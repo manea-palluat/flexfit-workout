@@ -1,0 +1,26 @@
+{
+  "resourceName": "Exercise",
+  "tableName": "Exercise",
+  "partitionKey": {
+    "fieldName": "userId",
+    "fieldType": "string"
+  },
+  "sortKey": {
+    "fieldName": "exerciseId",
+    "fieldType": "string"
+  },
+  "gsi": [
+    {
+      "name": "GSIFlexFit",
+      "partitionKey": {
+        "fieldName": "muscleGroup",
+        "fieldType": "string"
+      },
+      "sortKey": {
+        "fieldName": "exerciseId",
+        "fieldType": "string"
+      }
+    }
+  ],
+  "triggerFunctions": []
+}

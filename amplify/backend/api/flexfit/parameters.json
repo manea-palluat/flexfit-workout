@@ -1,0 +1,11 @@
+{
+  "AppSyncApiName": "flexfit",
+  "DynamoDBBillingMode": "PAY_PER_REQUEST",
+  "DynamoDBEnableServerSideEncryption": false,
+  "AuthCognitoUserPoolId": {
+    "Fn::GetAtt": [
+      "authflexfit4e80d91d",
+      "Outputs.UserPoolId"
+    ]
+  }
+}

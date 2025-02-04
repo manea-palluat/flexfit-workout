@@ -1,0 +1,26 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-flexfit-dev-966d9-authRole",
+      "UnauthRoleArn": "arn:aws:iam::588738612378:role/amplify-flexfit-dev-966d9-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::588738612378:role/amplify-flexfit-dev-966d9-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-flexfit-dev-966d9-deployment",
+      "UnauthRoleName": "amplify-flexfit-dev-966d9-unauthRole",
+      "StackName": "amplify-flexfit-dev-966d9",
+      "StackId": "arn:aws:cloudformation:us-east-1:588738612378:stack/amplify-flexfit-dev-966d9/4135ee80-e296-11ef-927a-0affeffc4b97",
+      "AmplifyAppId": "d22eirf12qv38l"
+    },
+    "categories": {
+      "auth": {
+        "flexfit4e80d91d": {}
+      },
+      "storage": {
+        "Exercise": {}
+      },
+      "api": {
+        "flexfit": {}
+      }
+    }
+  }
+}

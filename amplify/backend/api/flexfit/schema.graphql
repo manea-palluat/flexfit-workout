@@ -1,0 +1,10 @@
+type Exercise @model @auth(rules: [{ allow: owner }]) {
+  userId: ID! @primaryKey(sortKeyFields: ["exerciseId"])
+  exerciseId: ID!
+  name: String!
+  muscleGroup: String!
+  restTime: Int!
+  sets: Int!
+  reps: Int!
+  weight: Float!
+}

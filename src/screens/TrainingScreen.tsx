@@ -6,9 +6,11 @@ import {
     SectionList,
     StyleSheet,
     TouchableOpacity,
+    Alert,
 } from 'react-native';
 import { API, graphqlOperation } from 'aws-amplify';
 import { listExercises } from '../graphql/queries';
+import { deleteExercise } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
 import ExerciseSessionModal, { Exercise } from '../components/ExerciseSessionModal';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -31,7 +33,7 @@ const TrainingScreen: React.FC = () => {
 
     const navigation = useNavigation<NavigationProp>();
 
-    // Fetch exercises when the screen is focused.
+    // Refresh exercises whenever the screen gains focus.
     useFocusEffect(
         React.useCallback(() => {
             if (user) {
@@ -42,20 +44,10 @@ const TrainingScreen: React.FC = () => {
         }, [user])
     );
 
-    // Also fetch on initial mount.
-    useEffect(() => {
-        if (user) {
-            fetchExercises();
-        } else {
-            setLoading(false);
-        }
-    }, [user]);
-
     const fetchExercises = async () => {
         try {
             const response: any = await API.graphql(
                 graphqlOperation(listExercises, {
-                    // Use user.attributes.sub if available; otherwise, fallback to user.username.
                     filter: { userId: { eq: user?.attributes?.sub || user?.username } },
                 })
             );
@@ -80,21 +72,74 @@ const TrainingScreen: React.FC = () => {
         }
     };
 
+    const handleDeleteExercise = async (exercise: Exercise) => {
+        Alert.alert(
+            'Confirmer la suppression',
+            `Voulez-vous vraiment supprimer l'exercice "${exercise.name}" ?`,
+            [
+                { text: 'Annuler', style: 'cancel' },
+                {
+                    text: 'Supprimer',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const userId = user?.attributes?.sub || user?.username;
+                            if (!userId) {
+                                Alert.alert('Erreur', "Identifiant de l'utilisateur introuvable.");
+                                return;
+                            }
+                            const input = {
+                                userId,
+                                exerciseId: exercise.exerciseId,
+                            };
+                            await API.graphql(graphqlOperation(deleteExercise, { input }));
+                            Alert.alert('Succès', 'Exercice supprimé.');
+                            fetchExercises(); // Refresh the list
+                        } catch (error) {
+                            console.error('Erreur lors de la suppression de l\'exercice', error);
+                            Alert.alert(
+                                'Erreur',
+                                "Une erreur est survenue lors de la suppression de l'exercice."
+                            );
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     const renderExerciseItem = ({ item }: { item: Exercise }) => (
         <View style={styles.exerciseItem}>
             <Text style={styles.exerciseName}>{item.name}</Text>
             <Text style={styles.exerciseDetails}>
                 {item.sets} sets x {item.reps} reps – {item.restTime} sec repos
             </Text>
-            <TouchableOpacity
-                style={styles.playButton}
-                onPress={() => {
-                    setSelectedExercise(item);
-                    setModalVisible(true);
-                }}
-            >
-                <Text style={styles.playButtonText}>Play</Text>
-            </TouchableOpacity>
+            <View style={styles.itemButtons}>
+                <TouchableOpacity
+                    style={styles.playButton}
+                    onPress={() => {
+                        setSelectedExercise(item);
+                        setModalVisible(true);
+                    }}
+                >
+                    <Text style={styles.playButtonText}>Play</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => {
+                        // Navigate to AddEditExercise in edit mode.
+                        navigation.navigate('AddEditExercise', { exercise: item });
+                    }}
+                >
+                    <Text style={styles.editButtonText}>Modifier</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteExercise(item)}
+                >
+                    <Text style={styles.deleteButtonText}>Supprimer</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 
@@ -197,14 +242,36 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#666',
     },
+    itemButtons: {
+        flexDirection: 'row',
+        marginTop: 10,
+    },
     playButton: {
         backgroundColor: '#28A745',
         padding: 8,
         borderRadius: 5,
-        marginTop: 10,
-        alignSelf: 'flex-start',
+        marginRight: 10,
     },
     playButtonText: {
+        color: '#fff',
+        fontSize: 16,
+    },
+    editButton: {
+        backgroundColor: '#FFA500',
+        padding: 8,
+        borderRadius: 5,
+        marginRight: 10,
+    },
+    editButtonText: {
+        color: '#fff',
+        fontSize: 16,
+    },
+    deleteButton: {
+        backgroundColor: '#DC3545',
+        padding: 8,
+        borderRadius: 5,
+    },
+    deleteButtonText: {
         color: '#fff',
         fontSize: 16,
     },

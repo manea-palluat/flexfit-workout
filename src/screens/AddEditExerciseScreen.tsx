@@ -1,5 +1,5 @@
 // src/screens/AddEditExerciseScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -9,32 +9,32 @@ import {
     Alert,
     ScrollView,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { API, graphqlOperation } from 'aws-amplify';
 import { createExercise, updateExercise } from '../graphql/mutations';
+import { listExercises } from '../graphql/queries';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { v4 as uuidv4 } from 'uuid';
 
-// Define the route prop type for this screen using our RootStackParamList.
 type AddEditExerciseScreenRouteProp = RouteProp<RootStackParamList, 'AddEditExercise'>;
 
 const AddEditExerciseScreen: React.FC = () => {
-    // Use our typed route.
     const route = useRoute<AddEditExerciseScreenRouteProp>();
-    // Expect route.params to be an object with an optional "exercise" property.
     const { exercise } = route.params || {};
-    const exerciseToEdit = exercise; // If provided, we're in edit mode.
+    const exerciseToEdit = exercise; // if provided, we're in edit mode.
 
-    // Access the authenticated user and navigation.
     const { user } = useAuth();
     const navigation = useNavigation();
 
-    // Form fields: pre-populate if editing.
     const [name, setName] = useState(exerciseToEdit ? exerciseToEdit.name : '');
+    // For muscle group, we use a Picker.
+    const [availableMuscleGroups, setAvailableMuscleGroups] = useState<string[]>([]);
     const [muscleGroup, setMuscleGroup] = useState(
         exerciseToEdit ? exerciseToEdit.muscleGroup : ''
     );
+    const [customMuscleGroup, setCustomMuscleGroup] = useState('');
     const [restTime, setRestTime] = useState(
         exerciseToEdit ? exerciseToEdit.restTime.toString() : ''
     );
@@ -49,14 +49,47 @@ const AddEditExerciseScreen: React.FC = () => {
     );
     const [loading, setLoading] = useState<boolean>(false);
 
+    // Fetch distinct muscle groups for the user (only in add mode).
+    useEffect(() => {
+        const fetchMuscleGroups = async () => {
+            try {
+                const response: any = await API.graphql(
+                    graphqlOperation(listExercises, {
+                        filter: { userId: { eq: user?.attributes?.sub || user?.username } },
+                    })
+                );
+                const items = response.data.listExercises.items;
+                const groups = items.map((e: any) => e.muscleGroup) as string[];
+                const uniqueGroups = Array.from(new Set(groups)) as string[];
+                setAvailableMuscleGroups(uniqueGroups);
+                if (!exerciseToEdit) {
+                    if (uniqueGroups.length > 0) {
+                        setMuscleGroup(uniqueGroups[0]);
+                    } else {
+                        setMuscleGroup('add_new');
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching muscle groups', error);
+            }
+        };
+        if (user) {
+            fetchMuscleGroups();
+        }
+    }, [user, exerciseToEdit]);
+
     const handleSave = async () => {
-        // Validate that all fields are filled.
-        if (!name || !muscleGroup || !restTime || !sets || !reps || !weight) {
+        if (!name || !restTime || !sets || !reps || !weight) {
             Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
             return;
         }
+        const finalMuscleGroup =
+            muscleGroup === 'add_new' ? customMuscleGroup : muscleGroup;
+        if (!finalMuscleGroup) {
+            Alert.alert('Erreur', 'Veuillez sélectionner ou saisir un groupe musculaire.');
+            return;
+        }
 
-        // Convert numeric fields from strings.
         const restTimeNum = parseInt(restTime, 10);
         const setsNum = parseInt(sets, 10);
         const repsNum = parseInt(reps, 10);
@@ -79,10 +112,17 @@ const AddEditExerciseScreen: React.FC = () => {
         try {
             if (exerciseToEdit && exerciseToEdit.exerciseId) {
                 // Edit mode: update the existing exercise.
+                // We now include userId since UpdateExerciseInput requires it.
+                const userId = user?.attributes?.sub || user?.username;
+                if (!userId) {
+                    Alert.alert('Erreur', "Identifiant de l'utilisateur introuvable.");
+                    return;
+                }
                 const input = {
+                    userId, // include userId here
                     exerciseId: exerciseToEdit.exerciseId,
                     name,
-                    muscleGroup,
+                    muscleGroup: finalMuscleGroup,
                     restTime: restTimeNum,
                     sets: setsNum,
                     reps: repsNum,
@@ -92,21 +132,17 @@ const AddEditExerciseScreen: React.FC = () => {
                 Alert.alert('Succès', 'Exercice mis à jour.');
             } else {
                 // Add mode: create a new exercise.
-                // Compute a proper user identifier.
                 const userId = user?.attributes?.sub || user?.username;
-                console.log('User object:', user);
-                console.log('Computed userId:', userId);
                 if (!userId) {
                     Alert.alert('Erreur', "Identifiant de l'utilisateur introuvable.");
                     return;
                 }
-                // Generate a unique exerciseId for the new exercise.
                 const exerciseId = uuidv4();
                 const input = {
-                    userId,         // Use the computed userId
-                    exerciseId,     // Use the generated exerciseId
+                    userId,
+                    exerciseId,
                     name,
-                    muscleGroup,
+                    muscleGroup: finalMuscleGroup,
                     restTime: restTimeNum,
                     sets: setsNum,
                     reps: repsNum,
@@ -138,12 +174,25 @@ const AddEditExerciseScreen: React.FC = () => {
                 value={name}
                 onChangeText={setName}
             />
-            <TextInput
-                style={styles.input}
-                placeholder="Groupe musculaire"
-                value={muscleGroup}
-                onChangeText={setMuscleGroup}
-            />
+            <Text style={styles.label}>Groupe musculaire</Text>
+            <Picker
+                selectedValue={muscleGroup}
+                onValueChange={(itemValue) => setMuscleGroup(itemValue)}
+                style={styles.picker}
+            >
+                {availableMuscleGroups.map((group) => (
+                    <Picker.Item key={group} label={group} value={group} />
+                ))}
+                <Picker.Item label="Ajouter un nouveau groupe musculaire" value="add_new" />
+            </Picker>
+            {muscleGroup === 'add_new' && (
+                <TextInput
+                    style={styles.input}
+                    placeholder="Saisissez le nouveau groupe musculaire"
+                    value={customMuscleGroup}
+                    onChangeText={setCustomMuscleGroup}
+                />
+            )}
             <TextInput
                 style={styles.input}
                 placeholder="Temps de repos (sec)"
@@ -179,6 +228,9 @@ const AddEditExerciseScreen: React.FC = () => {
                     disabled={loading}
                 />
             </View>
+            <View style={styles.buttonContainer}>
+                <Button title="Annuler" onPress={() => navigation.goBack()} color="#888" />
+            </View>
         </ScrollView>
     );
 };
@@ -195,11 +247,18 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         textAlign: 'center',
     },
+    label: {
+        fontSize: 16,
+        marginBottom: 4,
+    },
     input: {
         borderWidth: 1,
         borderColor: '#ccc',
         borderRadius: 5,
         padding: 12,
+        marginBottom: 12,
+    },
+    picker: {
         marginBottom: 12,
     },
     buttonContainer: {

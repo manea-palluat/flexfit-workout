@@ -14,6 +14,9 @@ import {
     Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { API, graphqlOperation, Auth } from 'aws-amplify';
+import { createExerciseTracking } from '../graphql/mutations';
+import { v4 as uuidv4 } from 'uuid';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const COOLDOWN_BAR_WIDTH = 200;
@@ -55,7 +58,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     const [editingSetIndex, setEditingSetIndex] = useState<number>(0);
     const [tempReps, setTempReps] = useState<string>('');
     const [tempWeight, setTempWeight] = useState<string>('');
-    // New state to track end state of last set.
+    // isEnded tracks whether the final set has been saved.
     const [isEnded, setIsEnded] = useState<boolean>(false);
     const [isMinimized, setIsMinimized] = useState<boolean>(false);
 
@@ -72,8 +75,8 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
 
     useEffect(() => {
         let interval: NodeJS.Timeout | undefined;
+        // For non-last sets, run the timer when in rest phase.
         if (phase === 'rest' && currentSet < totalSets) {
-            // For non-last sets, count down the timer.
             interval = setInterval(() => {
                 setTimer(prev => {
                     if (prev <= 1) {
@@ -85,31 +88,31 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                 });
             }, 1000);
         }
-        // For last set, we do not start a rest timer.
+        // For the last set, we do not auto-run a rest timer.
         return () => {
             if (interval) clearInterval(interval);
         };
     }, [phase, restDuration, currentSet, totalSets]);
 
-    // For non-last sets: when rest timer expires, move to next set.
     const handleRestComplete = () => {
         setPhase('work');
         setTimer(restDuration);
         if (currentSet < totalSets) {
             setCurrentSet(prev => prev + 1);
+        } else {
+            finishSession();
         }
     };
 
-    // finishCurrentSet: when user taps "Série terminée"
     const finishCurrentSet = () => {
         if (currentSet === totalSets) {
-            // Last set: do NOT start rest timer; open modal immediately.
+            // Last set: open modal immediately without starting a rest timer.
             setEditingSetIndex(currentSet - 1);
             setTempReps('');
             setTempWeight('');
             setIsEditingModalVisible(true);
         } else {
-            // Non-last set: start rest phase so progress bar and timer show, then open modal.
+            // Non-last set: start rest phase so the progress bar and timer appear.
             setPhase('rest');
             setTimer(restDuration);
             setTimeout(() => {
@@ -121,7 +124,6 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
-    // In saveSetData, update results immediately.
     const saveSetData = () => {
         const repsNum = parseInt(tempReps, 10);
         const weightNum = parseFloat(tempWeight);
@@ -133,18 +135,35 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         updated[editingSetIndex] = { reps: repsNum, weight: weightNum };
         setResults(updated);
         setIsEditingModalVisible(false);
-        // If we are editing the current new set...
+        // If we are saving the current new set...
         if (editingSetIndex === currentSet - 1) {
-            // For the last set, enter end state:
             if (currentSet === totalSets) {
+                // For the last set, update history and enter end state.
                 setIsEnded(true);
+                // Force phase to 'work' to re-render the button
+                setPhase('work');
             }
-            // For non-last sets, update history instantly (history now shows completed data)
-            // and let the rest timer continue.
+            // For non-last sets, we update the results immediately.
         }
     };
 
-    const finishSession = () => {
+    const finishSession = async () => {
+        try {
+            const userObj = await Auth.currentAuthenticatedUser();
+            const userId = userObj.attributes.sub;
+            const trackingInput = {
+                id: uuidv4(),
+                userId,
+                exerciseId: "", // Include if available.
+                exerciseName,
+                date: new Date().toISOString(),
+                setsData: JSON.stringify(results),
+            };
+            await API.graphql(graphqlOperation(createExerciseTracking, { input: trackingInput }));
+            console.log("Tracking saved:", trackingInput);
+        } catch (error) {
+            console.error("Error saving tracking:", error);
+        }
         if (onComplete) onComplete(results);
         if (onClose) {
             onClose();
@@ -255,15 +274,13 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                     </>
                 )}
                 {phase === 'work' ? (
-                    // For the last set in work phase:
+                    // For work phase on the last set: if isEnded is true, show the green "Terminer l'exercice" button; otherwise, show "Série terminée".
                     currentSet === totalSets ? (
                         isEnded ? (
-                            // If the last set has been saved and we are in end state, show green "Terminer l'exercice" button.
                             <TouchableOpacity style={[styles.actionButton, styles.terminateButton]} onPress={finishSession}>
                                 <Text style={styles.actionButtonText}>Terminer l'exercice</Text>
                             </TouchableOpacity>
                         ) : (
-                            // Otherwise, show "Série terminée" button.
                             <TouchableOpacity style={styles.actionButton} onPress={finishCurrentSet}>
                                 <Text style={styles.actionButtonText}>Série terminée</Text>
                             </TouchableOpacity>
@@ -283,8 +300,8 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                     {renderHistory()}
                 </View>
 
-                {/* For non-last sets, show the "Abandonner l'exercice" button */}
-                {currentSet < totalSets && (
+                {/* Show "Abandonner l'exercice" if not in final end state */}
+                {(currentSet < totalSets || (currentSet === totalSets && !isEnded)) && (
                     <TouchableOpacity style={styles.endButton} onPress={abandonExercise}>
                         <Text style={styles.endButtonText}>Abandonner l'exercice</Text>
                     </TouchableOpacity>
@@ -295,7 +312,6 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                 </TouchableOpacity>
             </ScrollView>
 
-            {/* Modal for entering/editing set data */}
             <Modal visible={isEditingModalVisible} transparent animationType="slide">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContainer}>

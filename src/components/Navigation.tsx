@@ -11,6 +11,8 @@ import ConfirmSignUpScreen from '../screens/ConfirmSignUpScreen';
 import AddEditExerciseScreen from '../screens/AddEditExerciseScreen';
 import TrackingDetailScreen from '../screens/TrackingDetailScreen';
 import ExerciseHistoryScreen from '../screens/ExerciseHistoryScreen';
+import ManualTrackingScreen from '../screens/ManualTrackingScreen';
+import EditTrackingScreen from '../screens/EditTrackingScreen';
 import NotLoggedInModal from './NotLoggedInModal';
 import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from '../types/NavigationTypes';
@@ -45,6 +47,8 @@ const Navigation: React.FC = () => {
                 <Stack.Screen name="AddEditExercise" component={AddEditExerciseScreen} />
                 <Stack.Screen name="TrackingDetail" component={TrackingDetailScreen} />
                 <Stack.Screen name="ExerciseHistory" component={ExerciseHistoryScreen} />
+                <Stack.Screen name="ManualTracking" component={ManualTrackingScreen} />
+                <Stack.Screen name="EditTracking" component={EditTrackingScreen} />
             </Stack.Navigator>
             <NotLoggedInModal visible={modalVisible} onClose={() => setModalVisible(false)} />
         </NavigationContainer>

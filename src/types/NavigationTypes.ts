@@ -1,4 +1,3 @@
-// src/types/NavigationTypes.ts
 export type RootStackParamList = {
     MainTabs: undefined;
     Auth: { mode: 'login' | 'signup' } | undefined;
@@ -23,8 +22,16 @@ export type RootStackParamList = {
             setsData: string;
         };
     };
-    ExerciseHistory: {
-        exerciseName: string;
-        // Optionally, you could also pass exerciseId if needed.
+    ExerciseHistory: { exerciseName: string };
+    ManualTracking: undefined;
+    EditTracking: {
+        tracking: {
+            id: string;
+            userId: string;
+            exerciseId: string;
+            exerciseName: string;
+            date: string;
+            setsData: string;
+        }
     };
 };

@@ -1,6 +1,12 @@
 // src/screens/TrackingScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+    View,
+    Text,
+    FlatList,
+    StyleSheet,
+    TouchableOpacity
+} from 'react-native';
 import { API, graphqlOperation } from 'aws-amplify';
 import { listExerciseTrackings } from '../graphql/queries'; // Ensure this query exists
 import { useAuth } from '../context/AuthContext';
@@ -25,14 +31,13 @@ const TrackingScreen: React.FC = () => {
     const { user } = useAuth();
     const navigation = useNavigation<NavigationProp>();
 
-    // Use useFocusEffect to refresh tracking data every time the screen is focused.
+    // Refresh tracking data every time the screen gains focus.
     useFocusEffect(
         React.useCallback(() => {
             fetchTrackings();
         }, [user])
     );
 
-    // Also fetch on initial mount
     useEffect(() => {
         fetchTrackings();
     }, [user]);
@@ -65,7 +70,7 @@ const TrackingScreen: React.FC = () => {
             .toString()
             .padStart(2, '0')}`;
 
-        // Parse the setsData JSON to create a summary string.
+        // Parse setsData JSON to build a summary (each line: "reps x weight kg")
         let setSummary = '';
         try {
             const setsData = JSON.parse(item.setsData);
@@ -97,16 +102,14 @@ const TrackingScreen: React.FC = () => {
         );
     }
 
-    if (trackings.length === 0) {
-        return (
-            <View style={styles.loadingContainer}>
-                <Text>Aucune donnée de suivi trouvée.</Text>
-            </View>
-        );
-    }
-
     return (
         <View style={styles.container}>
+            <TouchableOpacity
+                style={styles.manualTrackingButton}
+                onPress={() => navigation.navigate('ManualTracking')}
+            >
+                <Text style={styles.manualTrackingButtonText}>Ajouter un suivi manuel</Text>
+            </TouchableOpacity>
             <FlatList
                 data={trackings}
                 keyExtractor={(item) => item.id}
@@ -147,6 +150,19 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#444',
         lineHeight: 20,
+    },
+    manualTrackingButton: {
+        backgroundColor: '#007BFF',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        alignSelf: 'center',
+        marginBottom: 20,
+    },
+    manualTrackingButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });
 

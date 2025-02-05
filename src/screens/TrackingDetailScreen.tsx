@@ -18,8 +18,8 @@ interface TrackingRecord {
     userId: string;
     exerciseId: string;
     exerciseName: string;
-    date: string; // ISO string
-    setsData: string; // JSON string containing an array of set results
+    date: string;
+    setsData: string;
 }
 
 const TrackingDetailScreen: React.FC = () => {
@@ -36,72 +36,81 @@ const TrackingDetailScreen: React.FC = () => {
 
     const fullDate = new Date(tracking.date).toLocaleString();
 
-    const ListFooter = () => (
-        <TouchableOpacity style={styles.retourButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.retourButtonText}>Retour</Text>
-        </TouchableOpacity>
-    );
-
     return (
-        <FlatList
-            data={setsData}
-            keyExtractor={(_, index) => index.toString()}
-            renderItem={({ item, index }) => (
-                <Text style={styles.setResult}>
-                    Série {index + 1} : {item.reps} répétitions x {item.weight} kg
-                </Text>
-            )}
-            ListHeaderComponent={
-                <View style={styles.headerContainer}>
-                    <Text style={styles.title}>
-                        {tracking.exerciseName || 'Exercice Inconnu'}
+        <View style={styles.container}>
+            <View style={styles.headerContainer}>
+                <Text style={styles.title}>{tracking.exerciseName || 'Exercice Inconnu'}</Text>
+                <Text style={styles.date}>Date : {fullDate}</Text>
+                <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('EditTracking', { tracking })}>
+                    <Text style={styles.editButtonText}>Modifier</Text>
+                </TouchableOpacity>
+            </View>
+            <FlatList
+                data={setsData}
+                keyExtractor={(_, index) => index.toString()}
+                renderItem={({ item, index }) => (
+                    <Text style={styles.setResult}>
+                        Série {index + 1} : {item.reps} répétitions x {item.weight} kg
                     </Text>
-                    <Text style={styles.date}>Date : {fullDate}</Text>
-                </View>
-            }
-            ListFooterComponent={ListFooter}
-            contentContainerStyle={styles.contentContainer}
-        />
+                )}
+                contentContainerStyle={styles.listContent}
+            />
+            <TouchableOpacity style={styles.retourButton} onPress={() => navigation.goBack()}>
+                <Text style={styles.retourButtonText}>Retour</Text>
+            </TouchableOpacity>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    contentContainer: {
-        paddingHorizontal: 16,
-        paddingBottom: 30,
+    container: {
+        flex: 1,
         backgroundColor: '#fff',
-        flexGrow: 1,
+        paddingHorizontal: 16,
     },
     headerContainer: {
-        paddingVertical: 50,
-        marginTop: 50,
+        paddingTop: 50,
+        paddingBottom: 20,
         alignItems: 'center',
     },
     title: {
         fontSize: 26,
         fontWeight: 'bold',
-        marginBottom: 12,
-        textAlign: 'center',
     },
     date: {
         fontSize: 16,
+        marginBottom: 10,
+    },
+    editButton: {
+        backgroundColor: '#FFA500',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 5,
         marginBottom: 20,
-        textAlign: 'center',
+    },
+    editButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    listContent: {
+        paddingBottom: 100,
     },
     setResult: {
-        fontSize: 18,
-        marginBottom: 12,
-        paddingVertical: 4,
+        fontSize: 16,
+        marginBottom: 8,
         borderBottomWidth: 1,
         borderBottomColor: '#ccc',
+        paddingVertical: 4,
     },
     retourButton: {
-        marginTop: 20,
         backgroundColor: '#007BFF',
         paddingVertical: 12,
         paddingHorizontal: 20,
         borderRadius: 8,
         alignSelf: 'center',
+        position: 'absolute',
+        bottom: 20,
     },
     retourButtonText: {
         color: '#fff',

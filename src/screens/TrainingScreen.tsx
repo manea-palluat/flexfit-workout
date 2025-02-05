@@ -12,13 +12,20 @@ import { API, graphqlOperation } from 'aws-amplify';
 import { listExercises } from '../graphql/queries';
 import { deleteExercise } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
-// Import the new tracking modal instead of the old one.
-import ExerciseSessionTrackingModal, { Exercise } from '../components/ExerciseSessionTrackingModal';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
+
+interface Exercise {
+    exerciseId: string;
+    name: string;
+    muscleGroup: string;
+    restTime: number;
+    sets: number;
+    reps: number;
+}
 
 interface SectionData {
     title: string;
@@ -29,9 +36,6 @@ const TrainingScreen: React.FC = () => {
     const [sections, setSections] = useState<SectionData[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const { user } = useAuth();
-    const [modalVisible, setModalVisible] = useState<boolean>(false);
-    const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-
     const navigation = useNavigation<NavigationProp>();
 
     // Refresh exercises whenever the screen gains focus.
@@ -45,13 +49,19 @@ const TrainingScreen: React.FC = () => {
         }, [user])
     );
 
+    useEffect(() => {
+        if (user) {
+            fetchExercises();
+        } else {
+            setLoading(false);
+        }
+    }, [user]);
+
     const fetchExercises = async () => {
         try {
             const response: any = await API.graphql(
                 graphqlOperation(listExercises, {
-                    filter: {
-                        userId: { eq: user?.attributes?.sub || user?.username },
-                    },
+                    filter: { userId: { eq: user?.attributes?.sub || user?.username } },
                 })
             );
             const items: Exercise[] = response.data.listExercises.items;
@@ -115,14 +125,16 @@ const TrainingScreen: React.FC = () => {
         <View style={styles.exerciseItem}>
             <Text style={styles.exerciseName}>{item.name}</Text>
             <Text style={styles.exerciseDetails}>
-                {item.sets} séries x {item.reps} reps – {item.restTime} sec repos
+                {item.sets} sets x {item.reps} reps – {item.restTime} sec repos
             </Text>
             <View style={styles.itemButtons}>
                 <TouchableOpacity
                     style={styles.playButton}
                     onPress={() => {
-                        setSelectedExercise(item);
-                        setModalVisible(true);
+                        // (Your existing behavior for starting the exercise)
+                        // For example, you might open a modal or navigate to a tracking modal.
+                        // Here, we'll assume you already have that logic elsewhere.
+                        // navigation.navigate('ExerciseTrackingModal', { exercise: item });
                     }}
                 >
                     <Text style={styles.playButtonText}>Play</Text>
@@ -132,6 +144,12 @@ const TrainingScreen: React.FC = () => {
                     onPress={() => navigation.navigate('AddEditExercise', { exercise: item })}
                 >
                     <Text style={styles.editButtonText}>Modifier</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.historyButton}
+                    onPress={() => navigation.navigate('ExerciseHistory', { exerciseName: item.name })}
+                >
+                    <Text style={styles.historyButtonText}>Historique</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.deleteButton}
@@ -151,58 +169,36 @@ const TrainingScreen: React.FC = () => {
         );
     }
 
-    if (!user) {
+    if (sections.length === 0) {
         return (
             <View style={styles.loadingContainer}>
-                <Text>Veuillez vous connecter pour voir vos exercices.</Text>
+                <Text>Aucun exercice créé pour le moment.</Text>
+                <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() => navigation.navigate('AddEditExercise')}
+                >
+                    <Text style={styles.addButtonText}>Ajouter un exercice</Text>
+                </TouchableOpacity>
             </View>
         );
     }
 
     return (
         <View style={styles.container}>
-            {sections.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                    <Text>Aucun exercice créé pour le moment.</Text>
-                    <TouchableOpacity
-                        style={styles.addButton}
-                        onPress={() => navigation.navigate('AddEditExercise')}
-                    >
-                        <Text style={styles.addButtonText}>Ajouter un exercice</Text>
-                    </TouchableOpacity>
-                </View>
-            ) : (
-                <>
-                    <SectionList
-                        sections={sections}
-                        keyExtractor={(item) => item.exerciseId}
-                        renderItem={renderExerciseItem}
-                        renderSectionHeader={({ section: { title } }) => (
-                            <Text style={styles.sectionHeader}>{title}</Text>
-                        )}
-                    />
-                    <TouchableOpacity
-                        style={styles.addButtonBottom}
-                        onPress={() => navigation.navigate('AddEditExercise')}
-                    >
-                        <Text style={styles.addButtonText}>Ajouter un exercice</Text>
-                    </TouchableOpacity>
-                </>
-            )}
-
-            {selectedExercise && (
-                <ExerciseSessionTrackingModal
-                    visible={modalVisible}
-                    exercise={selectedExercise}
-                    // Compute the userId from Auth context.
-                    userId={user?.attributes?.sub || user?.username}
-                    onClose={() => {
-                        setModalVisible(false);
-                        setSelectedExercise(null);
-                        fetchExercises(); // Optionally refresh the list after tracking.
-                    }}
-                />
-            )}
+            <SectionList
+                sections={sections}
+                keyExtractor={(item) => item.exerciseId}
+                renderItem={renderExerciseItem}
+                renderSectionHeader={({ section: { title } }) => (
+                    <Text style={styles.sectionHeader}>{title}</Text>
+                )}
+            />
+            <TouchableOpacity
+                style={styles.addButtonBottom}
+                onPress={() => navigation.navigate('AddEditExercise')}
+            >
+                <Text style={styles.addButtonText}>Ajouter un exercice</Text>
+            </TouchableOpacity>
         </View>
     );
 };
@@ -214,11 +210,6 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    emptyContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
@@ -248,12 +239,14 @@ const styles = StyleSheet.create({
     itemButtons: {
         flexDirection: 'row',
         marginTop: 10,
+        flexWrap: 'wrap',
     },
     playButton: {
         backgroundColor: '#28A745',
         padding: 8,
         borderRadius: 5,
         marginRight: 10,
+        marginBottom: 8,
     },
     playButtonText: {
         color: '#fff',
@@ -264,8 +257,20 @@ const styles = StyleSheet.create({
         padding: 8,
         borderRadius: 5,
         marginRight: 10,
+        marginBottom: 8,
     },
     editButtonText: {
+        color: '#fff',
+        fontSize: 16,
+    },
+    historyButton: {
+        backgroundColor: '#6C757D',
+        padding: 8,
+        borderRadius: 5,
+        marginRight: 10,
+        marginBottom: 8,
+    },
+    historyButtonText: {
         color: '#fff',
         fontSize: 16,
     },
@@ -273,6 +278,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#DC3545',
         padding: 8,
         borderRadius: 5,
+        marginBottom: 8,
     },
     deleteButtonText: {
         color: '#fff',

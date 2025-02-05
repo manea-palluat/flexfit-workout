@@ -5,11 +5,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import TrainingScreen from '../screens/TrainingScreen';
 import TrackingScreen from '../screens/TrackingScreen';
-import TrackingDetailScreen from '../screens/TrackingDetailScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import AuthScreen from '../screens/AuthScreen';
 import ConfirmSignUpScreen from '../screens/ConfirmSignUpScreen';
 import AddEditExerciseScreen from '../screens/AddEditExerciseScreen';
+import TrackingDetailScreen from '../screens/TrackingDetailScreen';
+import ExerciseHistoryScreen from '../screens/ExerciseHistoryScreen';
 import NotLoggedInModal from './NotLoggedInModal';
 import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from '../types/NavigationTypes';
@@ -43,6 +44,7 @@ const Navigation: React.FC = () => {
                 <Stack.Screen name="ConfirmSignUp" component={ConfirmSignUpScreen} />
                 <Stack.Screen name="AddEditExercise" component={AddEditExerciseScreen} />
                 <Stack.Screen name="TrackingDetail" component={TrackingDetailScreen} />
+                <Stack.Screen name="ExerciseHistory" component={ExerciseHistoryScreen} />
             </Stack.Navigator>
             <NotLoggedInModal visible={modalVisible} onClose={() => setModalVisible(false)} />
         </NavigationContainer>

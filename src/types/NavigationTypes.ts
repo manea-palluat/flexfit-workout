@@ -21,6 +21,10 @@ export type RootStackParamList = {
             exerciseName: string;
             date: string;
             setsData: string;
-        }
+        };
+    };
+    ExerciseHistory: {
+        exerciseName: string;
+        // Optionally, you could also pass exerciseId if needed.
     };
 };

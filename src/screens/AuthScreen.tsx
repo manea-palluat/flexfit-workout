@@ -40,7 +40,6 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                 }
             }
         } else {
-            // Inside the sign-in section in AuthScreen.tsx
             try {
                 await signIn(email, password);
                 navigation.reset({
@@ -59,7 +58,6 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                     setError(error.message || 'Erreur lors de la connexion.');
                 }
             }
-
         }
     };
 
@@ -106,6 +104,15 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                     {isSignup ? 'Déjà un compte ? Connexion' : 'Pas de compte ? Inscription'}
                 </Text>
             </TouchableOpacity>
+            {/* New "Forgot Password" Button */}
+            {!isSignup && (
+                <TouchableOpacity
+                    style={styles.forgotPasswordButton}
+                    onPress={() => navigation.navigate('ForgotPassword')}
+                >
+                    <Text style={styles.forgotPasswordText}>J'ai oublié mon mot de passe</Text>
+                </TouchableOpacity>
+            )}
         </View>
     );
 };
@@ -151,6 +158,13 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         textAlign: 'center',
         width: '80%',
+    },
+    forgotPasswordButton: {
+        marginTop: 20,
+    },
+    forgotPasswordText: {
+        color: '#007BFF',
+        fontSize: 16,
     },
 });
 

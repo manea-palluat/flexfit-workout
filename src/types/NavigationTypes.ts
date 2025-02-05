@@ -34,4 +34,5 @@ export type RootStackParamList = {
             setsData: string;
         }
     };
+    ForgotPassword: undefined;  // New route for forgot password flow
 };

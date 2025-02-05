@@ -76,14 +76,17 @@ const ExerciseHistoryScreen: React.FC = () => {
             console.error('Error parsing setsData', e);
         }
         return (
-            <View style={styles.trackingItem}>
+            <TouchableOpacity
+                style={styles.trackingItem}
+                onPress={() => navigation.navigate('TrackingDetail', { tracking: item })}
+            >
                 <Text style={styles.trackingDate}>{formattedDate}</Text>
                 {setsData.map((set, index) => (
                     <Text key={index} style={styles.setText}>
                         Série {index + 1} : {set.reps} x {set.weight} kg
                     </Text>
                 ))}
-            </View>
+            </TouchableOpacity>
         );
     };
 

@@ -41,7 +41,7 @@ const ProfileScreen: React.FC = () => {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Profil</Text>
-            <Text style={styles.detail}>Bienvenue, {displayName}!</Text>
+            <Text style={styles.detail}>Bienvenue, {displayName} !</Text>
             <Text style={styles.detail}>Email: {email}</Text>
             <TouchableOpacity
                 style={styles.button}

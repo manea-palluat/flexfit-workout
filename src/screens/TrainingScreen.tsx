@@ -7,6 +7,7 @@ import {
     StyleSheet,
     TouchableOpacity,
     Alert,
+    Modal,
 } from 'react-native';
 import { API, graphqlOperation } from 'aws-amplify';
 import { listExercises } from '../graphql/queries';
@@ -16,7 +17,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-// Import the tracking modal component.
+// Import your tracking modal component if needed
 import ExerciseSessionTrackingModal from '../components/ExerciseSessionTrackingModal';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
@@ -41,9 +42,13 @@ const TrainingScreen: React.FC = () => {
     const { user } = useAuth();
     const navigation = useNavigation<NavigationProp>();
 
-    // New state for controlling the tracking modal.
+    // For the "Play" modal:
     const [modalVisible, setModalVisible] = useState<boolean>(false);
     const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+
+    // For the three-dots action modal:
+    const [actionModalVisible, setActionModalVisible] = useState<boolean>(false);
+    const [selectedExerciseAction, setSelectedExerciseAction] = useState<Exercise | null>(null);
 
     // Refresh exercises whenever the screen gains focus.
     useFocusEffect(
@@ -128,6 +133,21 @@ const TrainingScreen: React.FC = () => {
         );
     };
 
+    const openActionModal = (exercise: Exercise) => {
+        setSelectedExerciseAction(exercise);
+        setActionModalVisible(true);
+    };
+
+    const handleAction = (action: 'modifier' | 'supprimer') => {
+        setActionModalVisible(false);
+        if (!selectedExerciseAction) return;
+        if (action === 'modifier') {
+            navigation.navigate('AddEditExercise', { exercise: selectedExerciseAction });
+        } else if (action === 'supprimer') {
+            handleDeleteExercise(selectedExerciseAction);
+        }
+    };
+
     const renderExerciseItem = ({ item }: { item: Exercise }) => (
         <View style={styles.exerciseItem}>
             <Text style={styles.exerciseName}>{item.name}</Text>
@@ -146,22 +166,16 @@ const TrainingScreen: React.FC = () => {
                     <Text style={styles.playButtonText}>Play</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={() => navigation.navigate('AddEditExercise', { exercise: item })}
-                >
-                    <Text style={styles.editButtonText}>Modifier</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
                     style={styles.historyButton}
                     onPress={() => navigation.navigate('ExerciseHistory', { exerciseName: item.name })}
                 >
                     <Text style={styles.historyButtonText}>Historique</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDeleteExercise(item)}
+                    style={styles.actionButton}
+                    onPress={() => openActionModal(item)}
                 >
-                    <Text style={styles.deleteButtonText}>Supprimer</Text>
+                    <Text style={styles.actionButtonText}>⋮</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -206,6 +220,7 @@ const TrainingScreen: React.FC = () => {
                 <Text style={styles.addButtonText}>Ajouter un exercice</Text>
             </TouchableOpacity>
 
+            {/* Tracking Modal for "Play" */}
             {selectedExercise && (
                 <ExerciseSessionTrackingModal
                     visible={modalVisible}
@@ -214,11 +229,36 @@ const TrainingScreen: React.FC = () => {
                     onClose={() => {
                         setModalVisible(false);
                         setSelectedExercise(null);
-                        // Optionally refresh the exercise list if needed
                         fetchExercises();
                     }}
                 />
             )}
+
+            {/* Action Modal for three dots */}
+            <Modal visible={actionModalVisible} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.actionModalContainer}>
+                        <TouchableOpacity
+                            style={styles.actionModalButton}
+                            onPress={() => handleAction('modifier')}
+                        >
+                            <Text style={styles.actionModalButtonText}>Modifier</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.actionModalButton}
+                            onPress={() => handleAction('supprimer')}
+                        >
+                            <Text style={styles.actionModalButtonText}>Supprimer</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.actionModalButton, styles.cancelActionButton]}
+                            onPress={() => setActionModalVisible(false)}
+                        >
+                            <Text style={styles.actionModalButtonText}>Annuler</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -272,17 +312,6 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
     },
-    editButton: {
-        backgroundColor: '#FFA500',
-        padding: 8,
-        borderRadius: 5,
-        marginRight: 10,
-        marginBottom: 8,
-    },
-    editButtonText: {
-        color: '#fff',
-        fontSize: 16,
-    },
     historyButton: {
         backgroundColor: '#6C757D',
         padding: 8,
@@ -294,15 +323,15 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
     },
-    deleteButton: {
-        backgroundColor: '#DC3545',
+    actionButton: {
+        backgroundColor: '#ccc',
         padding: 8,
         borderRadius: 5,
         marginBottom: 8,
     },
-    deleteButtonText: {
-        color: '#fff',
-        fontSize: 16,
+    actionButtonText: {
+        fontSize: 20,
+        color: '#333',
     },
     addButton: {
         marginTop: 20,
@@ -322,6 +351,35 @@ const styles = StyleSheet.create({
     addButtonText: {
         color: '#fff',
         fontSize: 16,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    actionModalContainer: {
+        width: '80%',
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        padding: 20,
+        alignItems: 'center',
+    },
+    actionModalButton: {
+        backgroundColor: '#007BFF',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        marginBottom: 10,
+        width: '100%',
+    },
+    cancelActionButton: {
+        backgroundColor: '#6C757D',
+    },
+    actionModalButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        textAlign: 'center',
     },
 });
 

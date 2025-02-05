@@ -16,9 +16,12 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+// Import the tracking modal component.
+import ExerciseSessionTrackingModal from '../components/ExerciseSessionTrackingModal';
+
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
-interface Exercise {
+export interface Exercise {
     exerciseId: string;
     name: string;
     muscleGroup: string;
@@ -37,6 +40,10 @@ const TrainingScreen: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const { user } = useAuth();
     const navigation = useNavigation<NavigationProp>();
+
+    // New state for controlling the tracking modal.
+    const [modalVisible, setModalVisible] = useState<boolean>(false);
+    const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
 
     // Refresh exercises whenever the screen gains focus.
     useFocusEffect(
@@ -131,10 +138,9 @@ const TrainingScreen: React.FC = () => {
                 <TouchableOpacity
                     style={styles.playButton}
                     onPress={() => {
-                        // (Your existing behavior for starting the exercise)
-                        // For example, you might open a modal or navigate to a tracking modal.
-                        // Here, we'll assume you already have that logic elsewhere.
-                        // navigation.navigate('ExerciseTrackingModal', { exercise: item });
+                        console.log('Play button pressed for:', item);
+                        setSelectedExercise(item);
+                        setModalVisible(true);
                     }}
                 >
                     <Text style={styles.playButtonText}>Play</Text>
@@ -199,6 +205,20 @@ const TrainingScreen: React.FC = () => {
             >
                 <Text style={styles.addButtonText}>Ajouter un exercice</Text>
             </TouchableOpacity>
+
+            {selectedExercise && (
+                <ExerciseSessionTrackingModal
+                    visible={modalVisible}
+                    exercise={selectedExercise}
+                    userId={user?.attributes?.sub || user?.username}
+                    onClose={() => {
+                        setModalVisible(false);
+                        setSelectedExercise(null);
+                        // Optionally refresh the exercise list if needed
+                        fetchExercises();
+                    }}
+                />
+            )}
         </View>
     );
 };

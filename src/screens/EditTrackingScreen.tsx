@@ -16,7 +16,6 @@ import { API, graphqlOperation } from 'aws-amplify';
 import { updateExerciseTracking } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { v4 as uuidv4 } from 'uuid';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -108,15 +107,17 @@ const EditTrackingScreen: React.FC = () => {
             id: tracking.id,
             userId,
             exerciseId: tracking.exerciseId,
-            exerciseName: tracking.exerciseName, // assuming the exercise name remains unchanged
+            exerciseName: tracking.exerciseName, // assume this remains unchanged
             date: date.toISOString(),
             setsData: JSON.stringify(setResults),
         };
         try {
             await API.graphql(graphqlOperation(updateExerciseTracking, { input: trackingInput }));
             Alert.alert('Succès', 'Données de suivi mises à jour.');
-            // Instead of simply going back, replace the current screen with an updated TrackingDetailScreen.
-            navigation.replace('TrackingDetail', { tracking: trackingInput });
+            // Remove both the EditTrackingScreen and the old TrackingDetailScreen,
+            // then navigate to a new TrackingDetailScreen with the updated data.
+            navigation.pop(2); // pop EditTrackingScreen and the previous TrackingDetailScreen
+            navigation.navigate('TrackingDetail', { tracking: trackingInput });
         } catch (error) {
             console.error('Erreur lors de la mise à jour du suivi', error);
             Alert.alert('Erreur', "Une erreur est survenue lors de la mise à jour du suivi.");

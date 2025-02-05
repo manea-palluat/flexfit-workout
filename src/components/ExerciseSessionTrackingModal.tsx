@@ -1,5 +1,5 @@
 // src/components/ExerciseSessionTrackingModal.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Modal,
     View,
@@ -8,6 +8,7 @@ import {
     TouchableOpacity,
     StyleSheet,
     Alert,
+    Animated,
 } from 'react-native';
 import { API, graphqlOperation } from 'aws-amplify';
 import { createExerciseTracking } from '../graphql/mutations';
@@ -34,19 +35,33 @@ interface ExerciseSessionTrackingModalProps {
     onClose: () => void;
 }
 
+const COOLDOWN_BAR_WIDTH = 200; // maximum width of the progress bar in pixels
+
 const ExerciseSessionTrackingModal: React.FC<ExerciseSessionTrackingModalProps> = ({
     visible,
     exercise,
     userId,
     onClose,
 }) => {
-    // Instead of destructuring 'name' here, we’ll refer to it as exercise.name in our logic.
+    // We'll reference exercise.name directly in our logic.
     const { sets, reps, restTime } = exercise;
     const [currentSet, setCurrentSet] = useState<number>(1);
     const [isResting, setIsResting] = useState<boolean>(false);
     const [timer, setTimer] = useState<number>(restTime);
     const [currentResult, setCurrentResult] = useState<SetResult>({ weight: 0, reps: 0 });
     const [results, setResults] = useState<SetResult[]>([]);
+
+    // Create an Animated.Value to drive the progress bar.
+    const progressAnim = useRef(new Animated.Value(restTime)).current;
+
+    // Every time timer changes, animate the progressAnim to the new timer value.
+    useEffect(() => {
+        Animated.timing(progressAnim, {
+            toValue: timer,
+            duration: 500, // half a second for a smooth transition
+            useNativeDriver: false,
+        }).start();
+    }, [timer, progressAnim]);
 
     // Countdown effect during rest period.
     useEffect(() => {
@@ -75,7 +90,7 @@ const ExerciseSessionTrackingModal: React.FC<ExerciseSessionTrackingModalProps> 
     }, [isResting, timer, currentSet]);
 
     const submitTrackingData = async () => {
-        // Force a non-empty exercise name.
+        // Ensure a non-empty exercise name.
         const safeExerciseName =
             (typeof exercise.name === 'string' && exercise.name.trim().length > 0)
                 ? exercise.name.trim()
@@ -117,6 +132,13 @@ const ExerciseSessionTrackingModal: React.FC<ExerciseSessionTrackingModalProps> 
         onClose();
     };
 
+    // Interpolate progressAnim to determine the width of the progress bar.
+    const progressBarWidth = progressAnim.interpolate({
+        inputRange: [0, restTime],
+        outputRange: [0, COOLDOWN_BAR_WIDTH],
+        extrapolate: 'clamp',
+    });
+
     return (
         <Modal visible={visible} transparent animationType="slide">
             <View style={styles.container}>
@@ -124,35 +146,46 @@ const ExerciseSessionTrackingModal: React.FC<ExerciseSessionTrackingModalProps> 
                     {!isResting ? (
                         <>
                             <Text style={styles.title}>
-                                Set {currentSet} sur {sets} (Planifié : {reps} répétitions)
+                                {currentSet}/{sets}
+                                {"\n"}
+                                {reps} reps
                             </Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Poids utilisé (kg)"
-                                keyboardType="numeric"
-                                value={currentResult.weight ? currentResult.weight.toString() : ''}
-                                onChangeText={(text) =>
-                                    setCurrentResult({ ...currentResult, weight: parseFloat(text) || 0 })
-                                }
-                            />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Répétitions réalisées"
-                                keyboardType="numeric"
-                                value={currentResult.reps ? currentResult.reps.toString() : ''}
-                                onChangeText={(text) =>
-                                    setCurrentResult({ ...currentResult, reps: parseInt(text, 10) || 0 })
-                                }
-                            />
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Poids utilisé (kg)</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    keyboardType="numeric"
+                                    value={currentResult.weight ? currentResult.weight.toString() : ''}
+                                    onChangeText={(text) =>
+                                        setCurrentResult({ ...currentResult, weight: parseFloat(text) || 0 })
+                                    }
+                                    textAlign="center"
+                                />
+                            </View>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Répétitions réalisées</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    keyboardType="numeric"
+                                    value={currentResult.reps ? currentResult.reps.toString() : ''}
+                                    onChangeText={(text) =>
+                                        setCurrentResult({ ...currentResult, reps: parseInt(text, 10) || 0 })
+                                    }
+                                    textAlign="center"
+                                />
+                            </View>
                             <TouchableOpacity style={styles.button} onPress={handleSetCompletion}>
                                 <Text style={styles.buttonText}>Terminé</Text>
                             </TouchableOpacity>
                         </>
                     ) : (
-                        <>
+                        <View style={styles.cooldownContainer}>
                             <Text style={styles.title}>Repos</Text>
-                            <Text style={styles.info}>Temps de repos : {timer} sec</Text>
-                        </>
+                            <View style={styles.progressContainer}>
+                                <Animated.View style={[styles.progressBar, { width: progressBarWidth }]} />
+                            </View>
+                            <Text style={styles.cooldownText}>Temps restant : {timer} sec</Text>
+                        </View>
                     )}
                     <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
                         <Text style={styles.cancelButtonText}>Annuler</Text>
@@ -180,10 +213,17 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 22,
         marginBottom: 10,
+        textAlign: 'center',
     },
-    info: {
-        fontSize: 18,
-        marginBottom: 20,
+    inputGroup: {
+        width: '100%',
+        marginBottom: 12,
+        alignItems: 'center',
+    },
+    inputLabel: {
+        fontSize: 16,
+        marginBottom: 4,
+        color: '#555',
     },
     input: {
         width: '80%',
@@ -191,7 +231,9 @@ const styles = StyleSheet.create({
         borderColor: '#ccc',
         borderRadius: 5,
         padding: 10,
-        marginBottom: 10,
+        fontSize: 16,
+        color: '#000',
+        textAlign: 'center',
     },
     button: {
         backgroundColor: '#28A745',
@@ -210,6 +252,27 @@ const styles = StyleSheet.create({
     },
     cancelButtonText: {
         color: 'red',
+        fontSize: 16,
+    },
+    cooldownContainer: {
+        alignItems: 'center',
+    },
+    progressContainer: {
+        width: COOLDOWN_BAR_WIDTH,
+        height: 20,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 10,
+        overflow: 'hidden',
+        marginBottom: 8,
+    },
+    progressBar: {
+        height: '100%',
+        backgroundColor: '#28A745',
+    },
+    cooldownText: {
+        fontSize: 18,
+        color: '#333',
     },
 });
 

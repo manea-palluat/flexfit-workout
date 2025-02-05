@@ -78,7 +78,7 @@ const ExerciseSessionModal: React.FC<ExerciseSessionModalProps> = ({
                             <Text style={modalStyles.title}>
                                 Set {currentSet} sur {sets}
                             </Text>
-                            <Text style={modalStyles.info}>{reps} répétitions</Text>
+                            <Text style={modalStyles.info}>{reps} reps</Text>
                             <TouchableOpacity style={modalStyles.button} onPress={handleDone}>
                                 <Text style={modalStyles.buttonText}>Terminé</Text>
                             </TouchableOpacity>

@@ -1,8 +1,15 @@
 // src/screens/ExerciseHistoryScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import {
+    View,
+    Text,
+    FlatList,
+    StyleSheet,
+    ActivityIndicator,
+    TouchableOpacity
+} from 'react-native';
 import { API, graphqlOperation } from 'aws-amplify';
-import { listExerciseTrackings } from '../graphql/queries';
+import { listExerciseTrackings } from '../graphql/queries'; // Ensure this query exists
 import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { RouteProp, useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -41,7 +48,7 @@ const ExerciseHistoryScreen: React.FC = () => {
                         userId: { eq: userId },
                         exerciseName: { eq: exerciseName },
                     },
-                    sortDirection: "DESC", // most recent first
+                    sortDirection: "DESC", // Most recent first
                 })
             );
             let items: TrackingRecord[] = response.data.listExerciseTrackings.items;
@@ -104,7 +111,9 @@ const ExerciseHistoryScreen: React.FC = () => {
     if (trackings.length === 0) {
         return (
             <View style={styles.emptyContainer}>
-                <Text>Aucune donnée de suivi pour cet exercice.</Text>
+                <Text style={styles.emptyText}>
+                    Tu n'as encore jamais effectué de session avec cet exercice !
+                </Text>
                 <TouchableOpacity style={styles.retourButton} onPress={() => navigation.goBack()}>
                     <Text style={styles.retourButtonText}>Retour</Text>
                 </TouchableOpacity>
@@ -155,8 +164,15 @@ const styles = StyleSheet.create({
     },
     emptyContainer: {
         flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 20,
+        paddingHorizontal: 16,
+    },
+    emptyText: {
+        fontSize: 18,
+        textAlign: 'center',
+        color: '#555',
+        marginBottom: 20,
     },
     trackingItem: {
         padding: 12,

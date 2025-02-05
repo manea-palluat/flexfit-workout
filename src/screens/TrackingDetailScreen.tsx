@@ -1,11 +1,12 @@
 // src/screens/TrackingDetailScreen.tsx
 import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { RouteProp, useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { API, graphqlOperation } from 'aws-amplify';
 import { getExerciseTracking } from '../graphql/queries';
+import { deleteExerciseTracking } from '../graphql/mutations';
 
 type TrackingDetailRouteProp = RouteProp<RootStackParamList, 'TrackingDetail'>;
 type NavigationProp = StackNavigationProp<RootStackParamList>;
@@ -27,14 +28,14 @@ interface TrackingRecord {
 const TrackingDetailScreen: React.FC = () => {
     const route = useRoute<TrackingDetailRouteProp>();
     const navigation = useNavigation<NavigationProp>();
-    // We initially get the tracking record from route parameters.
+    // Initially, get the tracking record from route params.
     const { tracking: initialTracking } = route.params;
 
-    // Use local state to store the tracking record.
+    // Store tracking record in local state.
     const [tracking, setTracking] = useState<TrackingRecord>(initialTracking);
     const [loading, setLoading] = useState<boolean>(false);
 
-    // Fetch the updated tracking record by ID whenever the screen is focused.
+    // Refresh the tracking record when the screen gains focus.
     useFocusEffect(
         useCallback(() => {
             const fetchTrackingDetail = async () => {
@@ -65,6 +66,31 @@ const TrackingDetailScreen: React.FC = () => {
 
     const fullDate = new Date(tracking.date).toLocaleString();
 
+    const handleDelete = async () => {
+        Alert.alert(
+            'Confirmer la suppression',
+            'Voulez-vous vraiment supprimer ce suivi ?',
+            [
+                { text: 'Annuler', style: 'cancel' },
+                {
+                    text: 'Supprimer',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const input = { id: tracking.id }; // Only pass id!
+                            await API.graphql(graphqlOperation(deleteExerciseTracking, { input }));
+                            Alert.alert('Succès', 'Suivi supprimé.');
+                            navigation.goBack();
+                        } catch (error) {
+                            console.error('Error deleting tracking record', error);
+                            Alert.alert('Erreur', 'Une erreur est survenue lors de la suppression.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.headerContainer}>
@@ -93,9 +119,14 @@ const TrackingDetailScreen: React.FC = () => {
                 />
             )}
 
-            <TouchableOpacity style={styles.retourButton} onPress={() => navigation.goBack()}>
-                <Text style={styles.retourButtonText}>Retour</Text>
-            </TouchableOpacity>
+            <View style={styles.footerContainer}>
+                <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+                    <Text style={styles.deleteButtonText}>Supprimer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.retourButton} onPress={() => navigation.goBack()}>
+                    <Text style={styles.retourButtonText}>Retour</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 };
@@ -107,7 +138,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     headerContainer: {
-        paddingTop: 50,
+        paddingTop: 50, // Extra top padding so the header isn't flush with the top edge
         paddingBottom: 20,
         alignItems: 'center',
     },
@@ -141,19 +172,42 @@ const styles = StyleSheet.create({
         borderBottomColor: '#ccc',
         paddingVertical: 4,
     },
+    footerContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    deleteButton: {
+        backgroundColor: '#DC3545',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+    },
+    deleteButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
     retourButton: {
         backgroundColor: '#007BFF',
         paddingVertical: 12,
         paddingHorizontal: 20,
         borderRadius: 8,
-        alignSelf: 'center',
-        position: 'absolute',
-        bottom: 20,
     },
     retourButtonText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        marginTop: 20,
     },
 });
 

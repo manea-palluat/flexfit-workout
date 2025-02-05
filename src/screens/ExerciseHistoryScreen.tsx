@@ -2,10 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { API, graphqlOperation } from 'aws-amplify';
-import { listExerciseTrackings } from '../graphql/queries'; // Ensure this query exists
+import { listExerciseTrackings } from '../graphql/queries';
 import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from '../types/NavigationTypes';
-import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
+import { RouteProp, useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 type ExerciseHistoryRouteProp = RouteProp<RootStackParamList, 'ExerciseHistory'>;
@@ -27,10 +27,6 @@ const ExerciseHistoryScreen: React.FC = () => {
     const { user } = useAuth();
     const [trackings, setTrackings] = useState<TrackingRecord[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
-
-    useEffect(() => {
-        fetchHistory();
-    }, [user]);
 
     const fetchHistory = async () => {
         if (!user) {
@@ -58,6 +54,13 @@ const ExerciseHistoryScreen: React.FC = () => {
             setLoading(false);
         }
     };
+
+    // Re-fetch the history every time this screen gains focus.
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchHistory();
+        }, [user, exerciseName])
+    );
 
     const renderItem = ({ item }: { item: TrackingRecord }) => {
         const dateObj = new Date(item.date);
@@ -98,6 +101,17 @@ const ExerciseHistoryScreen: React.FC = () => {
         );
     }
 
+    if (trackings.length === 0) {
+        return (
+            <View style={styles.emptyContainer}>
+                <Text>Aucune donnée de suivi pour cet exercice.</Text>
+                <TouchableOpacity style={styles.retourButton} onPress={() => navigation.goBack()}>
+                    <Text style={styles.retourButtonText}>Retour</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
     return (
         <View style={styles.container}>
             <View style={styles.headerContainer}>
@@ -107,11 +121,6 @@ const ExerciseHistoryScreen: React.FC = () => {
                 data={trackings}
                 keyExtractor={(item) => item.id}
                 renderItem={renderItem}
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <Text>Aucune donnée de suivi pour cet exercice.</Text>
-                    </View>
-                }
                 contentContainerStyle={styles.listContent}
             />
             <TouchableOpacity style={styles.retourButton} onPress={() => navigation.goBack()}>
@@ -126,11 +135,11 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
         paddingHorizontal: 16,
+        paddingTop: 50, // extra top spacing
     },
     headerContainer: {
-        paddingTop: 50, // Extra top padding so the header isn't flush with the top edge
-        paddingBottom: 20,
         alignItems: 'center',
+        marginBottom: 20,
     },
     headerTitle: {
         fontSize: 26,
@@ -138,6 +147,16 @@ const styles = StyleSheet.create({
     },
     listContent: {
         paddingBottom: 100,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    emptyContainer: {
+        flex: 1,
+        alignItems: 'center',
+        marginTop: 20,
     },
     trackingItem: {
         padding: 12,
@@ -155,23 +174,13 @@ const styles = StyleSheet.create({
         fontSize: 16,
         marginBottom: 4,
     },
-    emptyContainer: {
-        alignItems: 'center',
-        marginTop: 20,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
     retourButton: {
         backgroundColor: '#007BFF',
         paddingVertical: 12,
         paddingHorizontal: 20,
         borderRadius: 8,
         alignSelf: 'center',
-        position: 'absolute',
-        bottom: 20,
+        marginBottom: 20,
     },
     retourButtonText: {
         color: '#fff',

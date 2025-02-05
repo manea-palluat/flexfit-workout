@@ -17,7 +17,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-// Import your tracking modal component if needed
+// Import the tracking modal component (if needed)
 import ExerciseSessionTrackingModal from '../components/ExerciseSessionTrackingModal';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
@@ -159,12 +159,24 @@ const TrainingScreen: React.FC = () => {
                     style={styles.playButton}
                     onPress={() => {
                         console.log('Play button pressed for:', item);
-                        setSelectedExercise(item);
-                        setModalVisible(true);
+                        const sessionData = {
+                            exerciseName: item.name,
+                            totalSets: item.sets,
+                            plannedReps: item.reps,
+                            restDuration: item.restTime,
+                        };
+                        navigation.navigate('WorkoutSession', {
+                            sessionData,
+                            onComplete: (results: { reps?: number; weight?: number }[]) => {
+                                console.log('Session complete, results:', results);
+                                // Here, implement saving the session data as needed.
+                            }
+                        });
                     }}
                 >
                     <Text style={styles.playButtonText}>Play</Text>
                 </TouchableOpacity>
+                <Text style={styles.playButtonText}>Play</Text>
                 <TouchableOpacity
                     style={styles.historyButton}
                     onPress={() => navigation.navigate('ExerciseHistory', { exerciseName: item.name })}
@@ -178,7 +190,7 @@ const TrainingScreen: React.FC = () => {
                     <Text style={styles.actionButtonText}>⋮</Text>
                 </TouchableOpacity>
             </View>
-        </View>
+        </View >
     );
 
     if (loading) {
@@ -380,6 +392,19 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         textAlign: 'center',
+    },
+    retourButton: {
+        backgroundColor: '#007BFF',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        alignSelf: 'center',
+        marginBottom: 20,
+    },
+    retourButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });
 

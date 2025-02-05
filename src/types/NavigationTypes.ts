@@ -1,3 +1,17 @@
+// src/types/NavigationTypes.ts
+
+export interface WorkoutSessionData {
+    exerciseName: string;
+    totalSets: number;
+    plannedReps: number;
+    restDuration: number;
+}
+
+export interface SetResult {
+    reps?: number;
+    weight?: number;
+}
+
 export type RootStackParamList = {
     MainTabs: undefined;
     Auth: { mode: 'login' | 'signup' } | undefined;
@@ -34,5 +48,10 @@ export type RootStackParamList = {
             setsData: string;
         }
     };
-    ForgotPassword: undefined;  // New route for forgot password flow
+    ForgotPassword: undefined;
+    // Declare WorkoutSession with required parameters:
+    WorkoutSession: {
+        sessionData: WorkoutSessionData;
+        onComplete: (results: SetResult[]) => void;
+    };
 };

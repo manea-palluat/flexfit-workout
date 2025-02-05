@@ -43,9 +43,11 @@ const EditTrackingScreen: React.FC = () => {
     const { tracking } = route.params as { tracking: TrackingRecord };
     const { user } = useAuth();
 
-    // Pre-populate with existing tracking data.
+    // Pre-populate the date.
     const [date, setDate] = useState<Date>(new Date(tracking.date));
     const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+
+    // Parse the existing sets data.
     let initialSets: SetResult[] = [];
     try {
         initialSets = JSON.parse(tracking.setsData);
@@ -53,10 +55,12 @@ const EditTrackingScreen: React.FC = () => {
         console.error('Error parsing setsData', error);
     }
     const [setResults, setSetResults] = useState<SetResult[]>(initialSets);
+
+    // Local state for new set inputs (if adding a new set)
     const [tempReps, setTempReps] = useState<string>('');
     const [tempWeight, setTempWeight] = useState<string>('');
 
-    // Date picker handler: when a date is selected, fix time to noon.
+    // Date picker handler: fix time to noon.
     const onChangeDate = (event: any, selectedDate?: Date) => {
         setShowDatePicker(Platform.OS === 'ios');
         if (selectedDate) {
@@ -66,6 +70,18 @@ const EditTrackingScreen: React.FC = () => {
         }
     };
 
+    // Update an existing set in the array.
+    const updateSet = (index: number, field: 'reps' | 'weight', value: string) => {
+        const updated = [...setResults];
+        if (field === 'reps') {
+            updated[index].reps = parseInt(value, 10) || 0;
+        } else {
+            updated[index].weight = parseFloat(value) || 0;
+        }
+        setSetResults(updated);
+    };
+
+    // Add a new set.
     const addSet = () => {
         const repsNum = parseInt(tempReps, 10);
         const weightNum = parseFloat(tempWeight);
@@ -92,14 +108,15 @@ const EditTrackingScreen: React.FC = () => {
             id: tracking.id,
             userId,
             exerciseId: tracking.exerciseId,
-            exerciseName: tracking.exerciseName, // assuming exerciseName doesn't change
+            exerciseName: tracking.exerciseName, // assuming the exercise name remains unchanged
             date: date.toISOString(),
             setsData: JSON.stringify(setResults),
         };
         try {
             await API.graphql(graphqlOperation(updateExerciseTracking, { input: trackingInput }));
             Alert.alert('Succès', 'Données de suivi mises à jour.');
-            navigation.goBack();
+            // Instead of simply going back, replace the current screen with an updated TrackingDetailScreen.
+            navigation.replace('TrackingDetail', { tracking: trackingInput });
         } catch (error) {
             console.error('Erreur lors de la mise à jour du suivi', error);
             Alert.alert('Erreur', "Une erreur est survenue lors de la mise à jour du suivi.");
@@ -109,6 +126,7 @@ const EditTrackingScreen: React.FC = () => {
     return (
         <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.header}>Modifier le suivi</Text>
+
             <Text style={styles.label}>Date :</Text>
             <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateButton}>
                 <Text style={styles.dateButtonText}>{date.toLocaleDateString('fr-FR')}</Text>
@@ -121,13 +139,29 @@ const EditTrackingScreen: React.FC = () => {
                     onChange={onChangeDate}
                 />
             )}
+
             <Text style={styles.label}>Modifier les séries :</Text>
             {setResults.map((set, index) => (
                 <View key={index} style={styles.setRow}>
                     <Text style={styles.setLabel}>Série {index + 1} :</Text>
-                    <Text style={styles.setText}>{set.reps} répétitions x {set.weight} kg</Text>
+                    <TextInput
+                        style={[styles.input, styles.smallInput]}
+                        placeholder="Répétitions"
+                        keyboardType="numeric"
+                        value={set.reps.toString()}
+                        onChangeText={(value) => updateSet(index, 'reps', value)}
+                    />
+                    <TextInput
+                        style={[styles.input, styles.smallInput]}
+                        placeholder="Poids (kg)"
+                        keyboardType="numeric"
+                        value={set.weight.toString()}
+                        onChangeText={(value) => updateSet(index, 'weight', value)}
+                    />
                 </View>
             ))}
+
+            <Text style={styles.label}>Ajouter une nouvelle série :</Text>
             <View style={styles.setInputContainer}>
                 <TextInput
                     style={[styles.input, styles.smallInput]}
@@ -147,6 +181,7 @@ const EditTrackingScreen: React.FC = () => {
                     <Text style={styles.addSetButtonText}>Ajouter série</Text>
                 </TouchableOpacity>
             </View>
+
             <View style={styles.buttonContainer}>
                 <Button title="Sauvegarder" onPress={handleSave} />
             </View>
@@ -189,21 +224,13 @@ const styles = StyleSheet.create({
     setRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 4,
+        marginBottom: 10,
+        flexWrap: 'wrap',
     },
     setLabel: {
         fontSize: 16,
         fontWeight: 'bold',
         marginRight: 8,
-    },
-    setText: {
-        fontSize: 16,
-    },
-    setInputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 20,
-        flexWrap: 'wrap',
     },
     input: {
         borderWidth: 1,
@@ -215,6 +242,12 @@ const styles = StyleSheet.create({
     },
     smallInput: {
         width: '30%',
+    },
+    setInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+        flexWrap: 'wrap',
     },
     addSetButton: {
         backgroundColor: '#28A745',

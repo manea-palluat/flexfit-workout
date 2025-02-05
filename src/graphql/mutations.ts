@@ -20,7 +20,6 @@ export const createExercise = /* GraphQL */ `mutation CreateExercise(
     restTime
     sets
     reps
-    weight
     createdAt
     updatedAt
     owner
@@ -43,7 +42,6 @@ export const updateExercise = /* GraphQL */ `mutation UpdateExercise(
     restTime
     sets
     reps
-    weight
     createdAt
     updatedAt
     owner
@@ -66,7 +64,6 @@ export const deleteExercise = /* GraphQL */ `mutation DeleteExercise(
     restTime
     sets
     reps
-    weight
     createdAt
     updatedAt
     owner
@@ -76,4 +73,67 @@ export const deleteExercise = /* GraphQL */ `mutation DeleteExercise(
 ` as GeneratedMutation<
   APITypes.DeleteExerciseMutationVariables,
   APITypes.DeleteExerciseMutation
+>;
+export const createExerciseTracking = /* GraphQL */ `mutation CreateExerciseTracking(
+  $input: CreateExerciseTrackingInput!
+  $condition: ModelExerciseTrackingConditionInput
+) {
+  createExerciseTracking(input: $input, condition: $condition) {
+    id
+    userId
+    exerciseId
+    exerciseName
+    date
+    setsData
+    createdAt
+    updatedAt
+    owner
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.CreateExerciseTrackingMutationVariables,
+  APITypes.CreateExerciseTrackingMutation
+>;
+export const updateExerciseTracking = /* GraphQL */ `mutation UpdateExerciseTracking(
+  $input: UpdateExerciseTrackingInput!
+  $condition: ModelExerciseTrackingConditionInput
+) {
+  updateExerciseTracking(input: $input, condition: $condition) {
+    id
+    userId
+    exerciseId
+    exerciseName
+    date
+    setsData
+    createdAt
+    updatedAt
+    owner
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.UpdateExerciseTrackingMutationVariables,
+  APITypes.UpdateExerciseTrackingMutation
+>;
+export const deleteExerciseTracking = /* GraphQL */ `mutation DeleteExerciseTracking(
+  $input: DeleteExerciseTrackingInput!
+  $condition: ModelExerciseTrackingConditionInput
+) {
+  deleteExerciseTracking(input: $input, condition: $condition) {
+    id
+    userId
+    exerciseId
+    exerciseName
+    date
+    setsData
+    createdAt
+    updatedAt
+    owner
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.DeleteExerciseTrackingMutationVariables,
+  APITypes.DeleteExerciseTrackingMutation
 >;

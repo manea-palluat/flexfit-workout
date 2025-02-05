@@ -17,7 +17,6 @@ export const getExercise = /* GraphQL */ `query GetExercise($userId: ID!, $exerc
     restTime
     sets
     reps
-    weight
     createdAt
     updatedAt
     owner
@@ -52,7 +51,6 @@ export const listExercises = /* GraphQL */ `query ListExercises(
       restTime
       sets
       reps
-      weight
       createdAt
       updatedAt
       owner
@@ -65,4 +63,48 @@ export const listExercises = /* GraphQL */ `query ListExercises(
 ` as GeneratedQuery<
   APITypes.ListExercisesQueryVariables,
   APITypes.ListExercisesQuery
+>;
+export const getExerciseTracking = /* GraphQL */ `query GetExerciseTracking($id: ID!) {
+  getExerciseTracking(id: $id) {
+    id
+    userId
+    exerciseId
+    exerciseName
+    date
+    setsData
+    createdAt
+    updatedAt
+    owner
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.GetExerciseTrackingQueryVariables,
+  APITypes.GetExerciseTrackingQuery
+>;
+export const listExerciseTrackings = /* GraphQL */ `query ListExerciseTrackings(
+  $filter: ModelExerciseTrackingFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  listExerciseTrackings(filter: $filter, limit: $limit, nextToken: $nextToken) {
+    items {
+      id
+      userId
+      exerciseId
+      exerciseName
+      date
+      setsData
+      createdAt
+      updatedAt
+      owner
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.ListExerciseTrackingsQueryVariables,
+  APITypes.ListExerciseTrackingsQuery
 >;

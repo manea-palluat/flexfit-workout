@@ -20,7 +20,6 @@ export const onCreateExercise = /* GraphQL */ `subscription OnCreateExercise(
     restTime
     sets
     reps
-    weight
     createdAt
     updatedAt
     owner
@@ -43,7 +42,6 @@ export const onUpdateExercise = /* GraphQL */ `subscription OnUpdateExercise(
     restTime
     sets
     reps
-    weight
     createdAt
     updatedAt
     owner
@@ -66,7 +64,6 @@ export const onDeleteExercise = /* GraphQL */ `subscription OnDeleteExercise(
     restTime
     sets
     reps
-    weight
     createdAt
     updatedAt
     owner
@@ -76,4 +73,67 @@ export const onDeleteExercise = /* GraphQL */ `subscription OnDeleteExercise(
 ` as GeneratedSubscription<
   APITypes.OnDeleteExerciseSubscriptionVariables,
   APITypes.OnDeleteExerciseSubscription
+>;
+export const onCreateExerciseTracking = /* GraphQL */ `subscription OnCreateExerciseTracking(
+  $filter: ModelSubscriptionExerciseTrackingFilterInput
+  $owner: String
+) {
+  onCreateExerciseTracking(filter: $filter, owner: $owner) {
+    id
+    userId
+    exerciseId
+    exerciseName
+    date
+    setsData
+    createdAt
+    updatedAt
+    owner
+    __typename
+  }
+}
+` as GeneratedSubscription<
+  APITypes.OnCreateExerciseTrackingSubscriptionVariables,
+  APITypes.OnCreateExerciseTrackingSubscription
+>;
+export const onUpdateExerciseTracking = /* GraphQL */ `subscription OnUpdateExerciseTracking(
+  $filter: ModelSubscriptionExerciseTrackingFilterInput
+  $owner: String
+) {
+  onUpdateExerciseTracking(filter: $filter, owner: $owner) {
+    id
+    userId
+    exerciseId
+    exerciseName
+    date
+    setsData
+    createdAt
+    updatedAt
+    owner
+    __typename
+  }
+}
+` as GeneratedSubscription<
+  APITypes.OnUpdateExerciseTrackingSubscriptionVariables,
+  APITypes.OnUpdateExerciseTrackingSubscription
+>;
+export const onDeleteExerciseTracking = /* GraphQL */ `subscription OnDeleteExerciseTracking(
+  $filter: ModelSubscriptionExerciseTrackingFilterInput
+  $owner: String
+) {
+  onDeleteExerciseTracking(filter: $filter, owner: $owner) {
+    id
+    userId
+    exerciseId
+    exerciseName
+    date
+    setsData
+    createdAt
+    updatedAt
+    owner
+    __typename
+  }
+}
+` as GeneratedSubscription<
+  APITypes.OnDeleteExerciseTrackingSubscriptionVariables,
+  APITypes.OnDeleteExerciseTrackingSubscription
 >;

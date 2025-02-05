@@ -6,5 +6,36 @@ type Exercise @model @auth(rules: [{ allow: owner }]) {
   restTime: Int!
   sets: Int!
   reps: Int!
-  weight: Float!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  owner: String
+}
+
+input CreateExerciseInput {
+  userId: ID!
+  exerciseId: ID!
+  name: String!
+  muscleGroup: String!
+  restTime: Int!
+  sets: Int!
+  reps: Int!
+}
+
+input UpdateExerciseInput {
+  userId: ID!
+  exerciseId: ID!
+  name: String
+  muscleGroup: String
+  restTime: Int
+  sets: Int
+  reps: Int
+}
+
+type ExerciseTracking @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  userId: ID!
+  exerciseId: String!
+  exerciseName: String!
+  date: AWSDateTime!
+  setsData: AWSJSON!
 }

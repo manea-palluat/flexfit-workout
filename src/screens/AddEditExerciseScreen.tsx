@@ -29,7 +29,7 @@ const AddEditExerciseScreen: React.FC = () => {
     const navigation = useNavigation();
 
     const [name, setName] = useState(exerciseToEdit ? exerciseToEdit.name : '');
-    // For muscle group, we use a Picker.
+    // For muscle group selection:
     const [availableMuscleGroups, setAvailableMuscleGroups] = useState<string[]>([]);
     const [muscleGroup, setMuscleGroup] = useState(
         exerciseToEdit ? exerciseToEdit.muscleGroup : ''
@@ -43,9 +43,6 @@ const AddEditExerciseScreen: React.FC = () => {
     );
     const [reps, setReps] = useState(
         exerciseToEdit ? exerciseToEdit.reps.toString() : ''
-    );
-    const [weight, setWeight] = useState(
-        exerciseToEdit ? exerciseToEdit.weight.toString() : ''
     );
     const [loading, setLoading] = useState<boolean>(false);
 
@@ -79,7 +76,8 @@ const AddEditExerciseScreen: React.FC = () => {
     }, [user, exerciseToEdit]);
 
     const handleSave = async () => {
-        if (!name || !restTime || !sets || !reps || !weight) {
+        // Validate required fields.
+        if (!name || !restTime || !sets || !reps) {
             Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
             return;
         }
@@ -90,20 +88,15 @@ const AddEditExerciseScreen: React.FC = () => {
             return;
         }
 
+        // Convert numeric fields.
         const restTimeNum = parseInt(restTime, 10);
         const setsNum = parseInt(sets, 10);
         const repsNum = parseInt(reps, 10);
-        const weightNum = parseFloat(weight);
 
-        if (
-            isNaN(restTimeNum) ||
-            isNaN(setsNum) ||
-            isNaN(repsNum) ||
-            isNaN(weightNum)
-        ) {
+        if (isNaN(restTimeNum) || isNaN(setsNum) || isNaN(repsNum)) {
             Alert.alert(
                 'Erreur',
-                'Veuillez entrer des valeurs numériques valides pour le temps de repos, le nombre de sets, de répétitions et le poids.'
+                'Veuillez entrer des valeurs numériques valides pour le temps de repos, le nombre de sets et de répétitions.'
             );
             return;
         }
@@ -112,21 +105,19 @@ const AddEditExerciseScreen: React.FC = () => {
         try {
             if (exerciseToEdit && exerciseToEdit.exerciseId) {
                 // Edit mode: update the existing exercise.
-                // We now include userId since UpdateExerciseInput requires it.
                 const userId = user?.attributes?.sub || user?.username;
                 if (!userId) {
                     Alert.alert('Erreur', "Identifiant de l'utilisateur introuvable.");
                     return;
                 }
                 const input = {
-                    userId, // include userId here
+                    userId,
                     exerciseId: exerciseToEdit.exerciseId,
                     name,
                     muscleGroup: finalMuscleGroup,
                     restTime: restTimeNum,
                     sets: setsNum,
                     reps: repsNum,
-                    weight: weightNum,
                 };
                 await API.graphql(graphqlOperation(updateExercise, { input }));
                 Alert.alert('Succès', 'Exercice mis à jour.');
@@ -146,7 +137,6 @@ const AddEditExerciseScreen: React.FC = () => {
                     restTime: restTimeNum,
                     sets: setsNum,
                     reps: repsNum,
-                    weight: weightNum,
                 };
                 await API.graphql(graphqlOperation(createExercise, { input }));
                 Alert.alert('Succès', 'Exercice créé.');
@@ -212,13 +202,6 @@ const AddEditExerciseScreen: React.FC = () => {
                 placeholder="Nombre de répétitions"
                 value={reps}
                 onChangeText={setReps}
-                keyboardType="numeric"
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Poids (kg)"
-                value={weight}
-                onChangeText={setWeight}
                 keyboardType="numeric"
             />
             <View style={styles.buttonContainer}>

@@ -4,7 +4,6 @@ export type RootStackParamList = {
     Auth: { mode: 'login' | 'signup' } | undefined;
     ConfirmSignUp: { username: string };
     AddEditExercise: {
-        // When adding a new exercise, the parameter can be omitted.
         exercise?: {
             exerciseId: string;
             name: string;
@@ -12,7 +11,16 @@ export type RootStackParamList = {
             restTime: number;
             sets: number;
             reps: number;
-            weight: number;
         };
     } | undefined;
+    TrackingDetail: {
+        tracking: {
+            id: string;
+            userId: string;
+            exerciseId: string;
+            exerciseName: string;
+            date: string;
+            setsData: string;
+        }
+    };
 };

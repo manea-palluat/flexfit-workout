@@ -10,7 +10,6 @@ export type CreateExerciseInput = {
   restTime: number,
   sets: number,
   reps: number,
-  weight: number,
 };
 
 export type ModelExerciseConditionInput = {
@@ -19,13 +18,12 @@ export type ModelExerciseConditionInput = {
   restTime?: ModelIntInput | null,
   sets?: ModelIntInput | null,
   reps?: ModelIntInput | null,
-  weight?: ModelFloatInput | null,
-  and?: Array< ModelExerciseConditionInput | null > | null,
-  or?: Array< ModelExerciseConditionInput | null > | null,
-  not?: ModelExerciseConditionInput | null,
   createdAt?: ModelStringInput | null,
   updatedAt?: ModelStringInput | null,
   owner?: ModelStringInput | null,
+  and?: Array< ModelExerciseConditionInput | null > | null,
+  or?: Array< ModelExerciseConditionInput | null > | null,
+  not?: ModelExerciseConditionInput | null,
 };
 
 export type ModelStringInput = {
@@ -80,18 +78,6 @@ export type ModelIntInput = {
   attributeType?: ModelAttributeTypes | null,
 };
 
-export type ModelFloatInput = {
-  ne?: number | null,
-  eq?: number | null,
-  le?: number | null,
-  lt?: number | null,
-  ge?: number | null,
-  gt?: number | null,
-  between?: Array< number | null > | null,
-  attributeExists?: boolean | null,
-  attributeType?: ModelAttributeTypes | null,
-};
-
 export type Exercise = {
   __typename: "Exercise",
   userId: string,
@@ -101,7 +87,6 @@ export type Exercise = {
   restTime: number,
   sets: number,
   reps: number,
-  weight: number,
   createdAt: string,
   updatedAt: string,
   owner?: string | null,
@@ -115,12 +100,76 @@ export type UpdateExerciseInput = {
   restTime?: number | null,
   sets?: number | null,
   reps?: number | null,
-  weight?: number | null,
 };
 
 export type DeleteExerciseInput = {
   userId: string,
   exerciseId: string,
+};
+
+export type CreateExerciseTrackingInput = {
+  id?: string | null,
+  userId: string,
+  exerciseId: string,
+  exerciseName: string,
+  date: string,
+  setsData: string,
+};
+
+export type ModelExerciseTrackingConditionInput = {
+  userId?: ModelIDInput | null,
+  exerciseId?: ModelStringInput | null,
+  exerciseName?: ModelStringInput | null,
+  date?: ModelStringInput | null,
+  setsData?: ModelStringInput | null,
+  and?: Array< ModelExerciseTrackingConditionInput | null > | null,
+  or?: Array< ModelExerciseTrackingConditionInput | null > | null,
+  not?: ModelExerciseTrackingConditionInput | null,
+  createdAt?: ModelStringInput | null,
+  updatedAt?: ModelStringInput | null,
+  owner?: ModelStringInput | null,
+};
+
+export type ModelIDInput = {
+  ne?: string | null,
+  eq?: string | null,
+  le?: string | null,
+  lt?: string | null,
+  ge?: string | null,
+  gt?: string | null,
+  contains?: string | null,
+  notContains?: string | null,
+  between?: Array< string | null > | null,
+  beginsWith?: string | null,
+  attributeExists?: boolean | null,
+  attributeType?: ModelAttributeTypes | null,
+  size?: ModelSizeInput | null,
+};
+
+export type ExerciseTracking = {
+  __typename: "ExerciseTracking",
+  id: string,
+  userId: string,
+  exerciseId: string,
+  exerciseName: string,
+  date: string,
+  setsData: string,
+  createdAt: string,
+  updatedAt: string,
+  owner?: string | null,
+};
+
+export type UpdateExerciseTrackingInput = {
+  id: string,
+  userId?: string | null,
+  exerciseId?: string | null,
+  exerciseName?: string | null,
+  date?: string | null,
+  setsData?: string | null,
+};
+
+export type DeleteExerciseTrackingInput = {
+  id: string,
 };
 
 export type ModelIDKeyConditionInput = {
@@ -141,30 +190,13 @@ export type ModelExerciseFilterInput = {
   restTime?: ModelIntInput | null,
   sets?: ModelIntInput | null,
   reps?: ModelIntInput | null,
-  weight?: ModelFloatInput | null,
-  id?: ModelIDInput | null,
   createdAt?: ModelStringInput | null,
   updatedAt?: ModelStringInput | null,
+  owner?: ModelStringInput | null,
+  id?: ModelIDInput | null,
   and?: Array< ModelExerciseFilterInput | null > | null,
   or?: Array< ModelExerciseFilterInput | null > | null,
   not?: ModelExerciseFilterInput | null,
-  owner?: ModelStringInput | null,
-};
-
-export type ModelIDInput = {
-  ne?: string | null,
-  eq?: string | null,
-  le?: string | null,
-  lt?: string | null,
-  ge?: string | null,
-  gt?: string | null,
-  contains?: string | null,
-  notContains?: string | null,
-  between?: Array< string | null > | null,
-  beginsWith?: string | null,
-  attributeExists?: boolean | null,
-  attributeType?: ModelAttributeTypes | null,
-  size?: ModelSizeInput | null,
 };
 
 export enum ModelSortDirection {
@@ -179,6 +211,27 @@ export type ModelExerciseConnection = {
   nextToken?: string | null,
 };
 
+export type ModelExerciseTrackingFilterInput = {
+  id?: ModelIDInput | null,
+  userId?: ModelIDInput | null,
+  exerciseId?: ModelStringInput | null,
+  exerciseName?: ModelStringInput | null,
+  date?: ModelStringInput | null,
+  setsData?: ModelStringInput | null,
+  createdAt?: ModelStringInput | null,
+  updatedAt?: ModelStringInput | null,
+  and?: Array< ModelExerciseTrackingFilterInput | null > | null,
+  or?: Array< ModelExerciseTrackingFilterInput | null > | null,
+  not?: ModelExerciseTrackingFilterInput | null,
+  owner?: ModelStringInput | null,
+};
+
+export type ModelExerciseTrackingConnection = {
+  __typename: "ModelExerciseTrackingConnection",
+  items:  Array<ExerciseTracking | null >,
+  nextToken?: string | null,
+};
+
 export type ModelSubscriptionExerciseFilterInput = {
   userId?: ModelSubscriptionIDInput | null,
   exerciseId?: ModelSubscriptionIDInput | null,
@@ -187,10 +240,9 @@ export type ModelSubscriptionExerciseFilterInput = {
   restTime?: ModelSubscriptionIntInput | null,
   sets?: ModelSubscriptionIntInput | null,
   reps?: ModelSubscriptionIntInput | null,
-  weight?: ModelSubscriptionFloatInput | null,
-  id?: ModelSubscriptionIDInput | null,
   createdAt?: ModelSubscriptionStringInput | null,
   updatedAt?: ModelSubscriptionStringInput | null,
+  id?: ModelSubscriptionIDInput | null,
   and?: Array< ModelSubscriptionExerciseFilterInput | null > | null,
   or?: Array< ModelSubscriptionExerciseFilterInput | null > | null,
   owner?: ModelStringInput | null,
@@ -238,16 +290,18 @@ export type ModelSubscriptionIntInput = {
   notIn?: Array< number | null > | null,
 };
 
-export type ModelSubscriptionFloatInput = {
-  ne?: number | null,
-  eq?: number | null,
-  le?: number | null,
-  lt?: number | null,
-  ge?: number | null,
-  gt?: number | null,
-  between?: Array< number | null > | null,
-  in?: Array< number | null > | null,
-  notIn?: Array< number | null > | null,
+export type ModelSubscriptionExerciseTrackingFilterInput = {
+  id?: ModelSubscriptionIDInput | null,
+  userId?: ModelSubscriptionIDInput | null,
+  exerciseId?: ModelSubscriptionStringInput | null,
+  exerciseName?: ModelSubscriptionStringInput | null,
+  date?: ModelSubscriptionStringInput | null,
+  setsData?: ModelSubscriptionStringInput | null,
+  createdAt?: ModelSubscriptionStringInput | null,
+  updatedAt?: ModelSubscriptionStringInput | null,
+  and?: Array< ModelSubscriptionExerciseTrackingFilterInput | null > | null,
+  or?: Array< ModelSubscriptionExerciseTrackingFilterInput | null > | null,
+  owner?: ModelStringInput | null,
 };
 
 export type CreateExerciseMutationVariables = {
@@ -265,7 +319,6 @@ export type CreateExerciseMutation = {
     restTime: number,
     sets: number,
     reps: number,
-    weight: number,
     createdAt: string,
     updatedAt: string,
     owner?: string | null,
@@ -287,7 +340,6 @@ export type UpdateExerciseMutation = {
     restTime: number,
     sets: number,
     reps: number,
-    weight: number,
     createdAt: string,
     updatedAt: string,
     owner?: string | null,
@@ -309,7 +361,66 @@ export type DeleteExerciseMutation = {
     restTime: number,
     sets: number,
     reps: number,
-    weight: number,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type CreateExerciseTrackingMutationVariables = {
+  input: CreateExerciseTrackingInput,
+  condition?: ModelExerciseTrackingConditionInput | null,
+};
+
+export type CreateExerciseTrackingMutation = {
+  createExerciseTracking?:  {
+    __typename: "ExerciseTracking",
+    id: string,
+    userId: string,
+    exerciseId: string,
+    exerciseName: string,
+    date: string,
+    setsData: string,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type UpdateExerciseTrackingMutationVariables = {
+  input: UpdateExerciseTrackingInput,
+  condition?: ModelExerciseTrackingConditionInput | null,
+};
+
+export type UpdateExerciseTrackingMutation = {
+  updateExerciseTracking?:  {
+    __typename: "ExerciseTracking",
+    id: string,
+    userId: string,
+    exerciseId: string,
+    exerciseName: string,
+    date: string,
+    setsData: string,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type DeleteExerciseTrackingMutationVariables = {
+  input: DeleteExerciseTrackingInput,
+  condition?: ModelExerciseTrackingConditionInput | null,
+};
+
+export type DeleteExerciseTrackingMutation = {
+  deleteExerciseTracking?:  {
+    __typename: "ExerciseTracking",
+    id: string,
+    userId: string,
+    exerciseId: string,
+    exerciseName: string,
+    date: string,
+    setsData: string,
     createdAt: string,
     updatedAt: string,
     owner?: string | null,
@@ -331,7 +442,6 @@ export type GetExerciseQuery = {
     restTime: number,
     sets: number,
     reps: number,
-    weight: number,
     createdAt: string,
     updatedAt: string,
     owner?: string | null,
@@ -359,7 +469,50 @@ export type ListExercisesQuery = {
       restTime: number,
       sets: number,
       reps: number,
-      weight: number,
+      createdAt: string,
+      updatedAt: string,
+      owner?: string | null,
+    } | null >,
+    nextToken?: string | null,
+  } | null,
+};
+
+export type GetExerciseTrackingQueryVariables = {
+  id: string,
+};
+
+export type GetExerciseTrackingQuery = {
+  getExerciseTracking?:  {
+    __typename: "ExerciseTracking",
+    id: string,
+    userId: string,
+    exerciseId: string,
+    exerciseName: string,
+    date: string,
+    setsData: string,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type ListExerciseTrackingsQueryVariables = {
+  filter?: ModelExerciseTrackingFilterInput | null,
+  limit?: number | null,
+  nextToken?: string | null,
+};
+
+export type ListExerciseTrackingsQuery = {
+  listExerciseTrackings?:  {
+    __typename: "ModelExerciseTrackingConnection",
+    items:  Array< {
+      __typename: "ExerciseTracking",
+      id: string,
+      userId: string,
+      exerciseId: string,
+      exerciseName: string,
+      date: string,
+      setsData: string,
       createdAt: string,
       updatedAt: string,
       owner?: string | null,
@@ -383,7 +536,6 @@ export type OnCreateExerciseSubscription = {
     restTime: number,
     sets: number,
     reps: number,
-    weight: number,
     createdAt: string,
     updatedAt: string,
     owner?: string | null,
@@ -405,7 +557,6 @@ export type OnUpdateExerciseSubscription = {
     restTime: number,
     sets: number,
     reps: number,
-    weight: number,
     createdAt: string,
     updatedAt: string,
     owner?: string | null,
@@ -427,7 +578,66 @@ export type OnDeleteExerciseSubscription = {
     restTime: number,
     sets: number,
     reps: number,
-    weight: number,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type OnCreateExerciseTrackingSubscriptionVariables = {
+  filter?: ModelSubscriptionExerciseTrackingFilterInput | null,
+  owner?: string | null,
+};
+
+export type OnCreateExerciseTrackingSubscription = {
+  onCreateExerciseTracking?:  {
+    __typename: "ExerciseTracking",
+    id: string,
+    userId: string,
+    exerciseId: string,
+    exerciseName: string,
+    date: string,
+    setsData: string,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type OnUpdateExerciseTrackingSubscriptionVariables = {
+  filter?: ModelSubscriptionExerciseTrackingFilterInput | null,
+  owner?: string | null,
+};
+
+export type OnUpdateExerciseTrackingSubscription = {
+  onUpdateExerciseTracking?:  {
+    __typename: "ExerciseTracking",
+    id: string,
+    userId: string,
+    exerciseId: string,
+    exerciseName: string,
+    date: string,
+    setsData: string,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type OnDeleteExerciseTrackingSubscriptionVariables = {
+  filter?: ModelSubscriptionExerciseTrackingFilterInput | null,
+  owner?: string | null,
+};
+
+export type OnDeleteExerciseTrackingSubscription = {
+  onDeleteExerciseTracking?:  {
+    __typename: "ExerciseTracking",
+    id: string,
+    userId: string,
+    exerciseId: string,
+    exerciseName: string,
+    date: string,
+    setsData: string,
     createdAt: string,
     updatedAt: string,
     owner?: string | null,

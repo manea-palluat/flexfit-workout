@@ -12,7 +12,8 @@ import { API, graphqlOperation } from 'aws-amplify';
 import { listExercises } from '../graphql/queries';
 import { deleteExercise } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
-import ExerciseSessionModal, { Exercise } from '../components/ExerciseSessionModal';
+// Import the new tracking modal instead of the old one.
+import ExerciseSessionTrackingModal, { Exercise } from '../components/ExerciseSessionTrackingModal';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -48,7 +49,9 @@ const TrainingScreen: React.FC = () => {
         try {
             const response: any = await API.graphql(
                 graphqlOperation(listExercises, {
-                    filter: { userId: { eq: user?.attributes?.sub || user?.username } },
+                    filter: {
+                        userId: { eq: user?.attributes?.sub || user?.username },
+                    },
                 })
             );
             const items: Exercise[] = response.data.listExercises.items;
@@ -94,7 +97,7 @@ const TrainingScreen: React.FC = () => {
                             };
                             await API.graphql(graphqlOperation(deleteExercise, { input }));
                             Alert.alert('Succès', 'Exercice supprimé.');
-                            fetchExercises(); // Refresh the list
+                            fetchExercises();
                         } catch (error) {
                             console.error('Erreur lors de la suppression de l\'exercice', error);
                             Alert.alert(
@@ -112,7 +115,7 @@ const TrainingScreen: React.FC = () => {
         <View style={styles.exerciseItem}>
             <Text style={styles.exerciseName}>{item.name}</Text>
             <Text style={styles.exerciseDetails}>
-                {item.sets} sets x {item.reps} reps – {item.restTime} sec repos
+                {item.sets} séries x {item.reps} reps – {item.restTime} sec repos
             </Text>
             <View style={styles.itemButtons}>
                 <TouchableOpacity
@@ -126,10 +129,7 @@ const TrainingScreen: React.FC = () => {
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.editButton}
-                    onPress={() => {
-                        // Navigate to AddEditExercise in edit mode.
-                        navigation.navigate('AddEditExercise', { exercise: item });
-                    }}
+                    onPress={() => navigation.navigate('AddEditExercise', { exercise: item })}
                 >
                     <Text style={styles.editButtonText}>Modifier</Text>
                 </TouchableOpacity>
@@ -191,12 +191,15 @@ const TrainingScreen: React.FC = () => {
             )}
 
             {selectedExercise && (
-                <ExerciseSessionModal
+                <ExerciseSessionTrackingModal
                     visible={modalVisible}
                     exercise={selectedExercise}
+                    // Compute the userId from Auth context.
+                    userId={user?.attributes?.sub || user?.username}
                     onClose={() => {
                         setModalVisible(false);
                         setSelectedExercise(null);
+                        fetchExercises(); // Optionally refresh the list after tracking.
                     }}
                 />
             )}

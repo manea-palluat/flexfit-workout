@@ -8,8 +8,8 @@ import {
     StyleSheet,
     Alert,
     ScrollView,
+    TouchableOpacity,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { API, graphqlOperation } from 'aws-amplify';
 import { createExercise, updateExercise } from '../graphql/mutations';
 import { listExercises } from '../graphql/queries';
@@ -17,6 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { v4 as uuidv4 } from 'uuid';
+import MuscleGroupPickerModal from '../components/MuscleGroupPickerModal';
 
 type AddEditExerciseScreenRouteProp = RouteProp<RootStackParamList, 'AddEditExercise'>;
 
@@ -24,17 +25,16 @@ const AddEditExerciseScreen: React.FC = () => {
     const route = useRoute<AddEditExerciseScreenRouteProp>();
     const { exercise } = route.params || {};
     const exerciseToEdit = exercise; // if provided, we're in edit mode.
-
     const { user } = useAuth();
     const navigation = useNavigation();
 
     const [name, setName] = useState(exerciseToEdit ? exerciseToEdit.name : '');
-    // For muscle group selection:
+    // For muscle group selection using our custom modal.
     const [availableMuscleGroups, setAvailableMuscleGroups] = useState<string[]>([]);
     const [muscleGroup, setMuscleGroup] = useState(
         exerciseToEdit ? exerciseToEdit.muscleGroup : ''
     );
-    const [customMuscleGroup, setCustomMuscleGroup] = useState('');
+    const [showMuscleGroupModal, setShowMuscleGroupModal] = useState<boolean>(false);
     const [restTime, setRestTime] = useState(
         exerciseToEdit ? exerciseToEdit.restTime.toString() : ''
     );
@@ -46,7 +46,7 @@ const AddEditExerciseScreen: React.FC = () => {
     );
     const [loading, setLoading] = useState<boolean>(false);
 
-    // Fetch distinct muscle groups for the user (only in add mode).
+    // Fetch distinct muscle groups from the user's existing exercises.
     useEffect(() => {
         const fetchMuscleGroups = async () => {
             try {
@@ -63,7 +63,7 @@ const AddEditExerciseScreen: React.FC = () => {
                     if (uniqueGroups.length > 0) {
                         setMuscleGroup(uniqueGroups[0]);
                     } else {
-                        setMuscleGroup('add_new');
+                        setMuscleGroup('');
                     }
                 }
             } catch (error) {
@@ -76,19 +76,11 @@ const AddEditExerciseScreen: React.FC = () => {
     }, [user, exerciseToEdit]);
 
     const handleSave = async () => {
-        // Validate required fields.
-        if (!name || !restTime || !sets || !reps) {
+        if (!name || !muscleGroup || !restTime || !sets || !reps) {
             Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
             return;
         }
-        const finalMuscleGroup =
-            muscleGroup === 'add_new' ? customMuscleGroup : muscleGroup;
-        if (!finalMuscleGroup) {
-            Alert.alert('Erreur', 'Veuillez sélectionner ou saisir un groupe musculaire.');
-            return;
-        }
 
-        // Convert numeric fields.
         const restTimeNum = parseInt(restTime, 10);
         const setsNum = parseInt(sets, 10);
         const repsNum = parseInt(reps, 10);
@@ -104,17 +96,17 @@ const AddEditExerciseScreen: React.FC = () => {
         setLoading(true);
         try {
             if (exerciseToEdit && exerciseToEdit.exerciseId) {
-                // Edit mode: update the existing exercise.
+                // Edit mode: include userId as required.
                 const userId = user?.attributes?.sub || user?.username;
                 if (!userId) {
                     Alert.alert('Erreur', "Identifiant de l'utilisateur introuvable.");
                     return;
                 }
                 const input = {
-                    userId,
+                    userId, // now included
                     exerciseId: exerciseToEdit.exerciseId,
                     name,
-                    muscleGroup: finalMuscleGroup,
+                    muscleGroup,
                     restTime: restTimeNum,
                     sets: setsNum,
                     reps: repsNum,
@@ -133,7 +125,7 @@ const AddEditExerciseScreen: React.FC = () => {
                     userId,
                     exerciseId,
                     name,
-                    muscleGroup: finalMuscleGroup,
+                    muscleGroup,
                     restTime: restTimeNum,
                     sets: setsNum,
                     reps: repsNum,
@@ -155,7 +147,7 @@ const AddEditExerciseScreen: React.FC = () => {
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.title}>
+            <Text style={styles.header}>
                 {exerciseToEdit ? "Modifier l'exercice" : "Ajouter un exercice"}
             </Text>
             <TextInput
@@ -164,52 +156,50 @@ const AddEditExerciseScreen: React.FC = () => {
                 value={name}
                 onChangeText={setName}
             />
-            <Text style={styles.label}>Groupe musculaire</Text>
-            <Picker
-                selectedValue={muscleGroup}
-                onValueChange={(itemValue) => setMuscleGroup(itemValue)}
-                style={styles.picker}
+
+            <Text style={styles.label}>Groupe musculaire :</Text>
+            <TouchableOpacity
+                style={styles.selectorButton}
+                onPress={() => setShowMuscleGroupModal(true)}
             >
-                {availableMuscleGroups.map((group) => (
-                    <Picker.Item key={group} label={group} value={group} />
-                ))}
-                <Picker.Item label="Ajouter un nouveau groupe musculaire" value="add_new" />
-            </Picker>
-            {muscleGroup === 'add_new' && (
-                <TextInput
-                    style={styles.input}
-                    placeholder="Saisissez le nouveau groupe musculaire"
-                    value={customMuscleGroup}
-                    onChangeText={setCustomMuscleGroup}
-                />
-            )}
+                <Text style={styles.selectorButtonText}>
+                    {muscleGroup ? muscleGroup : 'Sélectionner un groupe'}
+                </Text>
+            </TouchableOpacity>
+            <MuscleGroupPickerModal
+                visible={showMuscleGroupModal}
+                muscleGroups={availableMuscleGroups}
+                onSelect={(selected) => setMuscleGroup(selected)}
+                onClose={() => setShowMuscleGroupModal(false)}
+            />
+
+            <Text style={styles.label}>Temps de repos (sec) :</Text>
             <TextInput
                 style={styles.input}
                 placeholder="Temps de repos (sec)"
+                keyboardType="numeric"
                 value={restTime}
                 onChangeText={setRestTime}
-                keyboardType="numeric"
             />
+            <Text style={styles.label}>Nombre de sets :</Text>
             <TextInput
                 style={styles.input}
                 placeholder="Nombre de sets"
+                keyboardType="numeric"
                 value={sets}
                 onChangeText={setSets}
-                keyboardType="numeric"
             />
+            <Text style={styles.label}>Nombre de répétitions :</Text>
             <TextInput
                 style={styles.input}
                 placeholder="Nombre de répétitions"
+                keyboardType="numeric"
                 value={reps}
                 onChangeText={setReps}
-                keyboardType="numeric"
             />
+
             <View style={styles.buttonContainer}>
-                <Button
-                    title={loading ? 'Enregistrement...' : 'Sauvegarder'}
-                    onPress={handleSave}
-                    disabled={loading}
-                />
+                <Button title={loading ? 'Enregistrement...' : 'Sauvegarder'} onPress={handleSave} disabled={loading} />
             </View>
             <View style={styles.buttonContainer}>
                 <Button title="Annuler" onPress={() => navigation.goBack()} color="#888" />
@@ -220,32 +210,43 @@ const AddEditExerciseScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
     container: {
-        padding: 16,
+        padding: 20,
         backgroundColor: '#fff',
         flexGrow: 1,
-        justifyContent: 'center',
     },
-    title: {
-        fontSize: 24,
-        marginBottom: 16,
+    header: {
+        fontSize: 26,
+        fontWeight: 'bold',
+        marginBottom: 20,
+        marginTop: 30,
         textAlign: 'center',
     },
     label: {
         fontSize: 16,
-        marginBottom: 4,
+        marginBottom: 8,
     },
     input: {
         borderWidth: 1,
         borderColor: '#ccc',
         borderRadius: 5,
         padding: 12,
-        marginBottom: 12,
+        marginBottom: 20,
+        fontSize: 16,
     },
-    picker: {
-        marginBottom: 12,
+    selectorButton: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        padding: 12,
+        marginBottom: 20,
+        alignItems: 'center',
+    },
+    selectorButtonText: {
+        fontSize: 16,
+        color: '#333',
     },
     buttonContainer: {
-        marginTop: 20,
+        marginTop: 10,
     },
 });
 

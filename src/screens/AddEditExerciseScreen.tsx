@@ -12,12 +12,13 @@ import {
 } from 'react-native';
 import { API, graphqlOperation } from 'aws-amplify';
 import { createExercise, updateExercise } from '../graphql/mutations';
-import { listExercises } from '../graphql/queries';
+import { listExercises, listExerciseTrackings } from '../graphql/queries';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { v4 as uuidv4 } from 'uuid';
 import MuscleGroupPickerModal from '../components/MuscleGroupPickerModal';
+import { updateExerciseTracking } from '../graphql/mutations'; // Ensure this mutation exists
 
 type AddEditExerciseScreenRouteProp = RouteProp<RootStackParamList, 'AddEditExercise'>;
 
@@ -28,8 +29,8 @@ const AddEditExerciseScreen: React.FC = () => {
     const { user } = useAuth();
     const navigation = useNavigation();
 
+    // Local state for the exercise fields.
     const [name, setName] = useState(exerciseToEdit ? exerciseToEdit.name : '');
-    // For muscle group selection using our custom modal.
     const [availableMuscleGroups, setAvailableMuscleGroups] = useState<string[]>([]);
     const [muscleGroup, setMuscleGroup] = useState(
         exerciseToEdit ? exerciseToEdit.muscleGroup : ''
@@ -75,6 +76,41 @@ const AddEditExerciseScreen: React.FC = () => {
         }
     }, [user, exerciseToEdit]);
 
+    // Helper function: Update all tracking records that have the old exercise name.
+    const updateTrackingExerciseName = async (oldName: string, newExerciseName: string) => {
+        try {
+            let nextToken: string | null = null;
+            const allTrackings: any[] = [];
+            do {
+                const response: any = await API.graphql(
+                    graphqlOperation(listExerciseTrackings, {
+                        filter: { exerciseName: { eq: oldName } },
+                        nextToken, // for pagination
+                    })
+                );
+                const { items, nextToken: token } = response.data.listExerciseTrackings;
+                console.log(`Fetched ${items.length} tracking records with name ${oldName}`);
+                allTrackings.push(...items);
+                nextToken = token;
+            } while (nextToken);
+
+            console.log(`Total tracking records to update: ${allTrackings.length}`);
+
+            for (const tracking of allTrackings) {
+                const input = {
+                    id: tracking.id,
+                    exerciseName: newExerciseName,
+                    _version: tracking._version, // remove or adjust if not using versioning
+                };
+                await API.graphql(graphqlOperation(updateExerciseTracking, { input }));
+                console.log(`Updated tracking record id: ${tracking.id}`);
+            }
+            console.log('All tracking records updated with new exercise name.');
+        } catch (error) {
+            console.error('Error updating tracking exercise names:', error);
+        }
+    };
+
     const handleSave = async () => {
         if (!name || !muscleGroup || !restTime || !sets || !reps) {
             Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
@@ -95,15 +131,15 @@ const AddEditExerciseScreen: React.FC = () => {
 
         setLoading(true);
         try {
+            const userId = user?.attributes?.sub || user?.username;
+            if (!userId) {
+                Alert.alert('Erreur', "Identifiant de l'utilisateur introuvable.");
+                return;
+            }
             if (exerciseToEdit && exerciseToEdit.exerciseId) {
-                // Edit mode: include userId as required.
-                const userId = user?.attributes?.sub || user?.username;
-                if (!userId) {
-                    Alert.alert('Erreur', "Identifiant de l'utilisateur introuvable.");
-                    return;
-                }
+                // Edit mode: update the exercise.
                 const input = {
-                    userId, // now included
+                    userId,
                     exerciseId: exerciseToEdit.exerciseId,
                     name,
                     muscleGroup,
@@ -113,13 +149,12 @@ const AddEditExerciseScreen: React.FC = () => {
                 };
                 await API.graphql(graphqlOperation(updateExercise, { input }));
                 Alert.alert('Succès', 'Exercice mis à jour.');
+                // If the name has changed, update all tracking records that have the old name.
+                if (exerciseToEdit.name !== name) {
+                    await updateTrackingExerciseName(exerciseToEdit.name, name);
+                }
             } else {
                 // Add mode: create a new exercise.
-                const userId = user?.attributes?.sub || user?.username;
-                if (!userId) {
-                    Alert.alert('Erreur', "Identifiant de l'utilisateur introuvable.");
-                    return;
-                }
                 const exerciseId = uuidv4();
                 const input = {
                     userId,

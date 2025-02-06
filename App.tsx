@@ -1,9 +1,15 @@
 // App.tsx
-import 'react-native-get-random-values'; // <-- Add this line at the very top!
+import 'react-native-get-random-values';
 import React from 'react';
 import Navigation from './src/components/Navigation';
 import { AuthProvider } from './src/context/AuthContext';
-import './src/aws-setup'; // This file configures Amplify
+import './src/aws-setup';
+import { LogBox } from 'react-native';
+
+LogBox.ignoreLogs([
+    "The user is not authenticated",
+    "The action 'RESET' with payload",
+]);
 
 const App: React.FC = () => {
     return (

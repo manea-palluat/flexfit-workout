@@ -1,10 +1,10 @@
 // src/screens/AuthScreen.tsx
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../types/NavigationTypes';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, CommonActions } from '@react-navigation/native';
 
 type AuthScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Auth'>;
 type AuthScreenRouteProp = RouteProp<RootStackParamList, 'Auth'>;
@@ -42,10 +42,13 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
         } else {
             try {
                 await signIn(email, password);
-                navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'MainTabs' }],
-                });
+                // Use CommonActions.reset to navigate to MainTabs
+                navigation.dispatch(
+                    CommonActions.reset({
+                        index: 0,
+                        routes: [{ name: 'MainTabs' }],
+                    })
+                );
             } catch (error: any) {
                 console.error('Error signing in', error);
                 if (error.code === 'UserNotFoundException') {
@@ -104,7 +107,7 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                     {isSignup ? 'Déjà un compte ? Connexion' : 'Pas de compte ? Inscription'}
                 </Text>
             </TouchableOpacity>
-            {/* New "Forgot Password" Button */}
+            {/* Forgot Password Button */}
             {!isSignup && (
                 <TouchableOpacity
                     style={styles.forgotPasswordButton}
@@ -113,6 +116,10 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                     <Text style={styles.forgotPasswordText}>J'ai oublié mon mot de passe</Text>
                 </TouchableOpacity>
             )}
+            {/* Retour Button */}
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                <Text style={styles.backButtonText}>Retour</Text>
+            </TouchableOpacity>
         </View>
     );
 };
@@ -163,6 +170,14 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     forgotPasswordText: {
+        color: '#007BFF',
+        fontSize: 16,
+    },
+    backButton: {
+        marginTop: 20,
+        padding: 10,
+    },
+    backButtonText: {
         color: '#007BFF',
         fontSize: 16,
     },

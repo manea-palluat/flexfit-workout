@@ -13,6 +13,7 @@ export interface SetResult {
 }
 
 export type RootStackParamList = {
+    Home: undefined;
     MainTabs: undefined;
     Auth: { mode: 'login' | 'signup' } | undefined;
     ConfirmSignUp: { username: string };
@@ -46,12 +47,12 @@ export type RootStackParamList = {
             exerciseName: string;
             date: string;
             setsData: string;
-        }
+        };
     };
     ForgotPassword: undefined;
-    // Declare WorkoutSession with required parameters:
     WorkoutSession: {
         sessionData: WorkoutSessionData;
         onComplete: (results: SetResult[]) => void;
     };
+    ProfileOptions: undefined;
 };

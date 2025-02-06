@@ -100,7 +100,7 @@ const TrainingScreen: React.FC = () => {
     const handleDeleteExercise = async (exercise: Exercise) => {
         Alert.alert(
             'Confirmer la suppression',
-            `Voulez-vous vraiment supprimer l'exercice "${exercise.name}" ?`,
+            `Voulez-vous vraiment supprimer l'exercice "${exercise.name}" ? Cette action est irréversible. Cela ne supprimera pas les données de suivi associées.`,
             [
                 { text: 'Annuler', style: 'cancel' },
                 {

@@ -48,6 +48,15 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     onComplete,
     onClose,
 }) => {
+    // Minimal guard: if sessionData is not provided, render an error view.
+    if (!sessionData) {
+        return (
+            <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>Erreur: Les paramètres de session sont manquants.</Text>
+            </View>
+        );
+    }
+
     const navigation = useNavigation();
     const { exerciseName, totalSets, plannedReps, restDuration } = sessionData;
     const [currentSet, setCurrentSet] = useState<number>(1);
@@ -140,31 +149,46 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
             if (currentSet === totalSets) {
                 // For the last set, update history and enter end state.
                 setIsEnded(true);
-                // Force phase to 'work' to re-render the button
                 setPhase('work');
             }
-            // For non-last sets, we update the results immediately.
         }
     };
 
     const finishSession = async () => {
+        // Filter out sets that don't have valid reps and weight.
+        const validResults = results.filter(set => set && set.reps && set.weight);
+
+        // If there are no valid sets, don't save anything.
+        if (validResults.length === 0) {
+            console.log("No valid set data entered. Finishing session without saving.");
+            if (onComplete) onComplete([]);
+            if (onClose) {
+                onClose();
+            } else {
+                navigation.goBack();
+            }
+            return;
+        }
+
+        // Otherwise, attempt to save the valid set data.
         try {
             const userObj = await Auth.currentAuthenticatedUser();
             const userId = userObj.attributes.sub;
             const trackingInput = {
                 id: uuidv4(),
                 userId,
-                exerciseId: "", // Include if available.
+                exerciseId: "", // If you have an exerciseId, include it here.
                 exerciseName,
                 date: new Date().toISOString(),
-                setsData: JSON.stringify(results),
+                setsData: JSON.stringify(validResults),
             };
             await API.graphql(graphqlOperation(createExerciseTracking, { input: trackingInput }));
             console.log("Tracking saved:", trackingInput);
         } catch (error) {
             console.error("Error saving tracking:", error);
         }
-        if (onComplete) onComplete(results);
+
+        if (onComplete) onComplete(validResults);
         if (onClose) {
             onClose();
         } else {
@@ -274,7 +298,6 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                     </>
                 )}
                 {phase === 'work' ? (
-                    // For work phase on the last set: if isEnded is true, show the green "Terminer l'exercice" button; otherwise, show "Série terminée".
                     currentSet === totalSets ? (
                         isEnded ? (
                             <TouchableOpacity style={[styles.actionButton, styles.terminateButton]} onPress={finishSession}>
@@ -300,7 +323,6 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                     {renderHistory()}
                 </View>
 
-                {/* Show "Abandonner l'exercice" if not in final end state */}
                 {(currentSet < totalSets || (currentSet === totalSets && !isEnded)) && (
                     <TouchableOpacity style={styles.endButton} onPress={abandonExercise}>
                         <Text style={styles.endButtonText}>Abandonner l'exercice</Text>
@@ -518,6 +540,18 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+        backgroundColor: '#fff',
+    },
+    errorText: {
+        fontSize: 18,
+        color: 'red',
+        textAlign: 'center',
     },
 });
 

@@ -1,8 +1,9 @@
 // src/components/Navigation.tsx
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
+import HomeScreen from '../screens/HomeScreen';
 import TrainingScreen from '../screens/TrainingScreen';
 import TrackingScreen from '../screens/TrackingScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -14,8 +15,8 @@ import ExerciseHistoryScreen from '../screens/ExerciseHistoryScreen';
 import ManualTrackingScreen from '../screens/ManualTrackingScreen';
 import EditTrackingScreen from '../screens/EditTrackingScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import ProfileOptionsScreen from '../screens/ProfileOptionsScreen';
 import WorkoutSessionScreenWrapper from '../components/WorkoutSessionScreenWrapper';
-import NotLoggedInModal from './NotLoggedInModal';
 import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from '../types/NavigationTypes';
 
@@ -34,27 +35,30 @@ function MainTabs() {
 
 const Navigation: React.FC = () => {
     const { user } = useAuth();
-    const [modalVisible, setModalVisible] = useState<boolean>(false);
-
-    useEffect(() => {
-        setModalVisible(!user);
-    }, [user]);
 
     return (
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="MainTabs" component={MainTabs} />
-                <Stack.Screen name="Auth" component={AuthScreen} />
-                <Stack.Screen name="ConfirmSignUp" component={ConfirmSignUpScreen} />
-                <Stack.Screen name="AddEditExercise" component={AddEditExerciseScreen} />
-                <Stack.Screen name="TrackingDetail" component={TrackingDetailScreen} />
-                <Stack.Screen name="ExerciseHistory" component={ExerciseHistoryScreen} />
-                <Stack.Screen name="ManualTracking" component={ManualTrackingScreen} />
-                <Stack.Screen name="EditTracking" component={EditTrackingScreen} />
-                <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-                <Stack.Screen name="WorkoutSession" component={WorkoutSessionScreenWrapper} />
+                {!user ? (
+                    <>
+                        <Stack.Screen name="Home" component={HomeScreen} />
+                        <Stack.Screen name="Auth" component={AuthScreen} />
+                        <Stack.Screen name="ConfirmSignUp" component={ConfirmSignUpScreen} />
+                        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+                    </>
+                ) : (
+                    <>
+                        <Stack.Screen name="MainTabs" component={MainTabs} />
+                        <Stack.Screen name="WorkoutSession" component={WorkoutSessionScreenWrapper} />
+                        <Stack.Screen name="AddEditExercise" component={AddEditExerciseScreen} />
+                        <Stack.Screen name="TrackingDetail" component={TrackingDetailScreen} />
+                        <Stack.Screen name="ExerciseHistory" component={ExerciseHistoryScreen} />
+                        <Stack.Screen name="ManualTracking" component={ManualTrackingScreen} />
+                        <Stack.Screen name="EditTracking" component={EditTrackingScreen} />
+                        <Stack.Screen name="ProfileOptions" component={ProfileOptionsScreen} />
+                    </>
+                )}
             </Stack.Navigator>
-            <NotLoggedInModal visible={modalVisible} onClose={() => setModalVisible(false)} />
         </NavigationContainer>
     );
 };

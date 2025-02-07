@@ -14,6 +14,7 @@ import {
     Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { API, graphqlOperation } from 'aws-amplify';
 import { createExerciseTracking } from '../graphql/mutations';
 import { listExercises } from '../graphql/queries';
@@ -35,7 +36,6 @@ interface SetResult {
     reps: number;
 }
 
-// A new component that shows a list of exercises in a modal.
 interface ExerciseSelectorModalProps {
     visible: boolean;
     exercises: Exercise[];
@@ -124,12 +124,12 @@ const ManualTrackingScreen: React.FC = () => {
     const { user } = useAuth();
     const navigation = useNavigation<NavigationProp>();
 
-    // State for exercise selection using a custom dropdown.
+    // State for exercise selection.
     const [exercises, setExercises] = useState<Exercise[]>([]);
     const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
     const [showExerciseSelector, setShowExerciseSelector] = useState<boolean>(false);
 
-    // State for date selection. (We show only a button to open the native date picker.)
+    // State for date selection.
     const [date, setDate] = useState<Date>(new Date());
     const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
 
@@ -138,7 +138,6 @@ const ManualTrackingScreen: React.FC = () => {
     const [tempReps, setTempReps] = useState<string>('');
     const [tempWeight, setTempWeight] = useState<string>('');
 
-    // Fetch user's exercises to populate the dropdown.
     useEffect(() => {
         const fetchExercises = async () => {
             if (!user) return;
@@ -165,9 +164,18 @@ const ManualTrackingScreen: React.FC = () => {
         fetchExercises();
     }, [user]);
 
-    // Date picker handler: When a date is selected, fix its time to noon.
+    // Date picker handler: for Android use modal; for iOS, use default picker.
     const onChangeDate = (event: any, selectedDate?: Date) => {
         setShowDatePicker(Platform.OS === 'ios');
+        if (selectedDate) {
+            const newDate = new Date(selectedDate);
+            newDate.setHours(12, 0, 0, 0);
+            setDate(newDate);
+        }
+    };
+
+    const handleConfirmDate = (selectedDate: Date) => {
+        setShowDatePicker(false);
         if (selectedDate) {
             const newDate = new Date(selectedDate);
             newDate.setHours(12, 0, 0, 0);
@@ -233,7 +241,6 @@ const ManualTrackingScreen: React.FC = () => {
                 </Text>
             </TouchableOpacity>
 
-            {/* Exercise selector modal */}
             <ExerciseSelectorModal
                 visible={showExerciseSelector}
                 exercises={exercises}
@@ -246,12 +253,22 @@ const ManualTrackingScreen: React.FC = () => {
                 <Text style={styles.dateButtonText}>{date.toLocaleDateString('fr-FR')}</Text>
             </TouchableOpacity>
             {showDatePicker && (
-                <DateTimePicker
-                    value={date}
-                    mode="date"
-                    display="default"
-                    onChange={onChangeDate}
-                />
+                Platform.OS === 'android' ? (
+                    <DateTimePickerModal
+                        isVisible={showDatePicker}
+                        mode="date"
+                        date={date}
+                        onConfirm={handleConfirmDate}
+                        onCancel={() => setShowDatePicker(false)}
+                    />
+                ) : (
+                    <DateTimePicker
+                        value={date}
+                        mode="date"
+                        display="default"
+                        onChange={onChangeDate}
+                    />
+                )
             )}
 
             <Text style={styles.label}>Ajouter des séries :</Text>
@@ -307,7 +324,7 @@ const styles = StyleSheet.create({
         fontSize: 26,
         fontWeight: 'bold',
         marginBottom: 20,
-        marginTop: 30, // Extra space at the top
+        marginTop: 30,
         textAlign: 'center',
     },
     label: {
@@ -324,9 +341,6 @@ const styles = StyleSheet.create({
     },
     exerciseButtonText: {
         fontSize: 16,
-    },
-    pickerContainer: {
-        // No longer used.
     },
     dateButton: {
         borderWidth: 1,

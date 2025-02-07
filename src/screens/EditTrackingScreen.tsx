@@ -12,6 +12,7 @@ import {
     Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { API, graphqlOperation } from 'aws-amplify';
 import { updateExerciseTracking } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
@@ -44,6 +45,9 @@ const EditTrackingScreen: React.FC = () => {
 
     // Pre-populate the date.
     const [date, setDate] = useState<Date>(new Date(tracking.date));
+    // NEW: State for modal date picker visibility (for Android)
+    const [showDatePickerModal, setShowDatePickerModal] = useState<boolean>(false);
+    // For iOS, we use the standard picker.
     const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
 
     // Parse the existing sets data.
@@ -62,6 +66,16 @@ const EditTrackingScreen: React.FC = () => {
     // Date picker handler: fix time to noon.
     const onChangeDate = (event: any, selectedDate?: Date) => {
         setShowDatePicker(Platform.OS === 'ios');
+        if (selectedDate) {
+            const newDate = new Date(selectedDate);
+            newDate.setHours(12, 0, 0, 0);
+            setDate(newDate);
+        }
+    };
+
+    // For Android, using the modal date picker.
+    const handleConfirmDate = (selectedDate: Date) => {
+        setShowDatePickerModal(false);
         if (selectedDate) {
             const newDate = new Date(selectedDate);
             newDate.setHours(12, 0, 0, 0);
@@ -107,16 +121,15 @@ const EditTrackingScreen: React.FC = () => {
             id: tracking.id,
             userId,
             exerciseId: tracking.exerciseId,
-            exerciseName: tracking.exerciseName, // assume this remains unchanged
+            exerciseName: tracking.exerciseName,
             date: date.toISOString(),
             setsData: JSON.stringify(setResults),
         };
         try {
             await API.graphql(graphqlOperation(updateExerciseTracking, { input: trackingInput }));
             Alert.alert('Succès', 'Données de suivi mises à jour.');
-            // Remove both the EditTrackingScreen and the old TrackingDetailScreen,
-            // then navigate to a new TrackingDetailScreen with the updated data.
-            navigation.pop(2); // pop EditTrackingScreen and the previous TrackingDetailScreen
+            // Pop two screens and navigate to TrackingDetail with updated data.
+            navigation.pop(2);
             navigation.navigate('TrackingDetail', { tracking: trackingInput });
         } catch (error) {
             console.error('Erreur lors de la mise à jour du suivi', error);
@@ -129,16 +142,32 @@ const EditTrackingScreen: React.FC = () => {
             <Text style={styles.header}>Modifier le suivi</Text>
 
             <Text style={styles.label}>Date :</Text>
-            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateButton}>
+            <TouchableOpacity onPress={() => {
+                if (Platform.OS === 'android') {
+                    setShowDatePickerModal(true);
+                } else {
+                    setShowDatePicker(true);
+                }
+            }} style={styles.dateButton}>
                 <Text style={styles.dateButtonText}>{date.toLocaleDateString('fr-FR')}</Text>
             </TouchableOpacity>
-            {showDatePicker && (
-                <DateTimePicker
-                    value={date}
+            {Platform.OS === 'android' ? (
+                <DateTimePickerModal
+                    isVisible={showDatePickerModal}
                     mode="date"
-                    display="default"
-                    onChange={onChangeDate}
+                    date={date}
+                    onConfirm={handleConfirmDate}
+                    onCancel={() => setShowDatePickerModal(false)}
                 />
+            ) : (
+                showDatePicker && (
+                    <DateTimePicker
+                        value={date}
+                        mode="date"
+                        display="default"
+                        onChange={onChangeDate}
+                    />
+                )
             )}
 
             <Text style={styles.label}>Modifier les séries :</Text>

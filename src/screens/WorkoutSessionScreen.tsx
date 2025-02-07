@@ -61,6 +61,8 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     const { exerciseName, totalSets, plannedReps, restDuration } = sessionData;
     const [currentSet, setCurrentSet] = useState<number>(1);
     const [phase, setPhase] = useState<'work' | 'rest'>('work');
+    // Use absolute target time instead of only a counter.
+    const [targetTime, setTargetTime] = useState<number>(Date.now() + restDuration * 1000);
     const [timer, setTimer] = useState<number>(restDuration);
     const [results, setResults] = useState<SetResult[]>(Array(totalSets).fill({}));
     const [isEditingModalVisible, setIsEditingModalVisible] = useState<boolean>(false);
@@ -82,30 +84,29 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }).start();
     }, [timer, progressAnim]);
 
+    // New timer effect: recalc remaining time based on targetTime.
     useEffect(() => {
         let interval: NodeJS.Timeout | undefined;
-        // For non-last sets, run the timer when in rest phase.
-        if (phase === 'rest' && currentSet < totalSets) {
+        if (phase === 'rest') {
             interval = setInterval(() => {
-                setTimer(prev => {
-                    if (prev <= 1) {
-                        if (interval) clearInterval(interval);
-                        handleRestComplete();
-                        return 0;
-                    }
-                    return prev - 1;
-                });
+                const remaining = Math.max(Math.ceil((targetTime - Date.now()) / 1000), 0);
+                setTimer(remaining);
+                if (remaining === 0) {
+                    if (interval) clearInterval(interval);
+                    handleRestComplete();
+                }
             }, 1000);
         }
-        // For the last set, we do not auto-run a rest timer.
         return () => {
             if (interval) clearInterval(interval);
         };
-    }, [phase, restDuration, currentSet, totalSets]);
+    }, [phase, targetTime]);
 
     const handleRestComplete = () => {
         setPhase('work');
+        // Reset timer and targetTime for next work phase.
         setTimer(restDuration);
+        setTargetTime(Date.now() + restDuration * 1000);
         if (currentSet < totalSets) {
             setCurrentSet(prev => prev + 1);
         } else {
@@ -121,8 +122,9 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
             setTempWeight('');
             setIsEditingModalVisible(true);
         } else {
-            // Non-last set: start rest phase so the progress bar and timer appear.
+            // Non-last set: start rest phase with absolute time.
             setPhase('rest');
+            setTargetTime(Date.now() + restDuration * 1000);
             setTimer(restDuration);
             setTimeout(() => {
                 setEditingSetIndex(currentSet - 1);
@@ -144,10 +146,8 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         updated[editingSetIndex] = { reps: repsNum, weight: weightNum };
         setResults(updated);
         setIsEditingModalVisible(false);
-        // If we are saving the current new set...
         if (editingSetIndex === currentSet - 1) {
             if (currentSet === totalSets) {
-                // For the last set, update history and enter end state.
                 setIsEnded(true);
                 setPhase('work');
             }
@@ -155,10 +155,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     };
 
     const finishSession = async () => {
-        // Filter out sets that don't have valid reps and weight.
         const validResults = results.filter(set => set && set.reps && set.weight);
-
-        // If there are no valid sets, don't save anything.
         if (validResults.length === 0) {
             console.log("No valid set data entered. Finishing session without saving.");
             if (onComplete) onComplete([]);
@@ -169,15 +166,13 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
             }
             return;
         }
-
-        // Otherwise, attempt to save the valid set data.
         try {
             const userObj = await Auth.currentAuthenticatedUser();
             const userId = userObj.attributes.sub;
             const trackingInput = {
                 id: uuidv4(),
                 userId,
-                exerciseId: "", // If you have an exerciseId, include it here.
+                exerciseId: "", // Include if available.
                 exerciseName,
                 date: new Date().toISOString(),
                 setsData: JSON.stringify(validResults),
@@ -187,7 +182,6 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         } catch (error) {
             console.error("Error saving tracking:", error);
         }
-
         if (onComplete) onComplete(validResults);
         if (onClose) {
             onClose();
@@ -199,6 +193,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     const skipRest = () => {
         setPhase('work');
         setTimer(restDuration);
+        setTargetTime(Date.now() + restDuration * 1000);
         if (currentSet < totalSets) {
             setCurrentSet(prev => prev + 1);
         } else {
@@ -512,7 +507,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     inputGroup: {
-        width: '100%',
+        width: '90%',
         marginBottom: 12,
         alignItems: 'center',
     },

@@ -55,4 +55,10 @@ export type RootStackParamList = {
         onComplete: (results: SetResult[]) => void;
     };
     ProfileOptions: undefined;
+    // New legal screens:
+    TermsOfUse: undefined;
+    PrivacyPolicy: undefined;
+    LegalNotice: undefined;
+    // New About screen:
+    About: undefined;
 };

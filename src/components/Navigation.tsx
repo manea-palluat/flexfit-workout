@@ -3,6 +3,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+
 import HomeScreen from '../screens/HomeScreen';
 import TrainingScreen from '../screens/TrainingScreen';
 import TrackingScreen from '../screens/TrackingScreen';
@@ -17,6 +18,14 @@ import EditTrackingScreen from '../screens/EditTrackingScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ProfileOptionsScreen from '../screens/ProfileOptionsScreen';
 import WorkoutSessionScreenWrapper from '../components/WorkoutSessionScreenWrapper';
+
+// New legal screens:
+import TermsOfUseScreen from '../screens/TermsOfUseScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
+import LegalNoticeScreen from '../screens/LegalNoticeScreen';
+// New About screen:
+import AboutScreen from '../screens/AboutScreen';
+
 import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from '../types/NavigationTypes';
 
@@ -45,6 +54,7 @@ const Navigation: React.FC = () => {
                         <Stack.Screen name="Auth" component={AuthScreen} />
                         <Stack.Screen name="ConfirmSignUp" component={ConfirmSignUpScreen} />
                         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+                        <Stack.Screen name="About" component={AboutScreen} />
                     </>
                 ) : (
                     <>
@@ -56,8 +66,13 @@ const Navigation: React.FC = () => {
                         <Stack.Screen name="ManualTracking" component={ManualTrackingScreen} />
                         <Stack.Screen name="EditTracking" component={EditTrackingScreen} />
                         <Stack.Screen name="ProfileOptions" component={ProfileOptionsScreen} />
+                        <Stack.Screen name="About" component={AboutScreen} />
                     </>
                 )}
+                {/* Legal screens available to all */}
+                <Stack.Screen name="TermsOfUse" component={TermsOfUseScreen} />
+                <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+                <Stack.Screen name="LegalNotice" component={LegalNoticeScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

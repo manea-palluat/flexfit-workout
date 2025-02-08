@@ -25,6 +25,9 @@ const HomeScreen: React.FC = () => {
             >
                 <Text style={styles.buttonText}>Inscription</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.aboutButton} onPress={() => navigation.navigate('About')}>
+                <Text style={styles.aboutButtonText}>À propos</Text>
+            </TouchableOpacity>
         </View>
     );
 };
@@ -58,6 +61,14 @@ const styles = StyleSheet.create({
     buttonText: {
         color: '#fff',
         fontSize: 18,
+    },
+    aboutButton: {
+        marginTop: 20,
+        padding: 10,
+    },
+    aboutButtonText: {
+        color: '#007BFF',
+        fontSize: 16,
     },
 });
 

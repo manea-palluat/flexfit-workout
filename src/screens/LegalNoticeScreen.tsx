@@ -4,10 +4,28 @@ import { ScrollView, Text, StyleSheet } from 'react-native';
 import { legalNoticeText } from '../legal/legalTexts';
 
 const LegalNoticeScreen: React.FC = () => {
+    const lines = legalNoticeText.split('\n');
+
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.title}>Mentions Légales - FlexFit</Text>
-            <Text style={styles.content}>{legalNoticeText}</Text>
+            <Text style={styles.mainTitle}>Mentions Légales - FlexFit</Text>
+            {lines.map((line, index) => {
+                const trimmed = line.trim();
+                if (trimmed === '') return null;
+                if (/^\d+\./.test(trimmed)) {
+                    return (
+                        <Text key={index} style={styles.sectionHeader}>
+                            {trimmed}
+                        </Text>
+                    );
+                } else {
+                    return (
+                        <Text key={index} style={styles.paragraph}>
+                            {trimmed}
+                        </Text>
+                    );
+                }
+            })}
         </ScrollView>
     );
 };
@@ -15,17 +33,27 @@ const LegalNoticeScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         padding: 16,
-        backgroundColor: '#fff'
+        backgroundColor: '#fff',
     },
-    title: {
-        fontSize: 24,
+    mainTitle: {
+        fontSize: 26,
         fontWeight: 'bold',
-        marginBottom: 8
+        marginBottom: 12,
+        textAlign: 'center',
     },
-    content: {
+    sectionHeader: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginTop: 20,
+        marginBottom: 8,
+    },
+    paragraph: {
         fontSize: 16,
-        lineHeight: 24
-    }
+        lineHeight: 24,
+        marginBottom: 10,
+        marginLeft: 16,
+        textAlign: 'justify',
+    },
 });
 
 export default LegalNoticeScreen;

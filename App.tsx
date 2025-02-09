@@ -1,22 +1,22 @@
 // App.tsx
 import 'react-native-get-random-values';
 import React from 'react';
+import AppLoading from 'expo-app-loading';
+import { useAppFonts } from './src/utils/useAppFonts';
 import Navigation from './src/components/Navigation';
 import { AuthProvider } from './src/context/AuthContext';
 import './src/aws-setup';
-import { LogBox } from 'react-native';
 
-LogBox.ignoreLogs([
-    "The user is not authenticated",
-    "The action 'RESET' with payload",
-]);
+export default function App() {
+    const [fontsLoaded] = useAppFonts();
 
-const App: React.FC = () => {
+    if (!fontsLoaded) {
+        return <AppLoading />;
+    }
+
     return (
         <AuthProvider>
             <Navigation />
         </AuthProvider>
     );
-};
-
-export default App;
+}

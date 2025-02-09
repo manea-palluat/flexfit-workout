@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^4.3.0",
+    "@expo-google-fonts/manrope": "^0.2.3",
+    "@expo-google-fonts/plus-jakarta-sans": "^0.2.3",
     "@react-native-async-storage/async-storage": "^1.23.1",
     "@react-native-community/datetimepicker": "^8.2.0",
     "@react-native-community/netinfo": "^11.4.1",
@@ -20,6 +22,8 @@
     "@react-navigation/stack": "^7.1.1",
     "aws-amplify": "^5.3.23",
     "expo": "~52.0.28",
+    "expo-app-loading": "^2.1.1",
+    "expo-font": "^13.0.3",
     "expo-secure-store": "^14.0.1",
     "expo-status-bar": "~2.0.1",
     "react": "^18.2.0",
@@ -30,11 +34,13 @@
     "react-native-modal-datetime-picker": "^18.0.0",
     "react-native-safe-area-context": "^5.2.0",
     "react-native-screens": "^4.6.0",
+    "react-native-svg": "^15.11.1",
     "uuid": "^11.0.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~18.3.12",
+    "react-native-svg-transformer": "^1.5.0",
     "typescript": "^5.3.3"
   },
   "private": true

@@ -1,9 +1,11 @@
 // src/screens/HomeScreen.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../types/NavigationTypes';
+import { ButtonStyles } from '../styles/ButtonStyles';
+import { TextStyles } from '../styles/TextStyles';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Auth'>;
 
@@ -12,19 +14,23 @@ const HomeScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Bienvenue sur FlexFit!</Text>
+            <Image style={styles.logo} source={require('../../assets/axolotl.png')} />
+            <Text style={[TextStyles.title, styles.titleMargin]}>Bienvenue sur FlexFit.</Text>
+
             <TouchableOpacity
-                style={styles.button}
+                style={ButtonStyles.container}
                 onPress={() => navigation.navigate('Auth', { mode: 'login' })}
             >
-                <Text style={styles.buttonText}>Connexion</Text>
+                <Text style={ButtonStyles.text}>Connexion</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
-                style={[styles.button, styles.signupButton]}
+                style={ButtonStyles.invertedContainer}
                 onPress={() => navigation.navigate('Auth', { mode: 'signup' })}
             >
-                <Text style={styles.buttonText}>Inscription</Text>
+                <Text style={ButtonStyles.invertedText}>Inscription</Text>
             </TouchableOpacity>
+
             <TouchableOpacity style={styles.aboutButton} onPress={() => navigation.navigate('About')}>
                 <Text style={styles.aboutButtonText}>À propos</Text>
             </TouchableOpacity>
@@ -34,33 +40,14 @@ const HomeScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,                     // Occupies the full display
-        justifyContent: 'center',    // Centers content vertically
-        alignItems: 'center',        // Centers content horizontally
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
         padding: 20,
         backgroundColor: '#fff',
     },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        marginBottom: 40,
-        textAlign: 'center',
-    },
-    button: {
-        backgroundColor: '#007BFF',
-        paddingVertical: 15,
-        paddingHorizontal: 40,
-        borderRadius: 8,
-        marginBottom: 20,
-        width: '80%',
-        alignItems: 'center',
-    },
-    signupButton: {
-        backgroundColor: '#28A745',
-    },
-    buttonText: {
-        color: '#fff',
-        fontSize: 18,
+    titleMargin: {
+        marginVertical: 20,
     },
     aboutButton: {
         marginTop: 20,
@@ -69,6 +56,11 @@ const styles = StyleSheet.create({
     aboutButtonText: {
         color: '#007BFF',
         fontSize: 16,
+    },
+    logo: {
+        width: 200,
+        height: 200,
+        marginBottom: 20,
     },
 });
 

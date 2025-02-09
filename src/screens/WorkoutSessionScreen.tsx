@@ -19,6 +19,7 @@ import { createExerciseTracking } from '../graphql/mutations';
 import { v4 as uuidv4 } from 'uuid';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+// (The progress container width is defined as a fixed pixel value for the demo; you may adapt as needed.)
 const COOLDOWN_BAR_WIDTH = 200;
 
 export interface SetResult {
@@ -48,11 +49,12 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     onComplete,
     onClose,
 }) => {
-    // Minimal guard: if sessionData is not provided, render an error view.
     if (!sessionData) {
         return (
             <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>Erreur: Les paramètres de session sont manquants.</Text>
+                <Text style={styles.errorText}>
+                    Erreur: Les paramètres de session sont manquants.
+                </Text>
             </View>
         );
     }
@@ -61,18 +63,20 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     const { exerciseName, totalSets, plannedReps, restDuration } = sessionData;
     const [currentSet, setCurrentSet] = useState<number>(1);
     const [phase, setPhase] = useState<'work' | 'rest'>('work');
-    // Use absolute target time instead of only a counter.
-    const [targetTime, setTargetTime] = useState<number>(Date.now() + restDuration * 1000);
+    // Use an absolute target time (in ms) to keep track of rest duration.
+    const [targetTime, setTargetTime] = useState<number>(
+        Date.now() + restDuration * 1000
+    );
     const [timer, setTimer] = useState<number>(restDuration);
     const [results, setResults] = useState<SetResult[]>(Array(totalSets).fill({}));
     const [isEditingModalVisible, setIsEditingModalVisible] = useState<boolean>(false);
     const [editingSetIndex, setEditingSetIndex] = useState<number>(0);
     const [tempReps, setTempReps] = useState<string>('');
     const [tempWeight, setTempWeight] = useState<string>('');
-    // isEnded tracks whether the final set has been saved.
     const [isEnded, setIsEnded] = useState<boolean>(false);
     const [isMinimized, setIsMinimized] = useState<boolean>(false);
 
+    // Animated progress value for rest timer.
     const progressAnim = useRef(new Animated.Value(restDuration)).current;
 
     useEffect(() => {
@@ -84,7 +88,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }).start();
     }, [timer, progressAnim]);
 
-    // New timer effect: recalc remaining time based on targetTime.
+    // Timer effect using absolute targetTime.
     useEffect(() => {
         let interval: NodeJS.Timeout | undefined;
         if (phase === 'rest') {
@@ -104,7 +108,6 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
 
     const handleRestComplete = () => {
         setPhase('work');
-        // Reset timer and targetTime for next work phase.
         setTimer(restDuration);
         setTargetTime(Date.now() + restDuration * 1000);
         if (currentSet < totalSets) {
@@ -116,13 +119,11 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
 
     const finishCurrentSet = () => {
         if (currentSet === totalSets) {
-            // Last set: open modal immediately without starting a rest timer.
             setEditingSetIndex(currentSet - 1);
             setTempReps('');
             setTempWeight('');
             setIsEditingModalVisible(true);
         } else {
-            // Non-last set: start rest phase with absolute time.
             setPhase('rest');
             setTargetTime(Date.now() + restDuration * 1000);
             setTimer(restDuration);
@@ -146,11 +147,9 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         updated[editingSetIndex] = { reps: repsNum, weight: weightNum };
         setResults(updated);
         setIsEditingModalVisible(false);
-        if (editingSetIndex === currentSet - 1) {
-            if (currentSet === totalSets) {
-                setIsEnded(true);
-                setPhase('work');
-            }
+        if (editingSetIndex === currentSet - 1 && currentSet === totalSets) {
+            setIsEnded(true);
+            setPhase('work');
         }
     };
 
@@ -172,7 +171,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
             const trackingInput = {
                 id: uuidv4(),
                 userId,
-                exerciseId: "", // Include if available.
+                exerciseId: "", // include if available
                 exerciseName,
                 date: new Date().toISOString(),
                 setsData: JSON.stringify(validResults),
@@ -203,8 +202,8 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
 
     const abandonExercise = () => {
         Alert.alert(
-            'Abandonner l\'exercice',
-            'Es-tu sûr de vouloir abandonner l\'exercice ? Les séries complétées seront sauvegardées.',
+            "Abandonner l'exercice",
+            "Es-tu sûr de vouloir abandonner l'exercice ? Les séries complétées seront sauvegardées.",
             [
                 { text: 'Annuler', style: 'cancel' },
                 {
@@ -242,23 +241,26 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                     }
                 }}
             >
-                <Text style={[
-                    styles.historyText,
-                    entry.status === 'completed'
-                        ? styles.historyCompleted
-                        : entry.status === 'inProgress'
-                            ? styles.historyInProgress
-                            : styles.historyUpcoming,
-                ]}>
+                <Text
+                    style={[
+                        styles.historyText,
+                        entry.status === 'completed'
+                            ? styles.historyCompleted
+                            : entry.status === 'inProgress'
+                                ? styles.historyInProgress
+                                : styles.historyUpcoming,
+                    ]}
+                >
                     {entry.text}
                 </Text>
             </TouchableOpacity>
         ));
     };
 
+    // Interpolate progress to a percentage string.
     const progressBarWidth = progressAnim.interpolate({
         inputRange: [0, restDuration],
-        outputRange: [0, COOLDOWN_BAR_WIDTH],
+        outputRange: ['0%', '100%'],
         extrapolate: 'clamp',
     });
 
@@ -276,9 +278,6 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
 
     return (
         <View style={styles.fullScreenContainer}>
-            <View style={styles.header}>
-                <Text style={styles.exerciseTitle}>{exerciseName}</Text>
-            </View>
             <ScrollView contentContainerStyle={styles.contentContainer}>
                 <Text style={styles.setIndicator}>Série {currentSet}/{totalSets}</Text>
                 <Text style={styles.statusText}>
@@ -374,61 +373,57 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
     },
-    header: {
-        paddingTop: 40,
-        alignItems: 'center',
-    },
-    exerciseTitle: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        marginBottom: 20,
-    },
     contentContainer: {
         flexGrow: 1,
-        justifyContent: 'center', // Center vertically
+        justifyContent: 'center', // Center content vertically
         alignItems: 'center',
         paddingVertical: 20,
         paddingHorizontal: 20,
     },
     setIndicator: {
-        fontSize: 26,
+        fontSize: 32, // Increased from 26 to 32 to match the Figma header (e.g., "Jumping Jacks")
         marginBottom: 20,
+        fontWeight: 'bold',
+        color: '#141118',
     },
     statusText: {
         fontSize: 22,
         marginBottom: 20,
+        color: '#141118',
     },
     timerText: {
         fontSize: 20,
         marginBottom: 10,
+        color: '#141118',
     },
     progressContainer: {
-        width: COOLDOWN_BAR_WIDTH,
-        height: 20,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 10,
+        width: '100%',
+        height: 6, // thinner progress bar
+        backgroundColor: '#e0dce5',
+        borderRadius: 3,
         overflow: 'hidden',
         marginBottom: 20,
     },
     progressBar: {
         height: '100%',
-        backgroundColor: '#28A745',
+        backgroundColor: '#141118',
     },
     actionButton: {
-        backgroundColor: '#007BFF',
-        paddingVertical: 15,
-        paddingHorizontal: 30,
-        borderRadius: 8,
+        backgroundColor: '#8019e6',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 50, // pill shape
         marginBottom: 30,
+        alignSelf: 'center',
     },
     terminateButton: {
         backgroundColor: 'green',
     },
     actionButtonText: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
+        letterSpacing: 0.5,
     },
     historyContainer: {
         width: '100%',
@@ -439,8 +434,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     historyText: {
-        fontSize: 18,
-        marginBottom: 10,
+        fontSize: 16,
+        marginBottom: 8,
     },
     historyCompleted: {
         color: 'green',
@@ -453,22 +448,25 @@ const styles = StyleSheet.create({
     },
     endButton: {
         backgroundColor: '#DC3545',
-        paddingVertical: 15,
-        paddingHorizontal: 30,
-        borderRadius: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 50,
         marginBottom: 20,
+        alignSelf: 'center',
     },
     endButtonText: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
+        letterSpacing: 0.5,
     },
     minimizeButton: {
         backgroundColor: '#6C757D',
         paddingVertical: 10,
         paddingHorizontal: 20,
-        borderRadius: 8,
+        borderRadius: 50,
         marginBottom: 20,
+        alignSelf: 'center',
     },
     minimizeButtonText: {
         color: '#fff',
@@ -505,6 +503,7 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: 'bold',
         marginBottom: 20,
+        color: '#141118',
     },
     inputGroup: {
         width: '90%',
@@ -514,6 +513,7 @@ const styles = StyleSheet.create({
     inputLabel: {
         fontSize: 18,
         marginBottom: 8,
+        color: '#141118',
     },
     input: {
         width: '80%',
@@ -529,12 +529,13 @@ const styles = StyleSheet.create({
         backgroundColor: '#28A745',
         paddingVertical: 12,
         paddingHorizontal: 20,
-        borderRadius: 8,
+        borderRadius: 50,
     },
     saveModalButtonText: {
         color: '#fff',
         fontSize: 18,
         fontWeight: 'bold',
+        letterSpacing: 0.5,
     },
     errorContainer: {
         flex: 1,

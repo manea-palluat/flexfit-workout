@@ -5,8 +5,8 @@ import {
     Text,
     TextInput,
     Button,
-    StyleSheet,
     TouchableOpacity,
+    StyleSheet,
     ScrollView,
     Alert,
     FlatList,
@@ -164,7 +164,7 @@ const ManualTrackingScreen: React.FC = () => {
         fetchExercises();
     }, [user]);
 
-    // Date picker handler: for Android use modal; for iOS, use default picker.
+    // Date picker handler
     const onChangeDate = (event: any, selectedDate?: Date) => {
         setShowDatePicker(Platform.OS === 'ios');
         if (selectedDate) {
@@ -183,9 +183,38 @@ const ManualTrackingScreen: React.FC = () => {
         }
     };
 
+    // --- WEIGHT INPUT HANDLING ---
+    // Allow user to type a weight with an optional comma and up to 2 digits.
+    // Permits intermediate states like "50," or "50,2".
+    const handleWeightChange = (value: string) => {
+        if (value === '') {
+            setTempWeight('');
+            return;
+        }
+        const regex = /^[0-9]+(,[0-9]{0,2})?$/;
+        if (regex.test(value)) {
+            setTempWeight(value);
+        }
+    };
+    // --- END WEIGHT INPUT HANDLING ---
+
     const addSet = () => {
         const repsNum = parseInt(tempReps, 10);
-        const weightNum = parseFloat(tempWeight);
+        if (tempWeight === '') {
+            Alert.alert('Erreur', 'Veuillez entrer un poids.');
+            return;
+        }
+        if (tempWeight.includes(',')) {
+            const parts = tempWeight.split(',');
+            if (
+                parts.length !== 2 ||
+                !(parts[1] === '25' || parts[1] === '5' || parts[1] === '75')
+            ) {
+                Alert.alert('Erreur', "Le poids doit être un entier ou un entier suivi d'une virgule et de 25, 5 ou 75.");
+                return;
+            }
+        }
+        const weightNum = parseFloat(tempWeight.replace(',', '.'));
         if (isNaN(repsNum) || isNaN(weightNum) || repsNum <= 0 || weightNum <= 0) {
             Alert.alert('Erreur', 'Veuillez entrer des valeurs valides pour les répétitions et le poids.');
             return;
@@ -282,10 +311,10 @@ const ManualTrackingScreen: React.FC = () => {
                 />
                 <TextInput
                     style={[styles.input, styles.smallInput]}
-                    placeholder="Poids (kg)"
+                    placeholder="Poids (kg) ex: 50,25"
                     keyboardType="numeric"
                     value={tempWeight}
-                    onChangeText={setTempWeight}
+                    onChangeText={handleWeightChange}
                 />
                 <TouchableOpacity style={styles.addSetButton} onPress={addSet}>
                     <Text style={styles.addSetButtonText}>Ajouter série</Text>
@@ -388,6 +417,18 @@ const styles = StyleSheet.create({
     },
     buttonContainer: {
         marginTop: 10,
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+        backgroundColor: '#fff',
+    },
+    errorText: {
+        fontSize: 18,
+        color: 'red',
+        textAlign: 'center',
     },
 });
 

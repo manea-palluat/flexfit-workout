@@ -16,8 +16,9 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { TextStyles } from '../styles/TextStyles'; // In case you need additional text styles
 
-// Import the tracking modal component (if needed)
+// Import the tracking modal component
 import ExerciseSessionTrackingModal from '../components/ExerciseSessionTrackingModal';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
@@ -121,7 +122,7 @@ const TrainingScreen: React.FC = () => {
                             Alert.alert('Succès', 'Exercice supprimé.');
                             fetchExercises();
                         } catch (error) {
-                            console.error('Erreur lors de la suppression de l\'exercice', error);
+                            console.error("Erreur lors de la suppression de l'exercice", error);
                             Alert.alert(
                                 'Erreur',
                                 "Une erreur est survenue lors de la suppression de l'exercice."
@@ -149,34 +150,39 @@ const TrainingScreen: React.FC = () => {
     };
 
     const renderExerciseItem = ({ item }: { item: Exercise }) => (
-        <View style={styles.exerciseItem}>
-            <Text style={styles.exerciseName}>{item.name}</Text>
-            <Text style={styles.exerciseDetails}>
-                {item.sets} sets x {item.reps} reps – {item.restTime} sec repos
-            </Text>
-            <View style={styles.itemButtons}>
-                <TouchableOpacity
-                    style={styles.playButton}
-                    onPress={() => {
-                        console.log('Play button pressed for:', item);
-                        const sessionData = {
-                            exerciseName: item.name,
-                            totalSets: item.sets,
-                            plannedReps: item.reps,
-                            restDuration: item.restTime,
-                        };
-                        navigation.navigate('WorkoutSession', {
-                            sessionData,
-                            onComplete: (results: { reps?: number; weight?: number }[]) => {
-                                console.log('Session complete, results:', results);
-                                // Here, implement saving the session data as needed.
-                            }
-                        });
-                    }}
-                >
-                    <Text style={styles.playButtonText}>Play</Text>
-                </TouchableOpacity>
-                <Text style={styles.playButtonText}>Play</Text>
+        <View style={styles.exerciseCard}>
+            {/* Play Icon on the left */}
+            <TouchableOpacity
+                style={styles.playIconContainer}
+                onPress={() => {
+                    const sessionData = {
+                        exerciseName: item.name,
+                        totalSets: item.sets,
+                        plannedReps: item.reps,
+                        restDuration: item.restTime,
+                    };
+                    navigation.navigate('WorkoutSession', {
+                        sessionData,
+                        onComplete: (results: { reps?: number; weight?: number }[]) => {
+                            console.log('Session complete, results:', results);
+                            // Implement saving the session data as needed.
+                        },
+                    });
+                }}
+            >
+                <Text style={styles.playIcon}>▶</Text>
+            </TouchableOpacity>
+
+            {/* Exercise Details in the center */}
+            <View style={styles.exerciseDetailsContainer}>
+                <Text style={styles.exerciseName}>{item.name}</Text>
+                <Text style={styles.exerciseParams}>
+                    {item.sets} × {item.reps} reps - {item.restTime}s
+                </Text>
+            </View>
+
+            {/* Right Side Buttons: History and Options */}
+            <View style={styles.cardButtonsContainer}>
                 <TouchableOpacity
                     style={styles.historyButton}
                     onPress={() => navigation.navigate('ExerciseHistory', { exerciseName: item.name })}
@@ -184,13 +190,13 @@ const TrainingScreen: React.FC = () => {
                     <Text style={styles.historyButtonText}>Historique</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={styles.actionButton}
+                    style={styles.optionsButton}
                     onPress={() => openActionModal(item)}
                 >
-                    <Text style={styles.actionButtonText}>⋮</Text>
+                    <Text style={styles.optionsButtonText}>⋮</Text>
                 </TouchableOpacity>
             </View>
-        </View >
+        </View>
     );
 
     if (loading) {
@@ -201,35 +207,31 @@ const TrainingScreen: React.FC = () => {
         );
     }
 
-    if (sections.length === 0) {
-        return (
-            <View style={styles.loadingContainer}>
-                <Text>Aucun exercice créé pour le moment.</Text>
-                <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() => navigation.navigate('AddEditExercise')}
-                >
-                    <Text style={styles.addButtonText}>Ajouter un exercice</Text>
-                </TouchableOpacity>
-            </View>
-        );
-    }
-
     return (
         <View style={styles.container}>
-            <SectionList
-                sections={sections}
-                keyExtractor={(item) => item.exerciseId}
-                renderItem={renderExerciseItem}
-                renderSectionHeader={({ section: { title } }) => (
-                    <Text style={styles.sectionHeader}>{title}</Text>
-                )}
-            />
+            {sections.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                    <Text>Aucun exercice créé pour le moment.</Text>
+                </View>
+            ) : (
+                <SectionList
+                    sections={sections}
+                    keyExtractor={(item) => item.exerciseId}
+                    renderItem={renderExerciseItem}
+                    renderSectionHeader={({ section: { title } }) => (
+                        <Text style={[TextStyles.headerText, styles.sectionHeaderText]}>
+                            {title}
+                        </Text>
+                    )}
+                />
+            )}
+
+            {/* Floating Action Button (FAB) */}
             <TouchableOpacity
-                style={styles.addButtonBottom}
+                style={styles.fab}
                 onPress={() => navigation.navigate('AddEditExercise')}
             >
-                <Text style={styles.addButtonText}>Ajouter un exercice</Text>
+                <Text style={styles.fabIcon}>+</Text>
             </TouchableOpacity>
 
             {/* Tracking Modal for "Play" */}
@@ -278,7 +280,7 @@ const TrainingScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: '#FFFFFF', // Very white white
         padding: 16,
     },
     loadingContainer: {
@@ -286,84 +288,86 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    sectionHeader: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        backgroundColor: '#eee',
-        padding: 8,
-        marginBottom: 4,
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    exerciseItem: {
-        backgroundColor: '#fff',
+    sectionHeaderText: {
+        color: '#333',
+        marginVertical: 12,
+        paddingHorizontal: 16,
+    },
+    // Exercise card style – using a very soft beige
+    exerciseCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F8F0E6', // Very soft beige
+        borderRadius: 10,
         padding: 16,
-        borderRadius: 8,
-        marginBottom: 8,
+        paddingVertical: 22,
+        marginVertical: 8,
+    },
+    // Play icon container (circular purple button)
+    playIconContainer: {
+        backgroundColor: '#b21ae5',
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+    },
+    playIcon: {
+        color: '#fff',
+        fontSize: 24,
+    },
+    // Exercise details container
+    exerciseDetailsContainer: {
+        flex: 1,
+        justifyContent: 'center',
     },
     exerciseName: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontFamily: 'PlusJakartaSans_500Medium',
+        lineHeight: 25,
+        fontSize: 16,
+        color: '#141217',
         marginBottom: 4,
     },
-    exerciseDetails: {
+    exerciseParams: {
         fontSize: 14,
-        color: '#666',
+        color: '#756387',
     },
-    itemButtons: {
+    // Right side container for History and Options buttons
+    cardButtonsContainer: {
         flexDirection: 'row',
-        marginTop: 10,
-        flexWrap: 'wrap',
-    },
-    playButton: {
-        backgroundColor: '#28A745',
-        padding: 8,
-        borderRadius: 5,
-        marginRight: 10,
-        marginBottom: 8,
-    },
-    playButtonText: {
-        color: '#fff',
-        fontSize: 16,
+        alignItems: 'center',
     },
     historyButton: {
-        backgroundColor: '#6C757D',
-        padding: 8,
-        borderRadius: 5,
-        marginRight: 10,
-        marginBottom: 8,
+        backgroundColor: '#b21ae5',
+        borderRadius: 50,
+        height: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginRight: 8,
     },
     historyButtonText: {
+        fontFamily: 'PlusJakartaSans_700Bold',
+        fontSize: 13,
         color: '#fff',
-        fontSize: 16,
     },
-    actionButton: {
-        backgroundColor: '#ccc',
+    optionsButton: {
+        width: 60, // Increased width for wider three dots
+        justifyContent: 'center',
+        alignItems: 'center',
         padding: 8,
-        borderRadius: 5,
-        marginBottom: 8,
     },
-    actionButtonText: {
-        fontSize: 20,
+    optionsButtonText: {
+        fontSize: 24,
         color: '#333',
     },
-    addButton: {
-        marginTop: 20,
-        backgroundColor: '#007BFF',
-        padding: 12,
-        borderRadius: 8,
-        width: '80%',
-        alignItems: 'center',
-    },
-    addButtonBottom: {
-        backgroundColor: '#007BFF',
-        padding: 12,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginTop: 10,
-    },
-    addButtonText: {
-        color: '#fff',
-        fontSize: 16,
-    },
+    // Modal overlay and action modal styles
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -393,18 +397,23 @@ const styles = StyleSheet.create({
         fontSize: 16,
         textAlign: 'center',
     },
-    retourButton: {
-        backgroundColor: '#007BFF',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 8,
-        alignSelf: 'center',
-        marginBottom: 20,
+    // Floating Action Button (FAB) styles
+    fab: {
+        position: 'absolute',
+        right: 16,
+        bottom: 16,
+        backgroundColor: '#b21ae5',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    retourButtonText: {
+    fabIcon: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: 32,
         fontWeight: 'bold',
+        transform: [{ translateY: -2.22 }],
     },
 });
 

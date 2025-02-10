@@ -90,7 +90,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
 
     // Timer effect using absolute targetTime.
     useEffect(() => {
-        let interval: NodeJS.Timeout | undefined;
+        let interval: ReturnType<typeof setInterval> | undefined;
         if (phase === 'rest') {
             interval = setInterval(() => {
                 const remaining = Math.max(Math.ceil((targetTime - Date.now()) / 1000), 0);
@@ -138,7 +138,20 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
 
     const saveSetData = () => {
         const repsNum = parseInt(tempReps, 10);
-        const weightNum = parseFloat(tempWeight);
+        // Final validation for weight:
+        if (tempWeight === '') {
+            Alert.alert('Erreur', 'Veuillez entrer un poids.');
+            return;
+        }
+        if (tempWeight.includes(',')) {
+            const parts = tempWeight.split(',');
+            // Ensure there's exactly one comma and the fractional part is exactly 25, 5, or 75.
+            if (parts.length !== 2 || !(parts[1] === '25' || parts[1] === '5' || parts[1] === '75')) {
+                Alert.alert('Erreur', "Le poids doit être un entier ou un entier suivi d'une virgule et de 25, 5 ou 75.");
+                return;
+            }
+        }
+        const weightNum = parseFloat(tempWeight.replace(',', '.'));
         if (isNaN(repsNum) || isNaN(weightNum) || repsNum <= 0 || weightNum <= 0) {
             Alert.alert('Erreur', 'Veuillez entrer des valeurs valides.');
             return;
@@ -257,7 +270,21 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         ));
     };
 
-    // Interpolate progress to a percentage string.
+    // Updated handler for weight input to allow intermediate input:
+    const handleWeightChange = (value: string) => {
+        // Allow an empty value
+        if (value === '') {
+            setTempWeight('');
+            return;
+        }
+        // Allow digits, optionally followed by a comma and up to 2 digits.
+        const regex = /^[0-9]+(,[0-9]{0,2})?$/;
+        if (regex.test(value)) {
+            setTempWeight(value);
+        }
+    };
+
+    // Interpolate progress to a percentage string for rest timer.
     const progressBarWidth = progressAnim.interpolate({
         inputRange: [0, restDuration],
         outputRange: ['0%', '100%'],
@@ -324,7 +351,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                 )}
 
                 <TouchableOpacity style={styles.minimizeButton} onPress={() => setIsMinimized(true)}>
-                    <Text style={styles.minimizeButtonText}>Minimiser</Text>
+                    <Text style={styles.minimizeButtonText}>Minimiserr</Text>
                 </TouchableOpacity>
             </ScrollView>
 
@@ -351,10 +378,10 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                             <Text style={styles.inputLabel}>Poids utilisé (kg)</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Poids"
+                                placeholder="Poids (ex. 50,25)"
                                 keyboardType="numeric"
                                 value={tempWeight}
-                                onChangeText={setTempWeight}
+                                onChangeText={handleWeightChange}
                                 textAlign="center"
                             />
                         </View>
@@ -381,7 +408,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     setIndicator: {
-        fontSize: 32, // Increased from 26 to 32 to match the Figma header (e.g., "Jumping Jacks")
+        fontSize: 32,
         marginBottom: 20,
         fontWeight: 'bold',
         color: '#141118',
@@ -398,7 +425,7 @@ const styles = StyleSheet.create({
     },
     progressContainer: {
         width: '100%',
-        height: 6, // thinner progress bar
+        height: 6,
         backgroundColor: '#e0dce5',
         borderRadius: 3,
         overflow: 'hidden',

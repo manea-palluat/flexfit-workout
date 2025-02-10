@@ -10,19 +10,14 @@ type WorkoutSessionRouteProp = RouteProp<RootStackParamList, 'WorkoutSession'>;
 const WorkoutSessionScreenWrapper: React.FC = () => {
     const route = useRoute<WorkoutSessionRouteProp>();
 
-    // Check if route and route.params exist
-    if (!route || !route.params) {
-        return (
-            <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>
-                    Erreur : Les paramètres de session sont manquants.
-                </Text>
-            </View>
-        );
-    }
+    // Type assert that route.params may also include an optional onClose property.
+    const { sessionData, onComplete, onClose } = route.params as {
+        sessionData: RootStackParamList['WorkoutSession']['sessionData'];
+        onComplete: (results: any[]) => void;
+        onClose?: () => void;
+    };
 
-    const { sessionData, onComplete } = route.params;
-    return <WorkoutSessionScreen sessionData={sessionData} onComplete={onComplete} />;
+    return <WorkoutSessionScreen sessionData={sessionData} onComplete={onComplete} onClose={onClose} />;
 };
 
 const styles = StyleSheet.create({

@@ -21,6 +21,9 @@ import { TextStyles } from '../styles/TextStyles'; // In case you need additiona
 // Import the tracking modal component
 import ExerciseSessionTrackingModal from '../components/ExerciseSessionTrackingModal';
 
+// Import SvgXml to render the SVG icon
+import { SvgXml } from 'react-native-svg';
+
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
 export interface Exercise {
@@ -36,6 +39,19 @@ interface SectionData {
     title: string;
     data: Exercise[];
 }
+
+// Define the SVG icon as a string
+const historyIconSvg = `
+<svg fill="#000000" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 503.379 503.379" xml:space="preserve">
+  <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+  <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+  <g id="SVGRepo_iconCarrier">
+    <g>
+      <path d="M458.091,128.116v326.842c0,26.698-21.723,48.421-48.422,48.421h-220.92c-26.699,0-48.421-21.723-48.421-48.421V242.439 c6.907,1.149,13.953,1.894,21.184,1.894c5.128,0,10.161-0.381,15.132-0.969v211.594c0,6.673,5.429,12.104,12.105,12.104h220.92 c6.674,0,12.105-5.432,12.105-12.104V128.116c0-6.676-5.432-12.105-12.105-12.105H289.835c0-12.625-1.897-24.793-5.297-36.315 h125.131C436.368,79.695,458.091,101.417,458.091,128.116z M159.49,228.401c-62.973,0-114.202-51.229-114.202-114.199 C45.289,51.229,96.517,0,159.49,0c62.971,0,114.202,51.229,114.202,114.202C273.692,177.172,222.461,228.401,159.49,228.401z M159.49,204.19c49.618,0,89.989-40.364,89.989-89.988c0-49.627-40.365-89.991-89.989-89.991 c-49.626,0-89.991,40.364-89.991,89.991C69.499,163.826,109.87,204.19,159.49,204.19z M227.981,126.308 c6.682,0,12.105-5.423,12.105-12.105s-5.423-12.105-12.105-12.105h-56.386v-47.52c0-6.682-5.423-12.105-12.105-12.105 s-12.105,5.423-12.105,12.105v59.625c0,6.682,5.423,12.105,12.105,12.105H227.981z M367.697,224.456h-131.14 c-6.682,0-12.105,5.423-12.105,12.105c0,6.683,5.423,12.105,12.105,12.105h131.14c6.685,0,12.105-5.423,12.105-12.105 C379.803,229.879,374.382,224.456,367.697,224.456z M367.91,297.885h-131.14c-6.682,0-12.105,5.42-12.105,12.105 s5.423,12.105,12.105,12.105h131.14c6.685,0,12.104-5.42,12.104-12.105S374.601,297.885,367.91,297.885z M367.91,374.353h-131.14 c-6.682,0-12.105,5.426-12.105,12.105c0,6.685,5.423,12.104,12.105,12.104h131.14c6.685,0,12.104-5.42,12.104-12.104 C380.015,379.778,374.601,374.353,367.91,374.353z"></path>
+    </g>
+  </g>
+</svg>
+`;
 
 const TrainingScreen: React.FC = () => {
     const [sections, setSections] = useState<SectionData[]>([]);
@@ -185,9 +201,12 @@ const TrainingScreen: React.FC = () => {
             <View style={styles.cardButtonsContainer}>
                 <TouchableOpacity
                     style={styles.historyButton}
-                    onPress={() => navigation.navigate('ExerciseHistory', { exerciseName: item.name })}
+                    onPress={() =>
+                        navigation.navigate('ExerciseHistory', { exerciseName: item.name })
+                    }
                 >
-                    <Text style={styles.historyButtonText}>Historique</Text>
+                    {/* Replace the "Historique" text with the SVG icon */}
+                    <SvgXml xml={historyIconSvg} width="24" height="24" />
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.optionsButton}
@@ -302,7 +321,7 @@ const styles = StyleSheet.create({
     exerciseCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F8F0E6', // Very soft beige
+        backgroundColor: '#F2F0F5', // Very soft beige
         borderRadius: 10,
         padding: 16,
         paddingVertical: 22,
@@ -310,7 +329,7 @@ const styles = StyleSheet.create({
     },
     // Play icon container (circular purple button)
     playIconContainer: {
-        backgroundColor: '#b21ae5',
+        backgroundColor: '#C932FC',
         width: 50,
         height: 50,
         borderRadius: 25,
@@ -335,7 +354,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     exerciseParams: {
-        fontSize: 14,
+        fontSize: 16,
         color: '#756387',
     },
     // Right side container for History and Options buttons
@@ -344,18 +363,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     historyButton: {
-        backgroundColor: '#b21ae5',
-        borderRadius: 50,
-        height: 50,
+        // Removed purple circle styling
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 20,
         marginRight: 8,
-    },
-    historyButtonText: {
-        fontFamily: 'PlusJakartaSans_700Bold',
-        fontSize: 13,
-        color: '#fff',
     },
     optionsButton: {
         width: 60, // Increased width for wider three dots
@@ -402,7 +413,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         right: 16,
         bottom: 16,
-        backgroundColor: '#b21ae5',
+        backgroundColor: '#b603fc',
         width: 60,
         height: 60,
         borderRadius: 30,
@@ -413,7 +424,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 32,
         fontWeight: 'bold',
-        transform: [{ translateY: -2.22 }],
+        transform: [{ translateY: -2.23 }],
     },
 });
 

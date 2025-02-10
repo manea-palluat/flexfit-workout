@@ -46,22 +46,6 @@ const formatTime = (seconds: number): string => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
-/**
- * SetNumberIcon Component
- * Renders a square (70×70) with background #F2F0F5 and centers the set number.
- */
-interface SetNumberIconProps {
-    number: number;
-}
-
-const SetNumberIcon: React.FC<SetNumberIconProps> = ({ number }) => {
-    return (
-        <View style={styles.setNumberIcon}>
-            <Text style={styles.setNumberIconText}>{number}</Text>
-        </View>
-    );
-};
-
 const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     sessionData,
     onComplete,
@@ -94,6 +78,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     const [editingSetIndex, setEditingSetIndex] = useState<number>(0);
     const [tempReps, setTempReps] = useState<string>('');
     const [tempWeight, setTempWeight] = useState<string>('');
+    // (isEnded is no longer used in the button logic)
     const [isMinimized, setIsMinimized] = useState<boolean>(false);
 
     // Animated progress value for rest timer.
@@ -212,6 +197,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
             const trackingInput = {
                 id: uuidv4(),
                 userId,
+                exerciseId: '', // include if available
                 exerciseName,
                 date: new Date().toISOString(),
                 setsData: JSON.stringify(validResults),
@@ -257,14 +243,14 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         );
     };
 
-    // Render the sets with the new structure.
+    // Render the series list as rounded cards.
     const renderSetCards = (mode: 'pre' | 'active' | 'rest') => {
         return (
             <>
                 {Array.from({ length: totalSets }).map((_, index) => {
                     let status = 'À venir';
                     if (results[index]?.reps && results[index]?.weight) {
-                        status = `Terminé : ${results[index].reps} x ${results[index].weight} kg`;
+                        status = `${results[index].reps} x ${results[index].weight} kg`;
                     } else if (mode !== 'pre' && index === currentSet - 1) {
                         status = 'En cours';
                     }
@@ -272,8 +258,8 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                         <TouchableOpacity
                             key={index}
                             style={[
-                                styles.setContainer,
-                                (mode !== 'pre' && index === currentSet - 1) && styles.setContainerActive,
+                                styles.seriesCard,
+                                (mode !== 'pre' && index === currentSet - 1) && styles.seriesCardActive,
                             ]}
                             onPress={() => {
                                 if (results[index]?.reps && results[index]?.weight) {
@@ -285,11 +271,10 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                                 }
                             }}
                         >
-                            <SetNumberIcon number={index + 1} />
-                            <View style={styles.setDetailsContainer}>
-                                <Text style={styles.setTitleText}>{`Série ${index + 1}`}</Text>
-                                <Text style={styles.setStatusText}>{status}</Text>
+                            <View style={styles.circle}>
+                                <Text style={styles.circleText}>{index + 1}</Text>
                             </View>
+                            <Text style={styles.cardStatusText}>{status}</Text>
                         </TouchableOpacity>
                     );
                 })}
@@ -297,6 +282,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         );
     };
 
+    // Update tempWeight with proper formatting.
     const handleWeightChange = (value: string) => {
         if (value === '') {
             setTempWeight('');
@@ -308,12 +294,14 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
+    // Animate progress width.
     const progressBarWidth = progressAnim.interpolate({
         inputRange: [0, restDuration],
         outputRange: ['0%', '100%'],
         extrapolate: 'clamp',
     });
 
+    // Determine if the last set is completed.
     const lastSetCompleted =
         currentSet === totalSets &&
         results[currentSet - 1]?.reps &&
@@ -341,16 +329,20 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     return (
         <View style={styles.fullScreenContainer}>
             <ScrollView contentContainerStyle={styles.contentContainer}>
-                <Text style={[TextStyles.title, { textAlign: 'center', marginBottom: 10 }]}>
+                {/* Common Header */}
+                <Text style={[TextStyles.title, { textAlign: 'center', marginBottom: 40 }]}>
                     {exerciseName}
                 </Text>
 
                 {!hasStarted ? (
+                    // State 1: Pre-Workout
                     <>
                         <Text style={[TextStyles.subTitle, { textAlign: 'center', marginBottom: 20 }]}>
                             Prêt ?
                         </Text>
-                        <View style={styles.seriesListContainer}>{renderSetCards('pre')}</View>
+                        <View style={styles.seriesListContainer}>
+                            {renderSetCards('pre')}
+                        </View>
                         <TouchableOpacity
                             style={ButtonStyles.container}
                             onPress={() => setHasStarted(true)}
@@ -359,13 +351,17 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                         </TouchableOpacity>
                     </>
                 ) : (
+                    // Active Workout / Rest Period
                     <>
                         {phase === 'work' ? (
+                            // State 2: Active Workout
                             <>
                                 <Text style={[TextStyles.subTitle, { textAlign: 'center', marginBottom: 20 }]}>
                                     {plannedReps} reps
                                 </Text>
-                                <View style={styles.seriesListContainer}>{renderSetCards('active')}</View>
+                                <View style={styles.seriesListContainer}>
+                                    {renderSetCards('active')}
+                                </View>
                                 <TouchableOpacity
                                     style={ButtonStyles.container}
                                     onPress={lastSetCompleted ? finishSession : finishCurrentSet}
@@ -376,6 +372,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                                 </TouchableOpacity>
                             </>
                         ) : (
+                            // State 3: Rest Period
                             <>
                                 <View style={styles.progressWrapper}>
                                     <Text style={TextStyles.simpleText}>Repos</Text>
@@ -384,12 +381,15 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                                     </View>
                                     <Text style={styles.timerText}>{formatTime(timer)}</Text>
                                 </View>
-                                <View style={styles.seriesListContainer}>{renderSetCards('rest')}</View>
+                                <View style={styles.seriesListContainer}>
+                                    {renderSetCards('rest')}
+                                </View>
                                 <TouchableOpacity style={ButtonStyles.container} onPress={skipRest}>
                                     <Text style={ButtonStyles.text}>Passer le repos</Text>
                                 </TouchableOpacity>
                             </>
                         )}
+                        {/* Abandon button */}
                         {(currentSet < totalSets ||
                             (currentSet === totalSets && !lastSetCompleted)) && (
                                 <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={abandonExercise}>
@@ -400,6 +400,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                 )}
             </ScrollView>
 
+            {/* Set Completion / Editing Modal */}
             <Modal visible={isEditingModalVisible} transparent animationType="slide">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContainer}>
@@ -439,6 +440,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                 </View>
             </Modal>
 
+            {/* Minimized view */}
             {isMinimized && (
                 <TouchableOpacity style={styles.minimizedContainer} onPress={() => setIsMinimized(false)}>
                     <Text style={TextStyles.simpleText}>{exerciseName}</Text>
@@ -465,52 +467,9 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         alignItems: 'center',
         paddingVertical: 20,
-        paddingHorizontal: 20, // This padding aligns buttons and set containers
+        paddingHorizontal: 20,
     },
-    // New styles for the sets container and its sub-containers:
-    setContainer: {
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 10,
-        marginVertical: 5,
-        width: '100%',
-    },
-    setContainerActive: {
-        borderWidth: 2,
-        borderColor: '#b21ae5',
-    },
-    // Updated setNumberIcon: now 70x70, background color changed to #F2F0F5, marginRight increased.
-    setNumberIcon: {
-        width: 70,
-        height: 70,
-        backgroundColor: '#F2F0F5',
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 20,
-    },
-    setNumberIconText: {
-        fontSize: 16,
-        color: '#141217',
-        fontFamily: 'PlusJakartaSans_700Bold',
-    },
-    setDetailsContainer: {
-        flexDirection: 'column',
-    },
-    setTitleText: {
-        fontSize: 20,
-        fontFamily: 'PlusJakartaSans_500Medium',
-        color: '#141217',
-        marginBottom: 8,
-    },
-    setStatusText: {
-        fontSize: 17,
-        fontFamily: 'PlusJakartaSans_300Light',
-        color: '#756387',
-    },
-    // Progress bar styles
+    // The progressWrapper now holds the "Repos" label, the thicker progress bar, and the timer.
     progressWrapper: {
         width: '100%',
         alignSelf: 'center',
@@ -538,6 +497,36 @@ const styles = StyleSheet.create({
     seriesListContainer: {
         width: '100%',
         marginVertical: 20,
+    },
+    seriesCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F8F0E6',
+        borderRadius: 10,
+        padding: 10,
+        marginVertical: 5,
+        width: '100%',
+    },
+    seriesCardActive: {
+        borderWidth: 2,
+        borderColor: '#b21ae5',
+    },
+    circle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#b21ae5',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 10,
+    },
+    circleText: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+    cardStatusText: {
+        fontSize: 16,
+        color: '#141118',
     },
     minimizedContainer: {
         position: 'absolute',

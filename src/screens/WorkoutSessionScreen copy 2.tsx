@@ -17,18 +17,12 @@ import { useNavigation } from '@react-navigation/native';
 import { API, graphqlOperation, Auth } from 'aws-amplify';
 import { createExerciseTracking } from '../graphql/mutations';
 import { v4 as uuidv4 } from 'uuid';
+// Import Ionicons for the check icon.
 import { Ionicons } from '@expo/vector-icons';
-import { MaterialCommunityIcons } from '@expo/vector-icons'; // For haptic icon
+
 import { ButtonStyles } from '../styles/ButtonStyles';
 import { TextInputStyles } from '../styles/TextInputStyles';
 import { TextStyles } from '../styles/TextStyles';
-
-// NEW: Import sound and haptic modules from Expo
-import { Audio } from 'expo-av';
-import * as Haptics from 'expo-haptics';
-
-// MODIF: We no longer need a gradient so we import only Rect from react-native-svg.
-import Svg, { Rect } from 'react-native-svg';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -54,130 +48,17 @@ const formatTime = (seconds: number): string => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
-/* ======================================================================
-   AnimatedBorder Component
-   This component creates an animated dashed border with a solid stroke.
-   Here we calculate the full perimeter (including rounded corners) and then
-   set the dash pattern so that only one dash (covering 20% of the perimeter)
-   is visible at a time. The dash offset is animated from 0 to -perimeter,
-   so the dash continuously rotates around the square.
-====================================================================== */
-const AnimatedRect = Animated.createAnimatedComponent(Rect);
-
-interface AnimatedBorderProps {
-    size: number;
-    borderRadius: number;
-    strokeWidth: number;
-}
-
-const AnimatedBorder: React.FC<AnimatedBorderProps> = ({
-    size,
-    borderRadius,
-    strokeWidth,
-}) => {
-    // Calculate the straight portions of the border:
-    // For each of the 4 corners, subtract the straight portion (2*borderRadius)
-    // and then add the arc lengths for all 4 rounded corners.
-    const straightLength = (size - strokeWidth) * 4 - (8 * borderRadius);
-    const curvedLength = 2 * Math.PI * borderRadius;
-    const perimeter = straightLength + curvedLength;
-
-    // Use a dash pattern where only one dash is visible.
-    // For example, a dash covering 20% of the perimeter and a gap for the rest.
-    const dashLength = perimeter * 0.2;
-    const gapLength = perimeter - dashLength;
-    const dashPattern = `${dashLength},${gapLength}`;
-
-    const dashOffsetAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        // Animate the dash offset from 0 to -perimeter continuously.
-        Animated.loop(
-            Animated.timing(dashOffsetAnim, {
-                toValue: -perimeter,
-                duration: 2000,
-                easing: Easing.linear,
-                useNativeDriver: false,
-            })
-        ).start();
-    }, [perimeter]);
-
-    return (
-        <Svg
-            width={size}
-            height={size}
-            style={{ position: 'absolute', top: 0, left: 0 }}
-        >
-            <AnimatedRect
-                x={strokeWidth / 2}
-                y={strokeWidth / 2}
-                width={size - strokeWidth}
-                height={size - strokeWidth}
-                rx={borderRadius}
-                ry={borderRadius}
-                fill="none"
-                stroke="#b21ae5"
-                strokeWidth={strokeWidth}
-                strokeDasharray={dashPattern}
-                strokeDashoffset={dashOffsetAnim}
-                strokeLinecap="round"
-            />
-        </Svg>
-    )
-};
-
-/* ======================================================================
-   SetNumberIcon Component
-   Displays a square with a number. When "active" the animated border appears.
-====================================================================== */
+/**
+ * SetNumberIcon Component
+ * Renders a square (80×80) with background #F2F0F5 and centers the set number.
+ */
 interface SetNumberIconProps {
     number: number;
-    active?: boolean;
 }
-const SetNumberIcon: React.FC<SetNumberIconProps> = ({ number, active }) => {
+const SetNumberIcon: React.FC<SetNumberIconProps> = ({ number }) => {
     return (
-        <View style={styles.setNumberIconContainer}>
-            <View style={styles.setNumberIcon}>
-                <Text style={styles.setNumberIconText}>{number}</Text>
-            </View>
-            {active && (
-                <AnimatedBorder size={80} borderRadius={20} strokeWidth={3} />
-            )}
-        </View>
-    );
-};
-
-/* ======================================================================
-   WorkoutInputField Component (unchanged)
-====================================================================== */
-interface WorkoutInputFieldProps {
-    label: string;
-    value: string;
-    onChangeText: (text: string) => void;
-    onBlur?: () => void;
-    error?: string;
-    keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
-}
-const WorkoutInputField: React.FC<WorkoutInputFieldProps> = ({
-    label,
-    value,
-    onChangeText,
-    onBlur,
-    error,
-    keyboardType = 'default',
-}) => {
-    return (
-        <View style={[TextInputStyles.container, styles.inputContainer]}>
-            <TextInput
-                placeholder={label}
-                placeholderTextColor="#999"
-                value={value}
-                onChangeText={onChangeText}
-                onBlur={onBlur}
-                style={TextInputStyles.input}
-                keyboardType={keyboardType}
-            />
-            {error ? <Text style={TextInputStyles.errorText}>{error}</Text> : null}
+        <View style={styles.setNumberIcon}>
+            <Text style={styles.setNumberIconText}>{number}</Text>
         </View>
     );
 };
@@ -212,53 +93,11 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     const [tempReps, setTempReps] = useState<string>('');
     const [tempWeight, setTempWeight] = useState<string>('');
     const [isMinimized, setIsMinimized] = useState<boolean>(false);
+    // Error states for the pop-up inputs:
     const [repsError, setRepsError] = useState<string>('');
     const [weightError, setWeightError] = useState<string>('');
 
-    // NEW: State for sound objects
-    const [countdownSound, setCountdownSound] = useState<Audio.Sound | null>(null);
-    const [whistleSound, setWhistleSound] = useState<Audio.Sound | null>(null);
-
-    // NEW: State to control whether sounds are enabled.
-    const [soundsEnabled, setSoundsEnabled] = useState<boolean>(true);
-    // NEW: State to control whether haptics are enabled.
-    const [hapticsEnabled, setHapticsEnabled] = useState<boolean>(true);
-
-    // NEW: Set audio mode to allow playback in silent mode (especially on iOS)
-    useEffect(() => {
-        Audio.setAudioModeAsync({
-            playsInSilentModeIOS: true,
-        });
-    }, []);
-
-    // NEW: Load sounds on mount and unload on cleanup.
-    useEffect(() => {
-        const loadSounds = async () => {
-            try {
-                const { sound: loadedCountdown } = await Audio.Sound.createAsync(
-                    require('../assets/sounds/beep.mp3')
-                );
-                setCountdownSound(loadedCountdown);
-                const { sound: loadedWhistle } = await Audio.Sound.createAsync(
-                    require('../assets/sounds/whistle.mp3')
-                );
-                setWhistleSound(loadedWhistle);
-            } catch (error) {
-                console.error("Error loading sounds:", error);
-            }
-        };
-        loadSounds();
-        return () => {
-            if (countdownSound) {
-                countdownSound.unloadAsync();
-            }
-            if (whistleSound) {
-                whistleSound.unloadAsync();
-            }
-        };
-    }, []);
-
-    // Progress bar animation for rest period.
+    // Animated progress value for rest timer.
     const progressAnim = useRef(new Animated.Value(restDuration)).current;
     useEffect(() => {
         Animated.timing(progressAnim, {
@@ -269,30 +108,14 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }).start();
     }, [timer, progressAnim]);
 
-    // Rest timer effect with sound and haptic feedback.
     useEffect(() => {
         let interval: ReturnType<typeof setInterval> | undefined;
         if (phase === 'rest') {
-            interval = setInterval(async () => {
+            interval = setInterval(() => {
                 const remaining = Math.max(Math.ceil((targetTime - Date.now()) / 1000), 0);
                 setTimer(remaining);
-
-                // During the last 3 seconds (and not at 0), play beep (if enabled) and trigger haptics (if enabled).
-                if (remaining > 0 && remaining <= 3) {
-                    if (soundsEnabled && countdownSound) {
-                        await countdownSound.replayAsync();
-                    }
-                    if (hapticsEnabled) {
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                    }
-                }
-
-                // When timer reaches 0, play whistle (if enabled) and complete the rest period.
                 if (remaining === 0) {
                     if (interval) clearInterval(interval);
-                    if (soundsEnabled && whistleSound) {
-                        await whistleSound.replayAsync();
-                    }
                     handleRestComplete();
                 }
             }, 1000);
@@ -300,7 +123,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         return () => {
             if (interval) clearInterval(interval);
         };
-    }, [phase, targetTime, countdownSound, whistleSound, soundsEnabled, hapticsEnabled]);
+    }, [phase, targetTime]);
 
     const handleRestComplete = () => {
         setPhase('work');
@@ -385,7 +208,6 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
             const trackingInput = {
                 id: uuidv4(),
                 userId,
-                exerciseId: '', // Required non-null field.
                 exerciseName,
                 date: new Date().toISOString(),
                 setsData: JSON.stringify(validResults),
@@ -431,6 +253,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         );
     };
 
+    // Render the sets with the new structure.
     const renderSetCards = (mode: 'pre' | 'active' | 'rest') => {
         return (
             <>
@@ -455,22 +278,15 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                                 }
                             }}
                         >
-                            <SetNumberIcon
-                                number={index + 1}
-                                active={hasStarted && index === currentSet - 1}
-                            />
+                            {/* If this set is complete, show a purple check icon on the left */}
+                            {results[index]?.reps && results[index]?.weight && (
+                                <Ionicons name="checkmark-circle" size={24} color="#b21ae5" style={styles.checkIcon} />
+                            )}
+                            <SetNumberIcon number={index + 1} />
                             <View style={styles.setDetailsContainer}>
                                 <Text style={styles.setTitleText}>{`Série ${index + 1}`}</Text>
                                 <Text style={styles.setStatusText}>{status}</Text>
                             </View>
-                            {results[index]?.reps && results[index]?.weight && (
-                                <Ionicons
-                                    name="checkmark-circle"
-                                    size={24}
-                                    color="#b21ae5"
-                                    style={styles.checkIcon}
-                                />
-                            )}
                         </TouchableOpacity>
                     );
                 })}
@@ -500,6 +316,20 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         results[currentSet - 1]?.reps &&
         results[currentSet - 1]?.weight;
 
+    if (isMinimized) {
+        return (
+            <TouchableOpacity style={styles.minimizedContainer} onPress={() => setIsMinimized(false)}>
+                <Text style={TextStyles.simpleText}>{exerciseName}</Text>
+                <Text style={TextStyles.simpleText}>Série {currentSet}/{totalSets}</Text>
+                <Text style={TextStyles.simpleText}>
+                    {phase === 'rest'
+                        ? 'Repos'
+                        : `${formatTime(timer)} : ${plannedReps} reps`}
+                </Text>
+            </TouchableOpacity>
+        );
+    }
+
     return (
         <View style={styles.fullScreenContainer}>
             <ScrollView contentContainerStyle={styles.contentContainer}>
@@ -513,35 +343,9 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                             Prêt ?
                         </Text>
                         <View style={styles.seriesListContainer}>{renderSetCards('pre')}</View>
-                        <TouchableOpacity
-                            style={ButtonStyles.container}
-                            onPress={() => setHasStarted(true)}
-                        >
+                        <TouchableOpacity style={ButtonStyles.container} onPress={() => setHasStarted(true)}>
                             <Text style={ButtonStyles.text}>Démarrer l'exercice</Text>
                         </TouchableOpacity>
-                        {/* Control container for toggling sounds and haptics */}
-                        <View style={styles.controlContainer}>
-                            <TouchableOpacity
-                                style={styles.controlButton}
-                                onPress={() => setSoundsEnabled(!soundsEnabled)}
-                            >
-                                <Ionicons
-                                    name={soundsEnabled ? "volume-high" : "volume-mute"}
-                                    size={30}
-                                    color="#b21ae5"
-                                />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.controlButton}
-                                onPress={() => setHapticsEnabled(!hapticsEnabled)}
-                            >
-                                <MaterialCommunityIcons
-                                    name={hapticsEnabled ? "vibrate" : "vibrate-off"}
-                                    size={30}
-                                    color="#b21ae5"
-                                />
-                            </TouchableOpacity>
-                        </View>
                     </>
                 ) : (
                     <>
@@ -559,9 +363,6 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                                         {lastSetCompleted ? "Terminer l'exercice" : "Série terminée"}
                                     </Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={abandonExercise}>
-                                    <Text style={ButtonStyles.invertedText}>Abandonner l'exercice</Text>
-                                </TouchableOpacity>
                             </>
                         ) : (
                             <>
@@ -576,34 +377,14 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                                 <TouchableOpacity style={ButtonStyles.container} onPress={skipRest}>
                                     <Text style={ButtonStyles.text}>Passer le repos</Text>
                                 </TouchableOpacity>
+                            </>
+                        )}
+                        {(currentSet < totalSets ||
+                            (currentSet === totalSets && !lastSetCompleted)) && (
                                 <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={abandonExercise}>
                                     <Text style={ButtonStyles.invertedText}>Abandonner l'exercice</Text>
                                 </TouchableOpacity>
-                            </>
-                        )}
-                        {/* Control container for toggling sounds and haptics */}
-                        <View style={styles.controlContainer}>
-                            <TouchableOpacity
-                                style={styles.controlButton}
-                                onPress={() => setSoundsEnabled(!soundsEnabled)}
-                            >
-                                <Ionicons
-                                    name={soundsEnabled ? "volume-high" : "volume-mute"}
-                                    size={30}
-                                    color="#b21ae5"
-                                />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.controlButton}
-                                onPress={() => setHapticsEnabled(!hapticsEnabled)}
-                            >
-                                <MaterialCommunityIcons
-                                    name={hapticsEnabled ? "vibrate" : "vibrate-off"}
-                                    size={30}
-                                    color="#b21ae5"
-                                />
-                            </TouchableOpacity>
-                        </View>
+                            )}
                     </>
                 )}
             </ScrollView>
@@ -616,6 +397,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                                 ? `Repos – Série ${editingSetIndex + 1}`
                                 : `Modifier la Série ${editingSetIndex + 1}`}
                         </Text>
+                        {/* Reps Input */}
                         <WorkoutInputField
                             label="Répétitions effectuées"
                             value={tempReps}
@@ -637,6 +419,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                             error={repsError}
                             keyboardType="numeric"
                         />
+                        {/* Weight Input */}
                         <WorkoutInputField
                             label="Poids effectué (kg)"
                             value={tempWeight}
@@ -684,10 +467,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
             </Modal>
 
             {isMinimized && (
-                <TouchableOpacity
-                    style={styles.minimizedContainer}
-                    onPress={() => setIsMinimized(false)}
-                >
+                <TouchableOpacity style={styles.minimizedContainer} onPress={() => setIsMinimized(false)}>
                     <Text style={TextStyles.simpleText}>{exerciseName}</Text>
                     <Text style={TextStyles.simpleText}>Série {currentSet}/{totalSets}</Text>
                     <Text style={TextStyles.simpleText}>
@@ -701,6 +481,42 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     );
 };
 
+/**
+ * WorkoutInputField Component
+ * Replicates the AuthScreen input style for the modal inputs.
+ */
+interface WorkoutInputFieldProps {
+    label: string;
+    value: string;
+    onChangeText: (text: string) => void;
+    onBlur?: () => void;
+    error?: string;
+    keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+}
+const WorkoutInputField: React.FC<WorkoutInputFieldProps> = ({
+    label,
+    value,
+    onChangeText,
+    onBlur,
+    error,
+    keyboardType = 'default',
+}) => {
+    return (
+        <View style={[TextInputStyles.container, styles.inputContainer]}>
+            <TextInput
+                placeholder={label}
+                placeholderTextColor="#999"
+                value={value}
+                onChangeText={onChangeText}
+                onBlur={onBlur}
+                style={TextInputStyles.input}
+                keyboardType={keyboardType}
+            />
+            {error ? <Text style={TextInputStyles.errorText}>{error}</Text> : null}
+        </View>
+    );
+};
+
 const styles = StyleSheet.create({
     fullScreenContainer: {
         flex: 1,
@@ -710,8 +526,9 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         alignItems: 'center',
         paddingVertical: 20,
-        paddingHorizontal: 20,
+        paddingHorizontal: 20, // This padding aligns buttons and set containers
     },
+    // Sets container and sub-containers:
     setContainer: {
         backgroundColor: '#fff',
         borderRadius: 10,
@@ -719,16 +536,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 10,
         paddingRight: 10,
-        paddingLeft: 0,
+        paddingLeft: 0, // No left padding so the content is flush with the parent's padding.
         marginVertical: 5,
         width: '100%',
     },
-    setNumberIconContainer: {
-        width: 80,
-        height: 80,
-        position: 'relative',
-        marginRight: 20,
-    },
+    // Removed active outline style.
     setNumberIcon: {
         width: 80,
         height: 80,
@@ -736,6 +548,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
+        marginRight: 20,
     },
     setNumberIconText: {
         fontSize: 16,
@@ -744,7 +557,6 @@ const styles = StyleSheet.create({
     },
     setDetailsContainer: {
         flexDirection: 'column',
-        flex: 1,
     },
     setTitleText: {
         fontSize: 20,
@@ -757,9 +569,12 @@ const styles = StyleSheet.create({
         fontFamily: 'PlusJakartaSans_300Light',
         color: '#756387',
     },
+    // Purple check icon style.
     checkIcon: {
         marginLeft: 10,
+        marginRight: 10,
     },
+    // Progress bar styles
     progressWrapper: {
         width: '100%',
         alignSelf: 'center',
@@ -826,17 +641,6 @@ const styles = StyleSheet.create({
     },
     inputContainer: {
         marginBottom: 10,
-    },
-    controlContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 15,
-        marginBottom: 15,
-    },
-    controlButton: {
-        marginHorizontal: 20,
-        alignItems: 'center',
     },
 });
 

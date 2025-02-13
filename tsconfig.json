@@ -5,6 +5,7 @@
   },
   "include": [
     "src",
-    "svg.d.ts"
+    "svg.d.ts",
+    "react-native-vector-icons.d.ts"
   ]
 }

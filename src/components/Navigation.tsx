@@ -251,6 +251,8 @@ const Navigation: React.FC = () => {
                                 headerTitle:
                                     route.params?.sessionData?.exerciseName ?? 'Workout Session',
                                 headerTitleStyle: defaultTitleStyle,
+                                // Hides the back arrow on the WorkoutSession screen
+                                headerLeft: () => null,
                             })}
                         />
                         <Stack.Screen

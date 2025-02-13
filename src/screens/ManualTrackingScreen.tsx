@@ -4,7 +4,6 @@ import {
     View,
     Text,
     TextInput,
-    Button,
     TouchableOpacity,
     StyleSheet,
     ScrollView,
@@ -23,6 +22,7 @@ import { useNavigation } from '@react-navigation/native';
 import { v4 as uuidv4 } from 'uuid';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { ButtonStyles } from '../styles/ButtonStyles';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -69,8 +69,8 @@ const ExerciseSelectorModal: React.FC<ExerciseSelectorModalProps> = ({
                             </TouchableOpacity>
                         )}
                     />
-                    <TouchableOpacity style={selectorStyles.closeButton} onPress={onClose}>
-                        <Text style={selectorStyles.closeButtonText}>Annuler</Text>
+                    <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={onClose}>
+                        <Text style={ButtonStyles.invertedText}>Annuler</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -97,26 +97,19 @@ const selectorStyles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 12,
         textAlign: 'center',
+        color: '#333',
     },
     itemContainer: {
+        backgroundColor: '#F1F1F1',
         paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#ccc',
+        paddingHorizontal: 15,
+        borderRadius: 5,
+        marginBottom: 10,
     },
     itemText: {
         fontSize: 16,
         textAlign: 'center',
-    },
-    closeButton: {
-        marginTop: 12,
-        backgroundColor: '#007BFF',
-        paddingVertical: 10,
-        borderRadius: 5,
-    },
-    closeButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        textAlign: 'center',
+        color: '#333',
     },
 });
 
@@ -164,7 +157,7 @@ const ManualTrackingScreen: React.FC = () => {
         fetchExercises();
     }, [user]);
 
-    // Date picker handler
+    // Date picker handlers.
     const onChangeDate = (event: any, selectedDate?: Date) => {
         setShowDatePicker(Platform.OS === 'ios');
         if (selectedDate) {
@@ -184,8 +177,6 @@ const ManualTrackingScreen: React.FC = () => {
     };
 
     // --- WEIGHT INPUT HANDLING ---
-    // Allow user to type a weight with an optional comma and up to 2 digits.
-    // Permits intermediate states like "50," or "50,2".
     const handleWeightChange = (value: string) => {
         if (value === '') {
             setTempWeight('');
@@ -210,7 +201,10 @@ const ManualTrackingScreen: React.FC = () => {
                 parts.length !== 2 ||
                 !(parts[1] === '25' || parts[1] === '5' || parts[1] === '75')
             ) {
-                Alert.alert('Erreur', "Le poids doit être un entier ou un entier suivi d'une virgule et de 25, 5 ou 75.");
+                Alert.alert(
+                    'Erreur',
+                    "Le poids doit être un entier ou un entier suivi d'une virgule et de 25, 5 ou 75."
+                );
                 return;
             }
         }
@@ -262,10 +256,10 @@ const ManualTrackingScreen: React.FC = () => {
 
             <Text style={styles.label}>Exercice :</Text>
             <TouchableOpacity
-                style={styles.exerciseButton}
+                style={styles.selectorButton}
                 onPress={() => setShowExerciseSelector(true)}
             >
-                <Text style={styles.exerciseButtonText}>
+                <Text style={styles.selectorButtonText}>
                     {selectedExercise ? selectedExercise.name : 'Sélectionner un exercice'}
                 </Text>
             </TouchableOpacity>
@@ -278,11 +272,11 @@ const ManualTrackingScreen: React.FC = () => {
             />
 
             <Text style={styles.label}>Date :</Text>
-            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateButton}>
-                <Text style={styles.dateButtonText}>{date.toLocaleDateString('fr-FR')}</Text>
+            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.selectorButton}>
+                <Text style={styles.selectorButtonText}>{date.toLocaleDateString('fr-FR')}</Text>
             </TouchableOpacity>
-            {showDatePicker && (
-                Platform.OS === 'android' ? (
+            {showDatePicker &&
+                (Platform.OS === 'android' ? (
                     <DateTimePickerModal
                         isVisible={showDatePicker}
                         mode="date"
@@ -291,20 +285,15 @@ const ManualTrackingScreen: React.FC = () => {
                         onCancel={() => setShowDatePicker(false)}
                     />
                 ) : (
-                    <DateTimePicker
-                        value={date}
-                        mode="date"
-                        display="default"
-                        onChange={onChangeDate}
-                    />
-                )
-            )}
+                    <DateTimePicker value={date} mode="date" display="default" onChange={onChangeDate} />
+                ))}
 
             <Text style={styles.label}>Ajouter des séries :</Text>
             <View style={styles.setInputContainer}>
                 <TextInput
                     style={[styles.input, styles.smallInput]}
                     placeholder="Répétitions"
+                    placeholderTextColor="#999"
                     keyboardType="numeric"
                     value={tempReps}
                     onChangeText={setTempReps}
@@ -312,6 +301,7 @@ const ManualTrackingScreen: React.FC = () => {
                 <TextInput
                     style={[styles.input, styles.smallInput]}
                     placeholder="Poids (kg) ex: 50,25"
+                    placeholderTextColor="#999"
                     keyboardType="numeric"
                     value={tempWeight}
                     onChangeText={handleWeightChange}
@@ -325,19 +315,27 @@ const ManualTrackingScreen: React.FC = () => {
                 <View style={styles.setsList}>
                     <Text style={styles.label}>Séries ajoutées :</Text>
                     {setResults.map((set, index) => (
-                        <Text key={index} style={styles.setSummary}>
-                            Série {index + 1}: {set.reps} répétitions x {set.weight} kg
-                        </Text>
+                        <View key={index} style={styles.setCard}>
+                            <View style={styles.setNumberIconContainer}>
+                                <View style={styles.setNumberIcon}>
+                                    <Text style={styles.setNumberIconText}>{index + 1}</Text>
+                                </View>
+                            </View>
+                            <View style={styles.setDetailsContainer}>
+                                <Text style={styles.setTitleText}>{`Série ${index + 1}`}</Text>
+                                <Text style={styles.setStatusText}>{`${set.reps} x ${set.weight} kg`}</Text>
+                            </View>
+                        </View>
                     ))}
                 </View>
             )}
 
-            <View style={styles.buttonContainer}>
-                <Button title="Sauvegarder" onPress={handleSave} />
-            </View>
-            <View style={styles.buttonContainer}>
-                <Button title="Annuler" onPress={() => navigation.goBack()} color="#888" />
-            </View>
+            <TouchableOpacity style={ButtonStyles.container} onPress={handleSave}>
+                <Text style={ButtonStyles.text}>Sauvegarder</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={() => navigation.goBack()}>
+                <Text style={ButtonStyles.invertedText}>Annuler</Text>
+            </TouchableOpacity>
         </ScrollView>
     );
 };
@@ -355,32 +353,24 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         marginTop: 30,
         textAlign: 'center',
+        color: '#333',
     },
     label: {
         fontSize: 16,
         marginBottom: 8,
+        color: '#555',
     },
-    exerciseButton: {
-        borderWidth: 1,
-        borderColor: '#ccc',
+    selectorButton: {
+        backgroundColor: '#F1F1F1',
+        paddingVertical: 12,
+        paddingHorizontal: 15,
         borderRadius: 5,
-        padding: 12,
         marginBottom: 20,
         alignItems: 'center',
     },
-    exerciseButtonText: {
+    selectorButtonText: {
         fontSize: 16,
-    },
-    dateButton: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: 12,
-        marginBottom: 20,
-        alignItems: 'center',
-    },
-    dateButtonText: {
-        fontSize: 16,
+        color: '#333',
     },
     setInputContainer: {
         flexDirection: 'row',
@@ -389,10 +379,12 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
     },
     input: {
-        borderWidth: 1,
-        borderColor: '#ccc',
+        backgroundColor: '#F1F1F1',
+        paddingVertical: 12,
+        paddingHorizontal: 15,
         borderRadius: 5,
-        padding: 12,
+        fontSize: 16,
+        color: '#333',
         marginRight: 10,
         marginBottom: 10,
     },
@@ -400,35 +392,70 @@ const styles = StyleSheet.create({
         width: '30%',
     },
     addSetButton: {
-        backgroundColor: '#28A745',
-        padding: 12,
-        borderRadius: 5,
+        backgroundColor: '#b21ae5', // Same as primary color from ButtonStyles.
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 50,
+        alignItems: 'center',
+        marginBottom: 10,
     },
     addSetButtonText: {
         color: '#fff',
         fontSize: 14,
+        fontWeight: '600',
     },
     setsList: {
         marginBottom: 20,
     },
-    setSummary: {
-        fontSize: 16,
-        marginBottom: 4,
+    // ---- Set Card Styles (matching WorkoutSessionScreen design) ----
+    setCard: {
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 10,
+        marginVertical: 5,
+        width: '100%',
+        // Optionally add shadow or elevation:
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
-    buttonContainer: {
-        marginTop: 10,
+    setNumberIconContainer: {
+        width: 70,
+        height: 70,
+        marginRight: 20,
     },
-    errorContainer: {
-        flex: 1,
+    setNumberIcon: {
+        width: 70,
+        height: 70,
+        backgroundColor: '#F2F0F5',
+        borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
-        backgroundColor: '#fff',
     },
-    errorText: {
+    setNumberIconText: {
+        fontSize: 16,
+        color: '#141217',
+        // fontFamily: 'PlusJakartaSans_700Bold', // if available
+    },
+    setDetailsContainer: {
+        flex: 1,
+        flexDirection: 'column',
+    },
+    setTitleText: {
         fontSize: 18,
-        color: 'red',
-        textAlign: 'center',
+        // fontFamily: 'PlusJakartaSans_500Medium',
+        color: '#141217',
+        marginBottom: 8,
+    },
+    setStatusText: {
+        fontSize: 16,
+        // fontFamily: 'PlusJakartaSans_300Light',
+        color: '#756387',
     },
 });
 

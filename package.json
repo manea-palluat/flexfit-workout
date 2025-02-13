@@ -27,6 +27,7 @@
     "expo-font": "^13.0.3",
     "expo-haptics": "~14.0.1",
     "expo-linear-gradient": "^14.0.2",
+    "expo-notifications": "~0.29.13",
     "expo-secure-store": "^14.0.1",
     "expo-status-bar": "~2.0.1",
     "react": "^18.2.0",
@@ -40,8 +41,8 @@
     "react-native-safe-area-context": "^5.2.0",
     "react-native-screens": "^4.6.0",
     "react-native-svg": "^15.11.1",
-    "uuid": "^11.0.5",
-    "expo-notifications": "~0.29.13"
+    "react-native-vector-icons": "^10.2.0",
+    "uuid": "^11.0.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

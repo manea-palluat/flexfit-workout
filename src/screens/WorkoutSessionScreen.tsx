@@ -8,7 +8,6 @@ import {
     ScrollView,
     Animated,
     Easing,
-    Dimensions,
     Modal,
     TextInput,
     Alert,
@@ -128,7 +127,7 @@ const SetNumberIcon: React.FC<SetNumberIconProps> = ({ number, active }) => {
             <View style={styles.setNumberIcon}>
                 <Text style={styles.setNumberIconText}>{number}</Text>
             </View>
-            {active && <AnimatedBorder size={80} borderRadius={20} strokeWidth={3} />}
+            {active && <AnimatedBorder size={70} borderRadius={20} strokeWidth={3} />}
         </View>
     );
 };
@@ -454,27 +453,83 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
-    // Modified abandonExercise: Cancel notifications and finish session
+    // New function to discard the session data and simply exit
+    const deleteSession = async () => {
+        if (onComplete) onComplete([]); // Pass an empty array to indicate no saved data
+        if (onClose) {
+            onClose();
+        } else {
+            navigation.goBack();
+        }
+    };
+
+    // Modified abandonExercise function:
+    // - If no set is completed, simply ask for confirmation.
+    // - If at least one set is completed, offer to save or delete data.
     const abandonExercise = () => {
-        Alert.alert(
-            "Abandonner l'exercice",
-            "Es-tu sûr de vouloir abandonner l'exercice ? Les séries complétées seront sauvegardées.",
-            [
-                { text: 'Annuler', style: 'cancel' },
-                {
-                    text: 'Abandonner',
-                    style: 'destructive',
-                    onPress: async () => {
-                        await Notifications.cancelAllScheduledNotificationsAsync();
-                        finishSession();
+        const hasCompletedSet = results.some(set => set?.reps && set?.weight);
+
+        if (!hasCompletedSet) {
+            Alert.alert(
+                "Abandonner l'exercice",
+                "Vous n'avez pas encore réalisé la première série. Voulez-vous vraiment abandonner l'exercice ?",
+                [
+                    { text: "Annuler", style: "cancel" },
+                    {
+                        text: "Abandonner",
+                        style: "destructive",
+                        onPress: async () => {
+                            await Notifications.cancelAllScheduledNotificationsAsync();
+                            deleteSession();
+                        },
                     },
-                },
-            ]
-        );
+                ]
+            );
+        } else {
+            Alert.alert(
+                "Abandonner l'exercice",
+                "Voulez-vous sauvegarder la séance en cours ou supprimer toutes les données ?",
+                [
+                    { text: "Annuler", style: "cancel" },
+                    {
+                        text: "Sauvegarder",
+                        onPress: async () => {
+                            await Notifications.cancelAllScheduledNotificationsAsync();
+                            finishSession();
+                        },
+                    },
+                    {
+                        text: "Supprimer",
+                        style: "destructive",
+                        onPress: async () => {
+                            await Notifications.cancelAllScheduledNotificationsAsync();
+                            deleteSession();
+                        },
+                    },
+                ]
+            );
+        }
+    };
+
+    // New function for pre‑start cancellation.
+    // This is used in the pre‑start UI (before the user taps "Démarrer l'exercice").
+    const cancelPreStartExercise = async () => {
+        await Notifications.cancelAllScheduledNotificationsAsync();
+        if (onClose) {
+            onClose();
+        } else {
+            navigation.goBack();
+        }
     };
 
     // Render set cards
     const renderSetCards = (mode: 'pre' | 'active' | 'rest') => {
+        // Determine if the last set is completed so we can disable the animated border.
+        const lastSetCompleted =
+            currentSet === totalSets &&
+            results[currentSet - 1]?.reps &&
+            results[currentSet - 1]?.weight;
+
         return (
             <>
                 {Array.from({ length: totalSets }).map((_, index) => {
@@ -498,7 +553,10 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                                 }
                             }}
                         >
-                            <SetNumberIcon number={index + 1} active={hasStarted && index === currentSet - 1} />
+                            <SetNumberIcon
+                                number={index + 1}
+                                active={hasStarted && index === currentSet - 1 && !lastSetCompleted}
+                            />
                             <View style={styles.setDetailsContainer}>
                                 <Text style={styles.setTitleText}>{`Série ${index + 1}`}</Text>
                                 <Text style={styles.setStatusText}>{status}</Text>
@@ -546,6 +604,9 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                         <View style={styles.seriesListContainer}>{renderSetCards('pre')}</View>
                         <TouchableOpacity style={ButtonStyles.container} onPress={() => setHasStarted(true)}>
                             <Text style={ButtonStyles.text}>Démarrer l'exercice</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={cancelPreStartExercise}>
+                            <Text style={ButtonStyles.invertedText}>Annuler l'exercice</Text>
                         </TouchableOpacity>
                         <View style={styles.controlContainer}>
                             <TouchableOpacity style={styles.controlButton} onPress={() => setSoundsEnabled(!soundsEnabled)}>
@@ -712,14 +773,14 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     setNumberIconContainer: {
-        width: 80,
-        height: 80,
+        width: 70,
+        height: 70,
         position: 'relative',
         marginRight: 20,
     },
     setNumberIcon: {
-        width: 80,
-        height: 80,
+        width: 70,
+        height: 70,
         backgroundColor: '#F2F0F5',
         borderRadius: 20,
         justifyContent: 'center',
@@ -735,13 +796,13 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     setTitleText: {
-        fontSize: 20,
+        fontSize: 18,
         fontFamily: 'PlusJakartaSans_500Medium',
         color: '#141217',
-        marginBottom: 12,
+        marginBottom: 8,
     },
     setStatusText: {
-        fontSize: 17,
+        fontSize: 16,
         fontFamily: 'PlusJakartaSans_300Light',
         color: '#756387',
     },

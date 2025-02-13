@@ -4,11 +4,10 @@ import {
     View,
     Text,
     TextInput,
-    Button,
-    StyleSheet,
     Alert,
     ScrollView,
     TouchableOpacity,
+    StyleSheet,
 } from 'react-native';
 import { API, graphqlOperation } from 'aws-amplify';
 import { createExercise, updateExercise } from '../graphql/mutations';
@@ -19,6 +18,7 @@ import type { RootStackParamList } from '../types/NavigationTypes';
 import { v4 as uuidv4 } from 'uuid';
 import MuscleGroupPickerModal from '../components/MuscleGroupPickerModal';
 import { updateExerciseTracking } from '../graphql/mutations'; // Ensure this mutation exists
+import { ButtonStyles } from '../styles/ButtonStyles';
 
 type AddEditExerciseScreenRouteProp = RouteProp<RootStackParamList, 'AddEditExercise'>;
 
@@ -61,11 +61,7 @@ const AddEditExerciseScreen: React.FC = () => {
                 const uniqueGroups = Array.from(new Set(groups)) as string[];
                 setAvailableMuscleGroups(uniqueGroups);
                 if (!exerciseToEdit) {
-                    if (uniqueGroups.length > 0) {
-                        setMuscleGroup(uniqueGroups[0]);
-                    } else {
-                        setMuscleGroup('');
-                    }
+                    setMuscleGroup(uniqueGroups.length > 0 ? uniqueGroups[0] : '');
                 }
             } catch (error) {
                 console.error('Error fetching muscle groups', error);
@@ -89,23 +85,18 @@ const AddEditExerciseScreen: React.FC = () => {
                     })
                 );
                 const { items, nextToken: token } = response.data.listExerciseTrackings;
-                console.log(`Fetched ${items.length} tracking records with name ${oldName}`);
                 allTrackings.push(...items);
                 nextToken = token;
             } while (nextToken);
-
-            console.log(`Total tracking records to update: ${allTrackings.length}`);
 
             for (const tracking of allTrackings) {
                 const input = {
                     id: tracking.id,
                     exerciseName: newExerciseName,
-                    _version: tracking._version, // remove or adjust if not using versioning
+                    _version: tracking._version, // adjust if not using versioning
                 };
                 await API.graphql(graphqlOperation(updateExerciseTracking, { input }));
-                console.log(`Updated tracking record id: ${tracking.id}`);
             }
-            console.log('All tracking records updated with new exercise name.');
         } catch (error) {
             console.error('Error updating tracking exercise names:', error);
         }
@@ -149,7 +140,6 @@ const AddEditExerciseScreen: React.FC = () => {
                 };
                 await API.graphql(graphqlOperation(updateExercise, { input }));
                 Alert.alert('Succès', 'Exercice mis à jour.');
-                // If the name has changed, update all tracking records that have the old name.
                 if (exerciseToEdit.name !== name) {
                     await updateTrackingExerciseName(exerciseToEdit.name, name);
                 }
@@ -185,59 +175,98 @@ const AddEditExerciseScreen: React.FC = () => {
             <Text style={styles.header}>
                 {exerciseToEdit ? "Modifier l'exercice" : "Ajouter un exercice"}
             </Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Nom de l'exercice"
-                value={name}
-                onChangeText={setName}
-            />
+            <View style={styles.formContainer}>
+                {/* Exercise Name */}
+                <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Nom de l'exercice</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Nom de l'exercice"
+                        placeholderTextColor="#999"
+                        value={name}
+                        onChangeText={setName}
+                    />
+                </View>
 
-            <Text style={styles.label}>Groupe musculaire :</Text>
-            <TouchableOpacity
-                style={styles.selectorButton}
-                onPress={() => setShowMuscleGroupModal(true)}
-            >
-                <Text style={styles.selectorButtonText}>
-                    {muscleGroup ? muscleGroup : 'Sélectionner un groupe'}
-                </Text>
-            </TouchableOpacity>
-            <MuscleGroupPickerModal
-                visible={showMuscleGroupModal}
-                muscleGroups={availableMuscleGroups}
-                onSelect={(selected) => setMuscleGroup(selected)}
-                onClose={() => setShowMuscleGroupModal(false)}
-            />
+                {/* Muscle Group Selector */}
+                <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Groupe musculaire</Text>
+                    <TouchableOpacity
+                        style={styles.input}
+                        onPress={() => setShowMuscleGroupModal(true)}
+                    >
+                        <Text style={styles.inputText}>
+                            {muscleGroup ? muscleGroup : 'Sélectionner un groupe'}
+                        </Text>
+                    </TouchableOpacity>
+                    <MuscleGroupPickerModal
+                        visible={showMuscleGroupModal}
+                        muscleGroups={availableMuscleGroups}
+                        onSelect={(selected) => {
+                            setMuscleGroup(selected);
+                            setShowMuscleGroupModal(false);
+                        }}
+                        onClose={() => setShowMuscleGroupModal(false)}
+                    />
+                </View>
 
-            <Text style={styles.label}>Temps de repos (sec) :</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Temps de repos (sec)"
-                keyboardType="numeric"
-                value={restTime}
-                onChangeText={setRestTime}
-            />
-            <Text style={styles.label}>Nombre de sets :</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Nombre de sets"
-                keyboardType="numeric"
-                value={sets}
-                onChangeText={setSets}
-            />
-            <Text style={styles.label}>Nombre de répétitions :</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Nombre de répétitions"
-                keyboardType="numeric"
-                value={reps}
-                onChangeText={setReps}
-            />
+                {/* Rest Time */}
+                <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Temps de repos (s)</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Temps de repos (sec)"
+                        placeholderTextColor="#999"
+                        keyboardType="numeric"
+                        value={restTime}
+                        onChangeText={setRestTime}
+                    />
+                </View>
 
-            <View style={styles.buttonContainer}>
-                <Button title={loading ? 'Enregistrement...' : 'Sauvegarder'} onPress={handleSave} disabled={loading} />
-            </View>
-            <View style={styles.buttonContainer}>
-                <Button title="Annuler" onPress={() => navigation.goBack()} color="#888" />
+                {/* Sets */}
+                <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Nombre de séries</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Nombre de sets"
+                        placeholderTextColor="#999"
+                        keyboardType="numeric"
+                        value={sets}
+                        onChangeText={setSets}
+                    />
+                </View>
+
+                {/* Repetitions */}
+                <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Nombre de répétitions par série</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Nombre de répétitions"
+                        placeholderTextColor="#999"
+                        keyboardType="numeric"
+                        value={reps}
+                        onChangeText={setReps}
+                    />
+                </View>
+
+                {/* Save Button (Primary) */}
+                <TouchableOpacity
+                    style={[ButtonStyles.container, loading && { opacity: 0.7 }]}
+                    onPress={handleSave}
+                    disabled={loading}
+                >
+                    <Text style={ButtonStyles.text}>
+                        {loading ? 'Enregistrement...' : 'Sauvegarder'}
+                    </Text>
+                </TouchableOpacity>
+
+                {/* Cancel Button (Inverted) */}
+                <TouchableOpacity
+                    style={ButtonStyles.invertedContainer}
+                    onPress={() => navigation.goBack()}
+                >
+                    <Text style={ButtonStyles.invertedText}>Annuler</Text>
+                </TouchableOpacity>
             </View>
         </ScrollView>
     );
@@ -245,43 +274,42 @@ const AddEditExerciseScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
     container: {
-        padding: 20,
-        backgroundColor: '#fff',
         flexGrow: 1,
+        backgroundColor: '#fff',
+        alignItems: 'center',
+        paddingVertical: 30,
+        paddingHorizontal: 20,
     },
     header: {
         fontSize: 26,
         fontWeight: 'bold',
         marginBottom: 20,
-        marginTop: 30,
         textAlign: 'center',
+        color: '#333',
+    },
+    formContainer: {
+        width: '100%',
+        maxWidth: 400,
+    },
+    inputContainer: {
+        marginBottom: 15,
     },
     label: {
         fontSize: 16,
-        marginBottom: 8,
+        color: '#555',
+        marginBottom: 5,
     },
     input: {
-        borderWidth: 1,
-        borderColor: '#ccc',
+        backgroundColor: '#F1F1F1',
+        paddingVertical: 12,
+        paddingHorizontal: 15,
         borderRadius: 5,
-        padding: 12,
-        marginBottom: 20,
-        fontSize: 16,
-    },
-    selectorButton: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: 12,
-        marginBottom: 20,
-        alignItems: 'center',
-    },
-    selectorButtonText: {
         fontSize: 16,
         color: '#333',
     },
-    buttonContainer: {
-        marginTop: 10,
+    inputText: {
+        fontSize: 16,
+        color: '#333',
     },
 });
 

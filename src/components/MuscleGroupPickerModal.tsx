@@ -9,6 +9,7 @@ import {
     TextInput,
     StyleSheet,
 } from 'react-native';
+import { ButtonStyles } from '../styles/ButtonStyles';
 
 interface MuscleGroupPickerModalProps {
     visible: boolean;
@@ -57,14 +58,11 @@ const MuscleGroupPickerModal: React.FC<MuscleGroupPickerModalProps> = ({
                                     </TouchableOpacity>
                                 )}
                             />
-                            <TouchableOpacity
-                                style={styles.addNewButton}
-                                onPress={() => setIsAdding(true)}
-                            >
-                                <Text style={styles.addNewButtonText}>Ajouter un nouveau groupe musculaire</Text>
+                            <TouchableOpacity style={ButtonStyles.container} onPress={() => setIsAdding(true)}>
+                                <Text style={ButtonStyles.text}>Ajouter</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                                <Text style={styles.closeButtonText}>Annuler</Text>
+                            <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={onClose}>
+                                <Text style={ButtonStyles.invertedText}>Annuler</Text>
                             </TouchableOpacity>
                         </>
                     ) : (
@@ -73,20 +71,18 @@ const MuscleGroupPickerModal: React.FC<MuscleGroupPickerModalProps> = ({
                             <TextInput
                                 style={styles.input}
                                 placeholder="Nom du groupe"
+                                placeholderTextColor="#999"
                                 value={newGroup}
                                 onChangeText={setNewGroup}
                             />
-                            <TouchableOpacity style={styles.addNewButton} onPress={handleAddNew}>
-                                <Text style={styles.addNewButtonText}>Valider</Text>
+                            <TouchableOpacity style={ButtonStyles.container} onPress={handleAddNew}>
+                                <Text style={ButtonStyles.text}>Valider</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.closeButton}
-                                onPress={() => {
-                                    setIsAdding(false);
-                                    setNewGroup('');
-                                }}
-                            >
-                                <Text style={styles.closeButtonText}>Annuler</Text>
+                            <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={() => {
+                                setIsAdding(false);
+                                setNewGroup('');
+                            }}>
+                                <Text style={ButtonStyles.invertedText}>Annuler</Text>
                             </TouchableOpacity>
                         </>
                     )}
@@ -115,44 +111,27 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 12,
         textAlign: 'center',
+        color: '#333',
     },
     itemContainer: {
+        backgroundColor: '#F1F1F1',
         paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#ccc',
+        paddingHorizontal: 15,
+        borderRadius: 5,
+        marginBottom: 10,
     },
     itemText: {
         fontSize: 16,
         textAlign: 'center',
-    },
-    addNewButton: {
-        backgroundColor: '#007BFF',
-        paddingVertical: 10,
-        borderRadius: 5,
-        marginTop: 12,
-    },
-    addNewButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        textAlign: 'center',
-    },
-    closeButton: {
-        marginTop: 12,
-        backgroundColor: '#6C757D',
-        paddingVertical: 10,
-        borderRadius: 5,
-    },
-    closeButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        textAlign: 'center',
+        color: '#333',
     },
     input: {
-        borderWidth: 1,
-        borderColor: '#ccc',
+        backgroundColor: '#F1F1F1',
+        paddingVertical: 12,
+        paddingHorizontal: 15,
         borderRadius: 5,
-        padding: 10,
         fontSize: 16,
+        color: '#333',
         marginBottom: 12,
     },
 });

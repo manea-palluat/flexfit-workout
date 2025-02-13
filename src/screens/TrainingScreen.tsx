@@ -7,7 +7,6 @@ import {
     StyleSheet,
     TouchableOpacity,
     Alert,
-    Modal,
 } from 'react-native';
 import { API, graphqlOperation } from 'aws-amplify';
 import { listExercises } from '../graphql/queries';
@@ -16,15 +15,10 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { TextStyles } from '../styles/TextStyles'; // In case you need additional text styles
-
-// Import the tracking modal component
-import ExerciseSessionTrackingModal from '../components/ExerciseSessionTrackingModal';
-
-// Import SvgXml to render the SVG icon
+import { TextStyles } from '../styles/TextStyles';
 import { SvgXml } from 'react-native-svg';
-
-type NavigationProp = StackNavigationProp<RootStackParamList>;
+import ExerciseSessionTrackingModal from '../components/ExerciseSessionTrackingModal';
+import ActionModal from '../components/ActionModal';
 
 export interface Exercise {
     exerciseId: string;
@@ -40,7 +34,6 @@ interface SectionData {
     data: Exercise[];
 }
 
-// Define the SVG icon as a string
 const historyIconSvg = `
 <svg fill="#000000" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 503.379 503.379" xml:space="preserve">
   <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
@@ -52,6 +45,8 @@ const historyIconSvg = `
   </g>
 </svg>
 `;
+
+type NavigationProp = StackNavigationProp<RootStackParamList>;
 
 const TrainingScreen: React.FC = () => {
     const [sections, setSections] = useState<SectionData[]>([]);
@@ -205,7 +200,6 @@ const TrainingScreen: React.FC = () => {
                         navigation.navigate('ExerciseHistory', { exerciseName: item.name })
                     }
                 >
-                    {/* Replace the "Historique" text with the SVG icon */}
                     <SvgXml xml={historyIconSvg} width="24" height="24" />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -267,31 +261,13 @@ const TrainingScreen: React.FC = () => {
                 />
             )}
 
-            {/* Action Modal for three dots */}
-            <Modal visible={actionModalVisible} transparent animationType="slide">
-                <View style={styles.modalOverlay}>
-                    <View style={styles.actionModalContainer}>
-                        <TouchableOpacity
-                            style={styles.actionModalButton}
-                            onPress={() => handleAction('modifier')}
-                        >
-                            <Text style={styles.actionModalButtonText}>Modifier</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.actionModalButton}
-                            onPress={() => handleAction('supprimer')}
-                        >
-                            <Text style={styles.actionModalButtonText}>Supprimer</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.actionModalButton, styles.cancelActionButton]}
-                            onPress={() => setActionModalVisible(false)}
-                        >
-                            <Text style={styles.actionModalButtonText}>Annuler</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
+            {/* External Action Modal */}
+            <ActionModal
+                visible={actionModalVisible}
+                onModifier={() => handleAction('modifier')}
+                onSupprimer={() => handleAction('supprimer')}
+                onCancel={() => setActionModalVisible(false)}
+            />
         </View>
     );
 };
@@ -299,7 +275,7 @@ const TrainingScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF', // Very white white
+        backgroundColor: '#FFFFFF',
         padding: 16,
     },
     loadingContainer: {
@@ -317,17 +293,15 @@ const styles = StyleSheet.create({
         marginVertical: 12,
         paddingHorizontal: 16,
     },
-    // Exercise card style – using a very soft beige
     exerciseCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F2F0F5', // Very soft beige
+        backgroundColor: '#F2F0F5',
         borderRadius: 10,
         padding: 16,
         paddingVertical: 22,
         marginVertical: 8,
     },
-    // Play icon container (circular purple button)
     playIconContainer: {
         backgroundColor: '#C932FC',
         width: 50,
@@ -341,7 +315,6 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 24,
     },
-    // Exercise details container
     exerciseDetailsContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -357,19 +330,17 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#756387',
     },
-    // Right side container for History and Options buttons
     cardButtonsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     historyButton: {
-        // Removed purple circle styling
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 8,
     },
     optionsButton: {
-        width: 60, // Increased width for wider three dots
+        width: 60,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 8,
@@ -378,37 +349,6 @@ const styles = StyleSheet.create({
         fontSize: 24,
         color: '#333',
     },
-    // Modal overlay and action modal styles
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    actionModalContainer: {
-        width: '80%',
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        padding: 20,
-        alignItems: 'center',
-    },
-    actionModalButton: {
-        backgroundColor: '#007BFF',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 8,
-        marginBottom: 10,
-        width: '100%',
-    },
-    cancelActionButton: {
-        backgroundColor: '#6C757D',
-    },
-    actionModalButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        textAlign: 'center',
-    },
-    // Floating Action Button (FAB) styles
     fab: {
         position: 'absolute',
         right: 16,

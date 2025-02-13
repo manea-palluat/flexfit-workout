@@ -13,7 +13,7 @@ const AnimatedBorder: React.FC<AnimatedBorderProps> = ({ isActive }) => {
             Animated.loop(
                 Animated.timing(rotateAnim, {
                     toValue: 1,
-                    duration: 2000, // Adjust for a faster/slower rotation
+                    duration: 2000,
                     easing: Easing.linear,
                     useNativeDriver: true,
                 })
@@ -49,7 +49,7 @@ const AnimatedBorder: React.FC<AnimatedBorderProps> = ({ isActive }) => {
                                 opacity: segmentOpacity,
                                 transform: [
                                     { rotate: `${segmentRotation}deg` },
-                                    { translateX: 41 }, // Adjust based on your container size
+                                    { translateX: 41 },
                                     { rotate },
                                 ],
                             },
@@ -60,5 +60,23 @@ const AnimatedBorder: React.FC<AnimatedBorderProps> = ({ isActive }) => {
         </View>
     );
 };
+
+const styles = StyleSheet.create({
+    borderContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    borderSegment: {
+        position: 'absolute',
+        width: 2,
+        height: 20,
+        backgroundColor: 'black',
+    },
+});
 
 export default AnimatedBorder;

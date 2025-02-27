@@ -17,7 +17,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { v4 as uuidv4 } from 'uuid';
 import MuscleGroupPickerModal from '../components/MuscleGroupPickerModal';
-import { updateExerciseTracking } from '../graphql/mutations'; // Ensure this mutation exists
+import { updateExerciseTracking } from '../graphql/mutations';
 import { ButtonStyles } from '../styles/ButtonStyles';
 
 type AddEditExerciseScreenRouteProp = RouteProp<RootStackParamList, 'AddEditExercise'>;
@@ -46,6 +46,10 @@ const AddEditExerciseScreen: React.FC = () => {
         exerciseToEdit ? exerciseToEdit.reps.toString() : ''
     );
     const [loading, setLoading] = useState<boolean>(false);
+    // New state: exerciseType is either 'normal' or 'bodyweight'
+    const [exerciseType, setExerciseType] = useState(
+        exerciseToEdit ? exerciseToEdit.exerciseType || 'normal' : 'normal'
+    );
 
     // Fetch distinct muscle groups from the user's existing exercises.
     useEffect(() => {
@@ -137,6 +141,7 @@ const AddEditExerciseScreen: React.FC = () => {
                     restTime: restTimeNum,
                     sets: setsNum,
                     reps: repsNum,
+                    exerciseType, // new field included here
                 };
                 await API.graphql(graphqlOperation(updateExercise, { input }));
                 Alert.alert('Succès', 'Exercice mis à jour.');
@@ -154,6 +159,7 @@ const AddEditExerciseScreen: React.FC = () => {
                     restTime: restTimeNum,
                     sets: setsNum,
                     reps: repsNum,
+                    exerciseType, // new field included here
                 };
                 await API.graphql(graphqlOperation(createExercise, { input }));
                 Alert.alert('Succès', 'Exercice créé.');
@@ -249,6 +255,31 @@ const AddEditExerciseScreen: React.FC = () => {
                     />
                 </View>
 
+                {/* Exercise Type Selector */}
+                <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Type d'exercice</Text>
+                    <View style={styles.row}>
+                        <TouchableOpacity
+                            style={[
+                                styles.optionButton,
+                                exerciseType === 'normal' && styles.selectedOption,
+                            ]}
+                            onPress={() => setExerciseType('normal')}
+                        >
+                            <Text style={styles.optionText}>Normal (poids)</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[
+                                styles.optionButton,
+                                exerciseType === 'bodyweight' && styles.selectedOption,
+                            ]}
+                            onPress={() => setExerciseType('bodyweight')}
+                        >
+                            <Text style={styles.optionText}>Poids du corps</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
                 {/* Save Button (Primary) */}
                 <TouchableOpacity
                     style={[ButtonStyles.container, loading && { opacity: 0.7 }]}
@@ -308,6 +339,25 @@ const styles = StyleSheet.create({
         color: '#333',
     },
     inputText: {
+        fontSize: 16,
+        color: '#333',
+    },
+    row: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    optionButton: {
+        flex: 1,
+        paddingVertical: 10,
+        backgroundColor: '#F1F1F1',
+        marginHorizontal: 5,
+        borderRadius: 5,
+        alignItems: 'center',
+    },
+    selectedOption: {
+        backgroundColor: '#b21ae5',
+    },
+    optionText: {
         fontSize: 16,
         color: '#333',
     },

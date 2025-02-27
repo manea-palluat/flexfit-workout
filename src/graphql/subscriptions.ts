@@ -20,6 +20,7 @@ export const onCreateExercise = /* GraphQL */ `subscription OnCreateExercise(
     restTime
     sets
     reps
+    exerciseType
     createdAt
     updatedAt
     owner
@@ -42,6 +43,7 @@ export const onUpdateExercise = /* GraphQL */ `subscription OnUpdateExercise(
     restTime
     sets
     reps
+    exerciseType
     createdAt
     updatedAt
     owner
@@ -64,6 +66,7 @@ export const onDeleteExercise = /* GraphQL */ `subscription OnDeleteExercise(
     restTime
     sets
     reps
+    exerciseType
     createdAt
     updatedAt
     owner

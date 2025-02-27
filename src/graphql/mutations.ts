@@ -20,6 +20,7 @@ export const createExercise = /* GraphQL */ `mutation CreateExercise(
     restTime
     sets
     reps
+    exerciseType
     createdAt
     updatedAt
     owner
@@ -42,6 +43,7 @@ export const updateExercise = /* GraphQL */ `mutation UpdateExercise(
     restTime
     sets
     reps
+    exerciseType
     createdAt
     updatedAt
     owner
@@ -64,6 +66,7 @@ export const deleteExercise = /* GraphQL */ `mutation DeleteExercise(
     restTime
     sets
     reps
+    exerciseType
     createdAt
     updatedAt
     owner

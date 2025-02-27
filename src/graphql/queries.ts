@@ -17,6 +17,7 @@ export const getExercise = /* GraphQL */ `query GetExercise($userId: ID!, $exerc
     restTime
     sets
     reps
+    exerciseType
     createdAt
     updatedAt
     owner
@@ -51,6 +52,7 @@ export const listExercises = /* GraphQL */ `query ListExercises(
       restTime
       sets
       reps
+      exerciseType
       createdAt
       updatedAt
       owner

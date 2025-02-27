@@ -1,5 +1,6 @@
 // src/screens/TrainingScreen.tsx
-import React, { useState, useEffect } from 'react';
+// IMPORT DES LIBS : on charge toutes les dependances nécessaires
+import React, { useState, useEffect } from 'react'; // react et ses hooks, tranquille
 import {
     View,
     Text,
@@ -7,33 +8,34 @@ import {
     StyleSheet,
     TouchableOpacity,
     Alert,
-} from 'react-native';
-import { API, graphqlOperation } from 'aws-amplify';
-import { listExercises } from '../graphql/queries';
-import { deleteExercise } from '../graphql/mutations';
-import { useAuth } from '../context/AuthContext';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import type { RootStackParamList } from '../types/NavigationTypes';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { TextStyles } from '../styles/TextStyles';
-import { SvgXml } from 'react-native-svg';
-import ExerciseSessionTrackingModal from '../components/ExerciseSessionTrackingModal';
-import ActionModal from '../components/ActionModal';
+} from 'react-native'; // composants de base de react-native
+import { API, graphqlOperation } from 'aws-amplify'; // pour interagir avec l'API backend
+import { listExercises } from '../graphql/queries'; // requête GraphQL pour récupérer les exos
+import { deleteExercise } from '../graphql/mutations'; // mutation pour supprimer un exo
+import { useAuth } from '../context/AuthContext'; // contexte d'authentification
+import { useNavigation, useFocusEffect } from '@react-navigation/native'; // navigation et focus effect
+import type { RootStackParamList } from '../types/NavigationTypes'; // types de navigation
+import { StackNavigationProp } from '@react-navigation/stack'; // type pour la navigation en stack
+import { TextStyles } from '../styles/TextStyles'; // styles custom pour le texte
+import { SvgXml } from 'react-native-svg'; // pour afficher du SVG
+import ExerciseSessionTrackingModal from '../components/ExerciseSessionTrackingModal'; // modal de suivi d'exo
+import ActionModal from '../components/ActionModal'; // modal d'actions (modifier/supprimer)
 
 export interface Exercise {
-    exerciseId: string;
-    name: string;
-    muscleGroup: string;
-    restTime: number;
-    sets: number;
-    reps: number;
+    exerciseId: string; // id unique de l'exo
+    name: string; // nom de l'exo
+    muscleGroup: string; // groupe musculaire ciblé
+    restTime: number; // temps de repos en secondes
+    sets: number; // nombre de séries
+    reps: number; // nb de répétitions
 }
 
 interface SectionData {
-    title: string;
-    data: Exercise[];
+    title: string; // titre de la section (groupe musculaire)
+    data: Exercise[]; // liste d'exos dans la section
 }
 
+// icône SVG pour l'historique
 const historyIconSvg = `
 <svg fill="#000000" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 503.379 503.379" xml:space="preserve">
   <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
@@ -46,23 +48,25 @@ const historyIconSvg = `
 </svg>
 `;
 
+// Type de navigation pour ce screen
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
+// MAIN TRAINING SCREEN : ici on gère l'affichage des exos et la navigation
 const TrainingScreen: React.FC = () => {
-    const [sections, setSections] = useState<SectionData[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const { user } = useAuth();
-    const navigation = useNavigation<NavigationProp>();
+    const [sections, setSections] = useState<SectionData[]>([]); // les sections groupées par muscle
+    const [loading, setLoading] = useState<boolean>(true); // loading pendant la récup
+    const { user } = useAuth(); // récupère l'user du contexte
+    const navigation = useNavigation<NavigationProp>(); // navigation typée
 
-    // For the "Play" modal:
+    // Modal pour lancer une session d'exo
     const [modalVisible, setModalVisible] = useState<boolean>(false);
     const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
 
-    // For the three-dots action modal:
+    // Modal d'action pour les trois points
     const [actionModalVisible, setActionModalVisible] = useState<boolean>(false);
     const [selectedExerciseAction, setSelectedExerciseAction] = useState<Exercise | null>(null);
 
-    // Refresh exercises whenever the screen gains focus.
+    // rafraîchit les exos quand l'écran reprend le focus
     useFocusEffect(
         React.useCallback(() => {
             if (user) {
@@ -81,6 +85,7 @@ const TrainingScreen: React.FC = () => {
         }
     }, [user]);
 
+    // fonction pour récupérer les exos depuis le backend
     const fetchExercises = async () => {
         try {
             const response: any = await API.graphql(
@@ -89,7 +94,7 @@ const TrainingScreen: React.FC = () => {
                 })
             );
             const items: Exercise[] = response.data.listExercises.items;
-            // Group exercises by muscleGroup.
+            // Regroupement des exos par groupe musculaire
             const grouped = items.reduce((acc: { [key: string]: Exercise[] }, exercise: Exercise) => {
                 if (!acc[exercise.muscleGroup]) {
                     acc[exercise.muscleGroup] = [];
@@ -109,12 +114,13 @@ const TrainingScreen: React.FC = () => {
         }
     };
 
+    // supprime un exo après confirmation
     const handleDeleteExercise = async (exercise: Exercise) => {
         Alert.alert(
-            'Confirmer la suppression',
-            `Voulez-vous vraiment supprimer l'exercice "${exercise.name}" ? Cette action est irréversible. Cela ne supprimera pas les données de suivi associées.`,
+            'Confirmer la suppression', // titre de l'alerte
+            `Voulez-vous vraiment supprimer l'exercice "${exercise.name}" ? Cette action est irréversible. Cela ne supprimera pas les données de suivi associées.`, // message
             [
-                { text: 'Annuler', style: 'cancel' },
+                { text: 'Annuler', style: 'cancel' }, // option annuler
                 {
                     text: 'Supprimer',
                     style: 'destructive',
@@ -131,7 +137,7 @@ const TrainingScreen: React.FC = () => {
                             };
                             await API.graphql(graphqlOperation(deleteExercise, { input }));
                             Alert.alert('Succès', 'Exercice supprimé.');
-                            fetchExercises();
+                            fetchExercises(); // rafraîchit la liste
                         } catch (error) {
                             console.error("Erreur lors de la suppression de l'exercice", error);
                             Alert.alert(
@@ -145,11 +151,13 @@ const TrainingScreen: React.FC = () => {
         );
     };
 
+    // ouvre la modal d'actions (modifier/supprimer)
     const openActionModal = (exercise: Exercise) => {
         setSelectedExerciseAction(exercise);
         setActionModalVisible(true);
     };
 
+    // gère l'action choisie dans la modal d'action
     const handleAction = (action: 'modifier' | 'supprimer') => {
         setActionModalVisible(false);
         if (!selectedExerciseAction) return;
@@ -160,9 +168,10 @@ const TrainingScreen: React.FC = () => {
         }
     };
 
+    // rend une carte d'exercice dans la liste
     const renderExerciseItem = ({ item }: { item: Exercise }) => (
         <View style={styles.exerciseCard}>
-            {/* Play Icon on the left */}
+            {/* Bouton PLAY à gauche pour lancer la session */}
             <TouchableOpacity
                 style={styles.playIconContainer}
                 onPress={() => {
@@ -176,7 +185,7 @@ const TrainingScreen: React.FC = () => {
                         sessionData,
                         onComplete: (results: { reps?: number; weight?: number }[]) => {
                             console.log('Session complete, results:', results);
-                            // Implement saving the session data as needed.
+                            // On pourra sauvegarder la session si besoin
                         },
                     });
                 }}
@@ -184,7 +193,7 @@ const TrainingScreen: React.FC = () => {
                 <Text style={styles.playIcon}>▶</Text>
             </TouchableOpacity>
 
-            {/* Exercise Details in the center */}
+            {/* Détails de l'exo au centre */}
             <View style={styles.exerciseDetailsContainer}>
                 <Text style={styles.exerciseName}>{item.name}</Text>
                 <Text style={styles.exerciseParams}>
@@ -192,7 +201,7 @@ const TrainingScreen: React.FC = () => {
                 </Text>
             </View>
 
-            {/* Right Side Buttons: History and Options */}
+            {/* Boutons History et Options à droite */}
             <View style={styles.cardButtonsContainer}>
                 <TouchableOpacity
                     style={styles.historyButton}
@@ -239,7 +248,7 @@ const TrainingScreen: React.FC = () => {
                 />
             )}
 
-            {/* Floating Action Button (FAB) */}
+            {/* FAB pour ajouter un exo */}
             <TouchableOpacity
                 style={styles.fab}
                 onPress={() => navigation.navigate('AddEditExercise')}
@@ -247,7 +256,7 @@ const TrainingScreen: React.FC = () => {
                 <Text style={styles.fabIcon}>+</Text>
             </TouchableOpacity>
 
-            {/* Tracking Modal for "Play" */}
+            {/* Modal de suivi d'exo quand on lance la session */}
             {selectedExercise && (
                 <ExerciseSessionTrackingModal
                     visible={modalVisible}
@@ -261,7 +270,7 @@ const TrainingScreen: React.FC = () => {
                 />
             )}
 
-            {/* External Action Modal */}
+            {/* Modal externe d'action pour modifier ou supprimer */}
             <ActionModal
                 visible={actionModalVisible}
                 onModifier={() => handleAction('modifier')}

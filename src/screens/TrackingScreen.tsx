@@ -1,5 +1,6 @@
 // src/screens/TrackingScreen.tsx
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+// IMPORT DES LIBS : on charge React, ses hooks et plein d'autres modules utiles
+import React, { useState, useEffect, useMemo, useCallback } from 'react'; // hooks pour gérer l'état, les effets et les mémos
 import {
     View,
     Text,
@@ -9,55 +10,56 @@ import {
     RefreshControl,
     Alert,
     TextInput,
-} from 'react-native';
-import { API, graphqlOperation } from 'aws-amplify';
-import { listExerciseTrackings, listExercises } from '../graphql/queries';
-import { useAuth } from '../context/AuthContext';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import type { RootStackParamList } from '../types/NavigationTypes';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { ButtonStyles } from '../styles/ButtonStyles';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import ExerciseFilterBar from '../components/ExerciseFilterBar';
-import MuscleGroupFilterBar from '../components/MuscleGroupFilterBar';
+} from 'react-native'; // composants de base RN
+import { API, graphqlOperation } from 'aws-amplify'; // pour faire des appels GraphQL
+import { listExerciseTrackings, listExercises } from '../graphql/queries'; // requêtes pour récupérer les suivis et les exos
+import { useAuth } from '../context/AuthContext'; // récupère le contexte d'authentification
+import { useNavigation, useFocusEffect } from '@react-navigation/native'; // navigation et effet au focus
+import type { RootStackParamList } from '../types/NavigationTypes'; // types de navigation
+import { StackNavigationProp } from '@react-navigation/stack'; // type pour la navigation en stack
+import { ButtonStyles } from '../styles/ButtonStyles'; // styles custom des boutons
+import Ionicons from 'react-native-vector-icons/Ionicons'; // icônes Ionicons
+import ExerciseFilterBar from '../components/ExerciseFilterBar'; // barre de filtre pour les exos
+import MuscleGroupFilterBar from '../components/MuscleGroupFilterBar'; // barre de filtre pour les groupes musculaires
 
-type NavigationProp = StackNavigationProp<RootStackParamList>;
-
+// TYPE : structure d'un enregistrement de suivi
 interface TrackingRecord {
-    id: string;
-    userId: string;
-    exerciseId: string;
-    exerciseName: string;
-    date: string; // ISO string
-    setsData: string; // JSON string
+    id: string; // id du suivi
+    userId: string; // id de l'user
+    exerciseId: string; // id de l'exo
+    exerciseName: string; // nom de l'exo
+    date: string; // date en ISO string
+    setsData: string; // données des séries sous forme de JSON string
 }
 
+type NavigationProp = StackNavigationProp<RootStackParamList>; // typage de la navigation
+
 const TrackingScreen: React.FC = () => {
-    const [trackings, setTrackings] = useState<TrackingRecord[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [refreshing, setRefreshing] = useState<boolean>(false);
-    const { user } = useAuth();
-    const navigation = useNavigation<NavigationProp>();
+    const [trackings, setTrackings] = useState<TrackingRecord[]>([]); // liste des suivis
+    const [loading, setLoading] = useState<boolean>(true); // état de chargement
+    const [refreshing, setRefreshing] = useState<boolean>(false); // état pour pull-to-refresh
+    const { user } = useAuth(); // récupère l'user courant
+    const navigation = useNavigation<NavigationProp>(); // navigation typée
 
-    // Search bar state.
-    const [searchQuery, setSearchQuery] = useState<string>('');
+    // ETAT : barre de recherche
+    const [searchQuery, setSearchQuery] = useState<string>(''); // query de recherche
 
-    // Exercise filter state (managed by ExerciseFilterBar).
-    const [filterExercise, setFilterExercise] = useState<string>('All');
+    // ETAT : filtre par exo (géré via ExerciseFilterBar)
+    const [filterExercise, setFilterExercise] = useState<string>('All'); // filtre sur l'exo sélectionné
 
-    // Muscle group filter state.
-    const [filterMuscleGroup, setFilterMuscleGroup] = useState<string>('All');
+    // ETAT : filtre par groupe musculaire
+    const [filterMuscleGroup, setFilterMuscleGroup] = useState<string>('All'); // filtre sur le groupe musculaire
 
-    // State for available muscle groups and mapping from exercise name to muscle group.
-    const [availableMuscleGroups, setAvailableMuscleGroups] = useState<string[]>([]);
-    const [exerciseMapping, setExerciseMapping] = useState<{ [key: string]: string }>({});
+    // ETAT : liste des groupes musculaires dispo et mapping nom exo => groupe
+    const [availableMuscleGroups, setAvailableMuscleGroups] = useState<string[]>([]); // groupes dispo
+    const [exerciseMapping, setExerciseMapping] = useState<{ [key: string]: string }>({}); // mapping exo -> groupe
 
-    // Compute unique exercises from tracking records.
+    // MEMO : récupère la liste unique d'exos à partir des suivis
     const uniqueExercises = useMemo(() => {
-        return Array.from(new Set(trackings.map((t) => t.exerciseName)));
+        return Array.from(new Set(trackings.map((t) => t.exerciseName))); // unique par nom
     }, [trackings]);
 
-    // Compute filtered exercises for the ExerciseFilterBar based on the active muscle group.
+    // MEMO : filtre les exos pour la barre de filtre en fonction du groupe sélectionné
     const filteredExercises = useMemo(() => {
         if (filterMuscleGroup !== 'All') {
             return uniqueExercises.filter(
@@ -67,25 +69,26 @@ const TrackingScreen: React.FC = () => {
         return uniqueExercises;
     }, [uniqueExercises, exerciseMapping, filterMuscleGroup]);
 
-    // Pull-to-refresh handler.
+    // PULL-TO-REFRESH : rafraîchit les suivis
     const onRefresh = async () => {
-        setRefreshing(true);
-        await fetchTrackings();
-        setRefreshing(false);
+        setRefreshing(true); // démarre le refresh
+        await fetchTrackings(); // recharge les données
+        setRefreshing(false); // stop refresh
     };
 
-    // Refresh tracking data when screen gains focus.
+    // Recharge les suivis dès que l'écran reprend le focus
     useFocusEffect(
         useCallback(() => {
-            fetchTrackings();
+            fetchTrackings(); // recharge quand l'écran est focus
         }, [user])
     );
 
+    // recharge aussi au montage ou quand l'user change
     useEffect(() => {
         fetchTrackings();
     }, [user]);
 
-    // Fetch tracking records.
+    // FONCTION : récupère les enregistrements de suivi depuis le backend
     const fetchTrackings = async () => {
         if (!user) {
             setLoading(false);
@@ -99,7 +102,7 @@ const TrackingScreen: React.FC = () => {
                 })
             );
             const items: TrackingRecord[] = response.data.listExerciseTrackings.items;
-            setTrackings(items);
+            setTrackings(items); // stocke les suivis
         } catch (error) {
             console.error('Error fetching tracking data', error);
             Alert.alert('Erreur', 'Une erreur est survenue lors du chargement des données.');
@@ -108,7 +111,7 @@ const TrackingScreen: React.FC = () => {
         }
     };
 
-    // Fetch available muscle groups and build exercise mapping from user's exercises.
+    // Récupère les groupes musculaires dispo et crée le mapping exo => groupe
     useEffect(() => {
         const fetchMuscleGroups = async () => {
             if (!user) return;
@@ -123,12 +126,12 @@ const TrackingScreen: React.FC = () => {
                 const groups: string[] = [];
                 items.forEach((e: any) => {
                     if (e.name && e.muscleGroup) {
-                        mapping[e.name] = e.muscleGroup;
-                        groups.push(e.muscleGroup);
+                        mapping[e.name] = e.muscleGroup; // associe nom => groupe
+                        groups.push(e.muscleGroup); // stocke le groupe
                     }
                 });
                 setExerciseMapping(mapping);
-                setAvailableMuscleGroups(Array.from(new Set(groups)));
+                setAvailableMuscleGroups(Array.from(new Set(groups))); // groupe unique
             } catch (error) {
                 console.error('Error fetching muscle groups', error);
                 Alert.alert('Erreur', 'Impossible de charger les groupes musculaires.');
@@ -137,22 +140,22 @@ const TrackingScreen: React.FC = () => {
         fetchMuscleGroups();
     }, [user]);
 
-    // Compute summary statistics.
-    const totalSessions = trackings.length;
+    // CALCULS : stats de synthèse
+    const totalSessions = trackings.length; // nb total de séances
     const totalWeightLifted = trackings.reduce((sum, record) => {
         try {
-            const setsData = JSON.parse(record.setsData);
+            const setsData = JSON.parse(record.setsData); // parse les données JSON
             const recordTotal = setsData.reduce(
                 (s: number, set: { reps: number; weight: number }) => s + set.reps * set.weight,
                 0
             );
-            return sum + recordTotal;
+            return sum + recordTotal; // ajoute le total de l'enregistrement
         } catch (e) {
             return sum;
         }
     }, 0);
 
-    // Filtering logic for tracking records.
+    // FILTRAGE : on filtre les suivis selon la recherche et les filtres appliqués
     const filteredTrackings = trackings.filter((tracking) => {
         let exerciseMatch = true;
         if (searchQuery) {
@@ -169,7 +172,7 @@ const TrackingScreen: React.FC = () => {
         return exerciseMatch && muscleMatch;
     });
 
-    // Active filter badges.
+    // ACTIVE FILTERS : badges affichés pour les filtres actifs
     const activeFilters: string[] = [];
     if (filterMuscleGroup && filterMuscleGroup !== 'All')
         activeFilters.push(`Groupe: ${filterMuscleGroup}`);
@@ -177,8 +180,10 @@ const TrackingScreen: React.FC = () => {
         activeFilters.push(`Exercice: ${filterExercise}`);
     if (searchQuery) activeFilters.push(`Recherche: ${searchQuery}`);
 
+    // RENDER : comment afficher chaque enregistrement de suivi
     const renderItem = ({ item }: { item: TrackingRecord }) => {
         const dateObj = new Date(item.date);
+        // Format de la date au style dd/mm
         const formattedDate = `${dateObj.getDate().toString().padStart(2, '0')}/${(
             dateObj.getMonth() + 1
         )
@@ -190,7 +195,7 @@ const TrackingScreen: React.FC = () => {
             const setsData = JSON.parse(item.setsData);
             setSummary = setsData
                 .map((set: { reps: number; weight: number }) => `${set.reps} x ${set.weight} kg`)
-                .join('\n');
+                .join('\n'); // résumé de chaque set
         } catch (e) {
             console.error('Error parsing setsData', e);
         }
@@ -198,7 +203,7 @@ const TrackingScreen: React.FC = () => {
         return (
             <TouchableOpacity
                 style={styles.recordItem}
-                onPress={() => navigation.navigate('TrackingDetail', { tracking: item })}
+                onPress={() => navigation.navigate('TrackingDetail', { tracking: item })} // navigate vers le détail
                 onLongPress={() => {
                     Alert.alert(
                         'Supprimer',
@@ -216,7 +221,7 @@ const TrackingScreen: React.FC = () => {
                         { cancelable: true }
                     );
                 }}
-                accessibilityLabel={`Enregistrement du ${formattedDate} pour ${item.exerciseName}`}
+                accessibilityLabel={`Enregistrement du ${formattedDate} pour ${item.exerciseName}`} // accessibilité
             >
                 <Text style={styles.recordTitle}>
                     {item.exerciseName} - {formattedDate}
@@ -226,6 +231,7 @@ const TrackingScreen: React.FC = () => {
         );
     };
 
+    // SI chargement => affiche écran de chargement
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -236,47 +242,47 @@ const TrackingScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
-            {/* Summary Header */}
+            {/* HEADER DE SYNTHÈSE */}
             <View style={styles.summaryHeader}>
                 <Text style={styles.summaryText}>Séances: {totalSessions}</Text>
                 <Text style={styles.summaryText}>Poids total: {totalWeightLifted.toFixed(0)} kg</Text>
             </View>
 
-            {/* Search Bar */}
+            {/* BARRE DE RECHERCHE */}
             <TextInput
                 style={styles.searchBar}
-                placeholder="Search exercises..."
+                placeholder="Rechercher un exercice..." // placeholder
                 placeholderTextColor="#999"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
             />
 
-            {/* Muscle Group Filter Bar */}
+            {/* FILTRE PAR GROUPE MUSCULAIRE */}
             <MuscleGroupFilterBar
-                groups={availableMuscleGroups}
-                activeGroup={filterMuscleGroup}
+                groups={availableMuscleGroups} // groupes dispo
+                activeGroup={filterMuscleGroup} // groupe sélectionné
                 onFilterChange={(selectedGroup) => {
                     setFilterMuscleGroup(selectedGroup);
-                    // Reset exercise filter only if current selected exercise doesn't belong to the chosen group.
+                    // Reset du filtre d'exo si l'exo courant ne correspond plus
                     if (
-                        filterExercise !== 'All' &&
+                        filterExercise !== 'Tout' &&
                         exerciseMapping[filterExercise] !== selectedGroup
                     ) {
-                        setFilterExercise('All');
+                        setFilterExercise('Tout');
                     }
                 }}
             />
 
-            {/* Exercise Filter Bar */}
+            {/* FILTRE PAR EXERCICE */}
             <ExerciseFilterBar
-                exercises={filteredExercises}
+                exercises={filteredExercises} // exos filtrés
                 onFilterChange={(selectedExercise, query) => {
                     setFilterExercise(selectedExercise);
-                    // Search query is controlled by the separate search bar.
+                    // la recherche est gérée séparément
                 }}
             />
 
-            {/* Active Filter Badges */}
+            {/* BADGES DES FILTRES ACTIFS */}
             {activeFilters.length > 0 && (
                 <View style={styles.activeFiltersContainer}>
                     {activeFilters.map((filter, idx) => (
@@ -287,12 +293,13 @@ const TrackingScreen: React.FC = () => {
                 </View>
             )}
 
+            {/* LISTE DES SUIVIS */}
             <FlatList
                 data={filteredTrackings}
                 keyExtractor={(item) => item.id}
                 renderItem={renderItem}
                 contentContainerStyle={styles.contentContainer}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} // pull-to-refresh
                 ListEmptyComponent={
                     <View style={styles.emptyStateContainer}>
                         <Text style={styles.emptyStateText}>
@@ -302,7 +309,7 @@ const TrackingScreen: React.FC = () => {
                 }
             />
 
-            {/* Persistent Action Button */}
+            {/* BOUTON ACTION PERMANENT */}
             <TouchableOpacity
                 style={styles.persistentButton}
                 onPress={() => navigation.navigate('ManualTracking')}
@@ -319,7 +326,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
         padding: 16,
-        paddingBottom: 80, // Extra space for persistent button.
+        paddingBottom: 80, // espace en bas pour le bouton
     },
     summaryHeader: {
         flexDirection: 'row',
@@ -398,7 +405,7 @@ const styles = StyleSheet.create({
         bottom: 16,
         left: 16,
         right: 16,
-        ...ButtonStyles.container,
+        ...ButtonStyles.container, // styles du bouton custom
     },
 });
 

@@ -1,5 +1,6 @@
 // src/screens/WorkoutSessionScreen.tsx
-import React, { useState, useEffect, useRef } from 'react';
+// IMPORT DES LIBS : on importe tout ce qu'il faut pour cet écran
+import React, { useState, useEffect, useRef } from 'react'; // importe react et ses hooks
 import {
     View,
     Text,
@@ -12,63 +13,64 @@ import {
     TextInput,
     Alert,
     AppState,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { API, graphqlOperation, Auth } from 'aws-amplify';
-import { createExerciseTracking } from '../graphql/mutations';
-import { v4 as uuidv4 } from 'uuid';
-import { Ionicons } from '@expo/vector-icons';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ButtonStyles } from '../styles/ButtonStyles';
-import { TextInputStyles } from '../styles/TextInputStyles';
-import { TextStyles } from '../styles/TextStyles';
-import { Audio } from 'expo-av';
-import * as Haptics from 'expo-haptics';
-import * as Notifications from 'expo-notifications';
-import Svg, { Rect } from 'react-native-svg';
+} from 'react-native'; // composants basiques de react-native
+import { useNavigation } from '@react-navigation/native'; // navigation entre écrans
+import { API, graphqlOperation, Auth } from 'aws-amplify'; // pour les appels API et l'authentification
+import { createExerciseTracking } from '../graphql/mutations'; // mutation pour sauvegarder l'exo
+import { v4 as uuidv4 } from 'uuid'; // générer des id uniques
+import { Ionicons } from '@expo/vector-icons'; // icônes Ionicons
+import { MaterialCommunityIcons } from '@expo/vector-icons'; // icônes Material Community
+import { ButtonStyles } from '../styles/ButtonStyles'; // styles custom des boutons
+import { TextInputStyles } from '../styles/TextInputStyles'; // styles custom des inputs
+import { TextStyles } from '../styles/TextStyles'; // styles custom du texte
+import { Audio } from 'expo-av'; // gestion du son
+import * as Haptics from 'expo-haptics'; // vibrations haptics
+import * as Notifications from 'expo-notifications'; // gestion des notifications
+import Svg, { Rect } from 'react-native-svg'; // dessin SVG
 
-// Configure notifications
+// CONFIG NOTIFICATIONS : configuration des notif' pour qu'elles s'affichent bien
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
+        shouldShowAlert: true, // affiche l'alerte
+        shouldPlaySound: true, // joue le son
+        shouldSetBadge: false, // pas de badge
     }),
 });
 
 // ----------------------------------------------------------------------------
 // INTERFACES & HELPER FUNCTIONS
-
+//
 export interface SetResult {
-    reps?: number;
-    weight?: number;
+    reps?: number; // rép
+    weight?: number; // poids
 }
 
 export interface WorkoutSessionScreenProps {
     sessionData: {
-        exerciseName: string;
-        totalSets: number;
-        plannedReps: number;
-        restDuration: number; // in seconds
+        exerciseName: string; // nom de l'exo
+        totalSets: number; // nombre total de séries
+        plannedReps: number; // répétitions prévues
+        restDuration: number; // durée du repos (sec)
     };
-    onComplete: (results: SetResult[]) => void;
-    onClose?: () => void;
+    onComplete: (results: SetResult[]) => void; // callback quand l'exo est fini
+    onClose?: () => void; // callback facultatif pour fermer l'écran
 }
 
 const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    const mins = Math.floor(seconds / 60); // calcule les minutes
+    const secs = seconds % 60; // calcule les secondes restantes
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`; // retourne au format mm:ss
 };
 
 // ----------------------------------------------------------------------------
-// AnimatedBorder Component
-const AnimatedRect = Animated.createAnimatedComponent(Rect);
+// ANIMATED BORDER COMPONENT
+//
+const AnimatedRect = Animated.createAnimatedComponent(Rect); // transforme Rect en composant animé
 
 interface AnimatedBorderProps {
-    size: number;
-    borderRadius: number;
-    strokeWidth: number;
+    size: number; // taille totale
+    borderRadius: number; // arrondi
+    strokeWidth: number; // épaisseur du trait
 }
 
 const AnimatedBorder: React.FC<AnimatedBorderProps> = ({
@@ -76,20 +78,21 @@ const AnimatedBorder: React.FC<AnimatedBorderProps> = ({
     borderRadius,
     strokeWidth,
 }) => {
-    const straightLength = (size - strokeWidth) * 4 - 8 * borderRadius;
-    const curvedLength = 2 * Math.PI * borderRadius;
-    const perimeter = straightLength + curvedLength;
-    const dashLength = perimeter * 0.2;
-    const gapLength = perimeter - dashLength;
-    const dashPattern = `${dashLength},${gapLength}`;
-    const dashOffsetAnim = useRef(new Animated.Value(0)).current;
+    const straightLength = (size - strokeWidth) * 4 - 8 * borderRadius; // longueur des segments droits
+    const curvedLength = 2 * Math.PI * borderRadius; // longueur des coins arrondis
+    const perimeter = straightLength + curvedLength; // périmètre total
+    const dashLength = perimeter * 0.2; // longueur du tiret
+    const gapLength = perimeter - dashLength; // longueur de l'espace
+    const dashPattern = `${dashLength},${gapLength}`; // pattern tiret/espace
+    const dashOffsetAnim = useRef(new Animated.Value(0)).current; // valeur d'animation pour le décalage
 
     useEffect(() => {
+        // boucle l'animation pour créer l'effet de défilement
         Animated.loop(
             Animated.timing(dashOffsetAnim, {
-                toValue: -perimeter,
-                duration: 2000,
-                easing: Easing.linear,
+                toValue: -perimeter, // fait défiler sur toute la longueur
+                duration: 2000, // durée de l'animation
+                easing: Easing.linear, // défilement constant
                 useNativeDriver: false,
             })
         ).start();
@@ -102,24 +105,25 @@ const AnimatedBorder: React.FC<AnimatedBorderProps> = ({
                 y={strokeWidth / 2}
                 width={size - strokeWidth}
                 height={size - strokeWidth}
-                rx={borderRadius}
-                ry={borderRadius}
-                fill="none"
-                stroke="#b21ae5"
+                rx={borderRadius} // arrondi horizontal
+                ry={borderRadius} // arrondi vertical
+                fill="none" // pas de remplissage
+                stroke="#b21ae5" // couleur du trait
                 strokeWidth={strokeWidth}
-                strokeDasharray={dashPattern}
-                strokeDashoffset={dashOffsetAnim}
-                strokeLinecap="round"
+                strokeDasharray={dashPattern} // applique le pattern
+                strokeDashoffset={dashOffsetAnim} // animation du décalage
+                strokeLinecap="round" // extrémités arrondies
             />
         </Svg>
     );
 };
 
 // ----------------------------------------------------------------------------
-// SetNumberIcon Component
+// SETNUMBER ICON COMPONENT
+//
 interface SetNumberIconProps {
-    number: number;
-    active?: boolean;
+    number: number; // numéro de la série
+    active?: boolean; // série active ou pas
 }
 const SetNumberIcon: React.FC<SetNumberIconProps> = ({ number, active }) => {
     return (
@@ -128,19 +132,21 @@ const SetNumberIcon: React.FC<SetNumberIconProps> = ({ number, active }) => {
                 <Text style={styles.setNumberIconText}>{number}</Text>
             </View>
             {active && <AnimatedBorder size={70} borderRadius={20} strokeWidth={3} />}
+            // si active, on affiche la bordure animée
         </View>
     );
 };
 
 // ----------------------------------------------------------------------------
-// WorkoutInputField Component
+// WORKOUT INPUT FIELD COMPONENT
+//
 interface WorkoutInputFieldProps {
-    label: string;
-    value: string;
-    onChangeText: (text: string) => void;
-    onBlur?: () => void;
-    error?: string;
-    keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+    label: string; // texte du placeholder
+    value: string; // valeur actuelle
+    onChangeText: (text: string) => void; // callback lors du changement
+    onBlur?: () => void; // callback à la perte de focus
+    error?: string; // message d'erreur éventuel
+    keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad'; // type de clavier
 }
 const WorkoutInputField: React.FC<WorkoutInputFieldProps> = ({
     label,
@@ -153,8 +159,8 @@ const WorkoutInputField: React.FC<WorkoutInputFieldProps> = ({
     return (
         <View style={[TextInputStyles.container, styles.inputContainer]}>
             <TextInput
-                placeholder={label}
-                placeholderTextColor="#999"
+                placeholder={label} // affiche le label
+                placeholderTextColor="#999" // couleur du placeholder
                 value={value}
                 onChangeText={onChangeText}
                 onBlur={onBlur}
@@ -162,12 +168,14 @@ const WorkoutInputField: React.FC<WorkoutInputFieldProps> = ({
                 keyboardType={keyboardType}
             />
             {error ? <Text style={TextInputStyles.errorText}>{error}</Text> : null}
+            // affiche l'erreur si besoin
         </View>
     );
 };
 
 // ----------------------------------------------------------------------------
-// Main WorkoutSessionScreen Component
+// MAIN WORKOUTSESSIONSCREEN COMPONENT
+//
 const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     sessionData,
     onComplete,
@@ -184,33 +192,33 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     const navigation = useNavigation();
     const { exerciseName, totalSets, plannedReps, restDuration } = sessionData;
 
-    // STATE DECLARATIONS
-    const [hasStarted, setHasStarted] = useState<boolean>(false);
-    const [currentSet, setCurrentSet] = useState<number>(1);
-    const [phase, setPhase] = useState<'work' | 'rest'>('work');
-    const [targetTime, setTargetTime] = useState<number>(Date.now() + restDuration * 1000);
-    const [timer, setTimer] = useState<number>(restDuration);
-    const [results, setResults] = useState<SetResult[]>(Array(totalSets).fill({}));
-    const [isEditingModalVisible, setIsEditingModalVisible] = useState<boolean>(false);
-    const [editingSetIndex, setEditingSetIndex] = useState<number>(0);
-    const [tempReps, setTempReps] = useState<string>('');
-    const [tempWeight, setTempWeight] = useState<string>('');
-    const [isMinimized, setIsMinimized] = useState<boolean>(false);
-    const [repsError, setRepsError] = useState<string>('');
-    const [weightError, setWeightError] = useState<string>('');
+    // déclaration des états
+    const [hasStarted, setHasStarted] = useState<boolean>(false); // l'exo a démarré ou pas
+    const [currentSet, setCurrentSet] = useState<number>(1); // série en cours
+    const [phase, setPhase] = useState<'work' | 'rest'>('work'); // phase: travail ou repos
+    const [targetTime, setTargetTime] = useState<number>(Date.now() + restDuration * 1000); // fin du repos en timestamp
+    const [timer, setTimer] = useState<number>(restDuration); // timer en sec
+    const [results, setResults] = useState<SetResult[]>(Array(totalSets).fill({})); // données des séries
+    const [isEditingModalVisible, setIsEditingModalVisible] = useState<boolean>(false); // modal d'édition visible
+    const [editingSetIndex, setEditingSetIndex] = useState<number>(0); // index de la série en modif
+    const [tempReps, setTempReps] = useState<string>(''); // rép temporaires
+    const [tempWeight, setTempWeight] = useState<string>(''); // poids temporaire
+    const [isMinimized, setIsMinimized] = useState<boolean>(false); // vue minimisée ou pas
+    const [repsError, setRepsError] = useState<string>(''); // erreur rép
+    const [weightError, setWeightError] = useState<string>(''); // erreur poids
 
-    // SOUND STATES
+    // états des sons
     const [countdownSound, setCountdownSound] = useState<Audio.Sound | null>(null);
     const [whistleSound, setWhistleSound] = useState<Audio.Sound | null>(null);
 
-    // CONTROLS FOR SOUNDS & HAPTICS
+    // contrôles sons et vibrations
     const [soundsEnabled, setSoundsEnabled] = useState<boolean>(true);
     const [hapticsEnabled, setHapticsEnabled] = useState<boolean>(true);
 
-    // APP STATE TRACKING
+    // suivi de l'état de l'app (foreground/background)
     const [appState, setAppState] = useState(AppState.currentState);
 
-    // Request notification permissions on component mount
+    // demande les permissions de notif' au montage
     useEffect(() => {
         (async () => {
             const { status } = await Notifications.requestPermissionsAsync();
@@ -224,7 +232,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         })();
     }, []);
 
-    // Set audio mode
+    // configure le mode audio
     useEffect(() => {
         Audio.setAudioModeAsync({
             playsInSilentModeIOS: true,
@@ -232,7 +240,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         });
     }, []);
 
-    // Load sounds
+    // chargement des sons pour le compte à rebours et le sifflet
     useEffect(() => {
         const loadSounds = async () => {
             try {
@@ -255,24 +263,24 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         };
     }, []);
 
-    // Animated progress bar
+    // BARRE DE PROGRESSION : animation de la barre pendant le repos
     const progressAnim = useRef(new Animated.Value(restDuration)).current;
     useEffect(() => {
         Animated.timing(progressAnim, {
-            toValue: timer,
+            toValue: timer, // fait varier selon le timer
             duration: 500,
             easing: Easing.linear,
             useNativeDriver: false,
         }).start();
     }, [timer]);
 
-    // Modified rest timer effect with notification
+    // TIMER DE REPOS AVEC NOTIF' : gère le timer et les notifications pendant le repos
     useEffect(() => {
         let interval: ReturnType<typeof setInterval> | undefined;
         let notificationId: string | undefined;
 
         if (phase === 'rest') {
-            // Immediately cancel any existing notifications and schedule a new one
+            // annule les notif' en cours et programme une nouvelle
             (async () => {
                 await Notifications.cancelAllScheduledNotificationsAsync();
                 notificationId = await Notifications.scheduleNotificationAsync({
@@ -307,7 +315,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                     if (soundsEnabled && whistleSound) {
                         await whistleSound.replayAsync();
                     }
-                    handleRestComplete();
+                    handleRestComplete(); // fin du repos, on repasse en mode travail
                 }
             }, 1000);
         }
@@ -320,7 +328,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         };
     }, [phase, targetTime, countdownSound, whistleSound, soundsEnabled, hapticsEnabled]);
 
-    // AppState listener: Cancel notifications when returning to foreground
+    // écouteur AppState : annule les notif' quand l'app redevient active
     useEffect(() => {
         const subscription = AppState.addEventListener('change', (nextAppState) => {
             setAppState(nextAppState);
@@ -333,22 +341,23 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         };
     }, []);
 
-    // When rest period ends, switch back to work phase
+    // fin du repos : on repasse en mode travail ou on termine la session
     const handleRestComplete = () => {
         setPhase('work');
         setTimer(restDuration);
         setTargetTime(Date.now() + restDuration * 1000);
         if (currentSet < totalSets) {
-            setCurrentSet((prev) => prev + 1);
+            setCurrentSet((prev) => prev + 1); // passe à la série suivante
         } else {
-            finishSession();
+            finishSession(); // fin de l'exo
         }
     };
 
-    // Called when the user finishes a set
+    // appelé quand l'utilisateur finit une série
     const finishCurrentSet = () => {
         if (currentSet === totalSets) {
             if (!(results[currentSet - 1]?.reps && results[currentSet - 1]?.weight)) {
+                // dernière série pas encore validée : ouvre le modal
                 setEditingSetIndex(currentSet - 1);
                 setTempReps('');
                 setTempWeight('');
@@ -357,11 +366,11 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                 setIsEditingModalVisible(true);
             }
         } else {
-            // Switch to rest phase
+            // passe en mode repos
             setPhase('rest');
             setTargetTime(Date.now() + restDuration * 1000);
             setTimer(restDuration);
-            // (The notification is scheduled immediately by the rest timer effect.)
+            // la notif se programme via l'effet du timer, ouvre le modal après un petit délai
             setTimeout(() => {
                 setEditingSetIndex(currentSet - 1);
                 setTempReps('');
@@ -373,7 +382,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
-    // Save set data
+    // sauvegarde les données de la série
     const saveSetData = () => {
         const repsNum = parseInt(tempReps, 10);
         if (!/^\d+$/.test(tempReps)) {
@@ -403,7 +412,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         setIsEditingModalVisible(false);
     };
 
-    // Finish session
+    // termine la session en sauvegardant si besoin
     const finishSession = async () => {
         const validResults = results.filter(set => set && set.reps && set.weight);
         if (validResults.length === 0) {
@@ -440,7 +449,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
-    // Modified skipRest: Cancel notifications and switch back to work phase
+    // skipRest : annule la notif et repasse en mode travail
     const skipRest = async () => {
         await Notifications.cancelAllScheduledNotificationsAsync();
         setPhase('work');
@@ -453,9 +462,9 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
-    // New function to discard the session data and simply exit
+    // supprime la session et quitte sans sauvegarder
     const deleteSession = async () => {
-        if (onComplete) onComplete([]); // Pass an empty array to indicate no saved data
+        if (onComplete) onComplete([]); // passe un tableau vide
         if (onClose) {
             onClose();
         } else {
@@ -463,9 +472,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
-    // Modified abandonExercise function:
-    // - If no set is completed, simply ask for confirmation.
-    // - If at least one set is completed, offer to save or delete data.
+    // abandon de l'exo : propose de sauvegarder ou supprimer selon le progrès
     const abandonExercise = () => {
         const hasCompletedSet = results.some(set => set?.reps && set?.weight);
 
@@ -511,8 +518,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
-    // New function for pre‑start cancellation.
-    // This is used in the pre‑start UI (before the user taps "Démarrer l'exercice").
+    // annule l'exo en pré-démarrage
     const cancelPreStartExercise = async () => {
         await Notifications.cancelAllScheduledNotificationsAsync();
         if (onClose) {
@@ -522,9 +528,8 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
-    // Render set cards
+    // affiche les cartes des séries
     const renderSetCards = (mode: 'pre' | 'active' | 'rest') => {
-        // Determine if the last set is completed so we can disable the animated border.
         const lastSetCompleted =
             currentSet === totalSets &&
             results[currentSet - 1]?.reps &&
@@ -627,7 +632,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                                     <Text style={ButtonStyles.text}>{lastSetCompleted ? "Terminer l'exercice" : "Série terminée"}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={abandonExercise}>
-                                    <Text style={ButtonStyles.invertedText}>Abandonner l'exercice</Text>
+                                    <Text style={ButtonStyles.invertedText}>Arrêter l'exercice</Text>
                                 </TouchableOpacity>
                             </>
                         ) : (
@@ -644,7 +649,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                                     <Text style={ButtonStyles.text}>Passer le repos</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={abandonExercise}>
-                                    <Text style={ButtonStyles.invertedText}>Abandonner l'exercice</Text>
+                                    <Text style={ButtonStyles.invertedText}>Arrêter l'exercice</Text>
                                 </TouchableOpacity>
                             </>
                         )}

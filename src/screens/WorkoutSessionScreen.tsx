@@ -1,6 +1,5 @@
 // src/screens/WorkoutSessionScreen.tsx
-// IMPORT DES LIBS : on importe tout ce qu'il faut pour cet écran
-import React, { useState, useEffect, useRef } from 'react'; // importe react et ses hooks
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -13,86 +12,80 @@ import {
     TextInput,
     Alert,
     AppState,
-} from 'react-native'; // composants basiques de react-native
-import { useNavigation } from '@react-navigation/native'; // navigation entre écrans
-import { API, graphqlOperation, Auth } from 'aws-amplify'; // pour les appels API et l'authentification
-import { createExerciseTracking } from '../graphql/mutations'; // mutation pour sauvegarder l'exo
-import { v4 as uuidv4 } from 'uuid'; // générer des id uniques
-import { Ionicons } from '@expo/vector-icons'; // icônes Ionicons
-import { MaterialCommunityIcons } from '@expo/vector-icons'; // icônes Material Community
-import { ButtonStyles } from '../styles/ButtonStyles'; // styles custom des boutons
-import { TextInputStyles } from '../styles/TextInputStyles'; // styles custom des inputs
-import { TextStyles } from '../styles/TextStyles'; // styles custom du texte
-import { Audio } from 'expo-av'; // gestion du son
-import * as Haptics from 'expo-haptics'; // vibrations haptics
-import * as Notifications from 'expo-notifications'; // gestion des notifications
-import Svg, { Rect } from 'react-native-svg'; // dessin SVG
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { API, graphqlOperation, Auth } from 'aws-amplify';
+import { createExerciseTracking } from '../graphql/mutations';
+import { v4 as uuidv4 } from 'uuid';
+import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { ButtonStyles } from '../styles/ButtonStyles';
+import { TextInputStyles } from '../styles/TextInputStyles';
+import { TextStyles } from '../styles/TextStyles';
+import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
+import * as Notifications from 'expo-notifications';
+import Svg, { Rect } from 'react-native-svg';
+import { loadSettingsFromFile, saveSettingsToFile } from '../utils/settingsStorage';
 
-// CONFIG NOTIFICATIONS : configuration des notif' pour qu'elles s'affichent bien
+// CONFIG NOTIFICATIONS : on configure la gestion des notifications pour l'app
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-        shouldShowAlert: true, // affiche l'alerte
-        shouldPlaySound: true, // joue le son
-        shouldSetBadge: false, // pas de badge
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
     }),
 });
 
-// ----------------------------------------------------------------------------
-// INTERFACES & HELPER FUNCTIONS
-//
+// INTERFACES POUR LES TYPES
 export interface SetResult {
-    reps?: number; // rép
-    weight?: number; // poids
+    reps?: number;
+    weight?: number;
 }
 
 export interface WorkoutSessionScreenProps {
     sessionData: {
-        exerciseName: string; // nom de l'exo
-        totalSets: number; // nombre total de séries
-        plannedReps: number; // répétitions prévues
-        restDuration: number; // durée du repos (sec)
+        exerciseName: string;
+        totalSets: number;
+        plannedReps: number;
+        restDuration: number;
+        exerciseType?: string;
     };
-    onComplete: (results: SetResult[]) => void; // callback quand l'exo est fini
-    onClose?: () => void; // callback facultatif pour fermer l'écran
+    onComplete: (results: SetResult[]) => void;
+    onClose?: () => void;
 }
 
+// FONCTION UTILITAIRE : formatte le temps en minutes:secondes
 const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60); // calcule les minutes
-    const secs = seconds % 60; // calcule les secondes restantes
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`; // retourne au format mm:ss
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
-// ----------------------------------------------------------------------------
-// ANIMATED BORDER COMPONENT
-//
-const AnimatedRect = Animated.createAnimatedComponent(Rect); // transforme Rect en composant animé
+// ANIMATION SVG : création d'un composant animé pour les bordures
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
 
 interface AnimatedBorderProps {
-    size: number; // taille totale
-    borderRadius: number; // arrondi
-    strokeWidth: number; // épaisseur du trait
+    size: number;
+    borderRadius: number;
+    strokeWidth: number;
 }
-
-const AnimatedBorder: React.FC<AnimatedBorderProps> = ({
-    size,
-    borderRadius,
-    strokeWidth,
-}) => {
-    const straightLength = (size - strokeWidth) * 4 - 8 * borderRadius; // longueur des segments droits
-    const curvedLength = 2 * Math.PI * borderRadius; // longueur des coins arrondis
-    const perimeter = straightLength + curvedLength; // périmètre total
-    const dashLength = perimeter * 0.2; // longueur du tiret
-    const gapLength = perimeter - dashLength; // longueur de l'espace
-    const dashPattern = `${dashLength},${gapLength}`; // pattern tiret/espace
-    const dashOffsetAnim = useRef(new Animated.Value(0)).current; // valeur d'animation pour le décalage
+const AnimatedBorder: React.FC<AnimatedBorderProps> = ({ size, borderRadius, strokeWidth }) => {
+    const straightLength = (size - strokeWidth) * 4 - 8 * borderRadius;
+    const curvedLength = 2 * Math.PI * borderRadius;
+    const perimeter = straightLength + curvedLength;
+    const dashLength = perimeter * 0.2;
+    const gapLength = perimeter - dashLength;
+    const dashPattern = `${dashLength},${gapLength}`;
+    const dashOffsetAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        // boucle l'animation pour créer l'effet de défilement
+        // boucle d'animation pour faire défiler le tiret
         Animated.loop(
             Animated.timing(dashOffsetAnim, {
-                toValue: -perimeter, // fait défiler sur toute la longueur
-                duration: 2000, // durée de l'animation
-                easing: Easing.linear, // défilement constant
+                toValue: -perimeter,
+                duration: 2000,
+                easing: Easing.linear,
                 useNativeDriver: false,
             })
         ).start();
@@ -105,25 +98,23 @@ const AnimatedBorder: React.FC<AnimatedBorderProps> = ({
                 y={strokeWidth / 2}
                 width={size - strokeWidth}
                 height={size - strokeWidth}
-                rx={borderRadius} // arrondi horizontal
-                ry={borderRadius} // arrondi vertical
-                fill="none" // pas de remplissage
-                stroke="#b21ae5" // couleur du trait
+                rx={borderRadius}
+                ry={borderRadius}
+                fill="none"
+                stroke="#b21ae5"
                 strokeWidth={strokeWidth}
-                strokeDasharray={dashPattern} // applique le pattern
-                strokeDashoffset={dashOffsetAnim} // animation du décalage
-                strokeLinecap="round" // extrémités arrondies
+                strokeDasharray={dashPattern}
+                strokeDashoffset={dashOffsetAnim}
+                strokeLinecap="round"
             />
         </Svg>
     );
 };
 
-// ----------------------------------------------------------------------------
-// SETNUMBER ICON COMPONENT
-//
+// COMPOSANT : icône indiquant le numéro de la série avec une bordure animée si active
 interface SetNumberIconProps {
-    number: number; // numéro de la série
-    active?: boolean; // série active ou pas
+    number: number;
+    active?: boolean;
 }
 const SetNumberIcon: React.FC<SetNumberIconProps> = ({ number, active }) => {
     return (
@@ -132,21 +123,18 @@ const SetNumberIcon: React.FC<SetNumberIconProps> = ({ number, active }) => {
                 <Text style={styles.setNumberIconText}>{number}</Text>
             </View>
             {active && <AnimatedBorder size={70} borderRadius={20} strokeWidth={3} />}
-            // si active, on affiche la bordure animée
         </View>
     );
 };
 
-// ----------------------------------------------------------------------------
-// WORKOUT INPUT FIELD COMPONENT
-//
+// COMPOSANT : champ de saisie personnalisé pour la séance d'exo
 interface WorkoutInputFieldProps {
-    label: string; // texte du placeholder
-    value: string; // valeur actuelle
-    onChangeText: (text: string) => void; // callback lors du changement
-    onBlur?: () => void; // callback à la perte de focus
-    error?: string; // message d'erreur éventuel
-    keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad'; // type de clavier
+    label: string;
+    value: string;
+    onChangeText: (text: string) => void;
+    onBlur?: () => void;
+    error?: string;
+    keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
 }
 const WorkoutInputField: React.FC<WorkoutInputFieldProps> = ({
     label,
@@ -159,8 +147,8 @@ const WorkoutInputField: React.FC<WorkoutInputFieldProps> = ({
     return (
         <View style={[TextInputStyles.container, styles.inputContainer]}>
             <TextInput
-                placeholder={label} // affiche le label
-                placeholderTextColor="#999" // couleur du placeholder
+                placeholder={label}
+                placeholderTextColor="#999"
                 value={value}
                 onChangeText={onChangeText}
                 onBlur={onBlur}
@@ -168,20 +156,18 @@ const WorkoutInputField: React.FC<WorkoutInputFieldProps> = ({
                 keyboardType={keyboardType}
             />
             {error ? <Text style={TextInputStyles.errorText}>{error}</Text> : null}
-            // affiche l'erreur si besoin
         </View>
     );
 };
 
-// ----------------------------------------------------------------------------
-// MAIN WORKOUTSESSIONSCREEN COMPONENT
-//
+// ECRAN PRINCIPAL DE LA SÉANCE : gère toute la logique de la session d'exercice
 const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     sessionData,
     onComplete,
     onClose,
 }) => {
     if (!sessionData) {
+        // Gestion d'erreur si les données de session sont manquantes
         return (
             <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>Erreur: Les paramètres de session sont manquants.</Text>
@@ -191,48 +177,54 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
 
     const navigation = useNavigation();
     const { exerciseName, totalSets, plannedReps, restDuration } = sessionData;
+    const exerciseType =
+        sessionData.exerciseType?.toLowerCase() === 'bodyweight' ? 'bodyweight' : 'normal';
 
-    // déclaration des états
-    const [hasStarted, setHasStarted] = useState<boolean>(false); // l'exo a démarré ou pas
+    // STATES LOCAUX : gestion de l'état de la séance, des timers, et des saisies utilisateur
+    const [hasStarted, setHasStarted] = useState<boolean>(false); // indique si la séance a démarré
     const [currentSet, setCurrentSet] = useState<number>(1); // série en cours
-    const [phase, setPhase] = useState<'work' | 'rest'>('work'); // phase: travail ou repos
-    const [targetTime, setTargetTime] = useState<number>(Date.now() + restDuration * 1000); // fin du repos en timestamp
-    const [timer, setTimer] = useState<number>(restDuration); // timer en sec
-    const [results, setResults] = useState<SetResult[]>(Array(totalSets).fill({})); // données des séries
-    const [isEditingModalVisible, setIsEditingModalVisible] = useState<boolean>(false); // modal d'édition visible
-    const [editingSetIndex, setEditingSetIndex] = useState<number>(0); // index de la série en modif
-    const [tempReps, setTempReps] = useState<string>(''); // rép temporaires
-    const [tempWeight, setTempWeight] = useState<string>(''); // poids temporaire
-    const [isMinimized, setIsMinimized] = useState<boolean>(false); // vue minimisée ou pas
-    const [repsError, setRepsError] = useState<string>(''); // erreur rép
-    const [weightError, setWeightError] = useState<string>(''); // erreur poids
+    const [phase, setPhase] = useState<'work' | 'rest'>('work'); // phase de travail ou de repos
+    const [targetTime, setTargetTime] = useState<number>(Date.now() + restDuration * 1000); // timestamp cible pour le repos
+    const [timer, setTimer] = useState<number>(restDuration); // temps restant
+    const [results, setResults] = useState<any[]>(Array(totalSets).fill({})); // stocke les résultats de chaque série
+    const [isEditingModalVisible, setIsEditingModalVisible] = useState<boolean>(false); // contrôle la modal de saisie
+    const [editingSetIndex, setEditingSetIndex] = useState<number>(0); // série en cours d'édition
+    const [tempReps, setTempReps] = useState<string>(''); // saisie temporaire pour les répétitions
+    const [tempWeight, setTempWeight] = useState<string>(''); // saisie temporaire pour le poids
+    const [isMinimized, setIsMinimized] = useState<boolean>(false); // état minimisé de l'écran
+    const [repsError, setRepsError] = useState<string>(''); // message d'erreur pour les répétitions
+    const [weightError, setWeightError] = useState<string>(''); // message d'erreur pour le poids
 
-    // états des sons
-    const [countdownSound, setCountdownSound] = useState<Audio.Sound | null>(null);
-    const [whistleSound, setWhistleSound] = useState<Audio.Sound | null>(null);
-
-    // contrôles sons et vibrations
+    // NOUVEAU : préférences pour le son et les vibrations
     const [soundsEnabled, setSoundsEnabled] = useState<boolean>(true);
     const [hapticsEnabled, setHapticsEnabled] = useState<boolean>(true);
 
-    // suivi de l'état de l'app (foreground/background)
-    const [appState, setAppState] = useState(AppState.currentState);
-
-    // demande les permissions de notif' au montage
+    // CHARGEMENT DES PARAMÈTRES : on récupère les settings depuis le fichier JSON au démarrage
     useEffect(() => {
-        (async () => {
-            const { status } = await Notifications.requestPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert(
-                    'Permission Required',
-                    'Please enable notifications to receive rest timer alerts.',
-                    [{ text: 'OK' }]
-                );
-            }
-        })();
+        const loadSettings = async () => {
+            const settings = await loadSettingsFromFile();
+            setSoundsEnabled(settings.audioEnabled);
+            setHapticsEnabled(settings.hapticsEnabled);
+        };
+        loadSettings();
     }, []);
 
-    // configure le mode audio
+    // FONCTIONS DE TOGGLE : met à jour les préférences et sauvegarde dans le fichier JSON
+    const toggleSound = async () => {
+        const newVal = !soundsEnabled;
+        setSoundsEnabled(newVal);
+        const currentSettings = await loadSettingsFromFile();
+        await saveSettingsToFile({ ...currentSettings, audioEnabled: newVal });
+    };
+
+    const toggleHaptics = async () => {
+        const newVal = !hapticsEnabled;
+        setHapticsEnabled(newVal);
+        const currentSettings = await loadSettingsFromFile();
+        await saveSettingsToFile({ ...currentSettings, hapticsEnabled: newVal });
+    };
+
+    // CONFIG AUDIO : on autorise la lecture en mode silencieux sur iOS et en arrière-plan
     useEffect(() => {
         Audio.setAudioModeAsync({
             playsInSilentModeIOS: true,
@@ -240,7 +232,10 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         });
     }, []);
 
-    // chargement des sons pour le compte à rebours et le sifflet
+    // CHARGEMENT DES SONS : on charge les fichiers audio pour le compte à rebours et le sifflet
+    const [countdownSound, setCountdownSound] = useState<Audio.Sound | null>(null);
+    const [whistleSound, setWhistleSound] = useState<Audio.Sound | null>(null);
+
     useEffect(() => {
         const loadSounds = async () => {
             try {
@@ -263,24 +258,23 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         };
     }, []);
 
-    // BARRE DE PROGRESSION : animation de la barre pendant le repos
+    // ANIMATION DE PROGRESSION : animation de la barre de progression durant le repos
     const progressAnim = useRef(new Animated.Value(restDuration)).current;
     useEffect(() => {
         Animated.timing(progressAnim, {
-            toValue: timer, // fait varier selon le timer
+            toValue: timer,
             duration: 500,
             easing: Easing.linear,
             useNativeDriver: false,
         }).start();
     }, [timer]);
 
-    // TIMER DE REPOS AVEC NOTIF' : gère le timer et les notifications pendant le repos
+    // GESTION DU TIMER ET DES NOTIFICATIONS EN PHASE DE REPOS
     useEffect(() => {
         let interval: ReturnType<typeof setInterval> | undefined;
         let notificationId: string | undefined;
 
         if (phase === 'rest') {
-            // annule les notif' en cours et programme une nouvelle
             (async () => {
                 await Notifications.cancelAllScheduledNotificationsAsync();
                 notificationId = await Notifications.scheduleNotificationAsync({
@@ -301,6 +295,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                 const remaining = Math.max(Math.ceil((targetTime - Date.now()) / 1000), 0);
                 setTimer(remaining);
 
+                // son et vibrations pour les 3 dernières secondes du repos
                 if (remaining > 0 && remaining <= 3) {
                     if (soundsEnabled && countdownSound) {
                         await countdownSound.replayAsync();
@@ -315,7 +310,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                     if (soundsEnabled && whistleSound) {
                         await whistleSound.replayAsync();
                     }
-                    handleRestComplete(); // fin du repos, on repasse en mode travail
+                    handleRestComplete();
                 }
             }, 1000);
         }
@@ -328,10 +323,9 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         };
     }, [phase, targetTime, countdownSound, whistleSound, soundsEnabled, hapticsEnabled]);
 
-    // écouteur AppState : annule les notif' quand l'app redevient active
+    // ANNULATION DES NOTIFICATIONS SI L'APPLI REDEVIENT ACTIVE
     useEffect(() => {
         const subscription = AppState.addEventListener('change', (nextAppState) => {
-            setAppState(nextAppState);
             if (nextAppState === 'active') {
                 Notifications.cancelAllScheduledNotificationsAsync();
             }
@@ -341,83 +335,114 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         };
     }, []);
 
-    // fin du repos : on repasse en mode travail ou on termine la session
+    // FONCTION : fin de la phase de repos, passe en mode "work" ou termine la séance
     const handleRestComplete = () => {
         setPhase('work');
         setTimer(restDuration);
         setTargetTime(Date.now() + restDuration * 1000);
         if (currentSet < totalSets) {
-            setCurrentSet((prev) => prev + 1); // passe à la série suivante
+            setCurrentSet((prev) => prev + 1);
         } else {
-            finishSession(); // fin de l'exo
+            finishSession();
         }
     };
 
-    // appelé quand l'utilisateur finit une série
+    // FONCTION : termine la série courante et déclenche l'édition des données
     const finishCurrentSet = () => {
-        if (currentSet === totalSets) {
-            if (!(results[currentSet - 1]?.reps && results[currentSet - 1]?.weight)) {
-                // dernière série pas encore validée : ouvre le modal
-                setEditingSetIndex(currentSet - 1);
-                setTempReps('');
-                setTempWeight('');
-                setRepsError('');
-                setWeightError('');
-                setIsEditingModalVisible(true);
+        if (exerciseType === 'bodyweight') {
+            if (currentSet === totalSets) {
+                if (!results[currentSet - 1]?.reps) {
+                    setEditingSetIndex(currentSet - 1);
+                    setTempReps('');
+                    setRepsError('');
+                    setIsEditingModalVisible(true);
+                }
+            } else {
+                setPhase('rest');
+                setTargetTime(Date.now() + restDuration * 1000);
+                setTimer(restDuration);
+                setTimeout(() => {
+                    setEditingSetIndex(currentSet - 1);
+                    setTempReps('');
+                    setRepsError('');
+                    setIsEditingModalVisible(true);
+                }, 500);
             }
         } else {
-            // passe en mode repos
-            setPhase('rest');
-            setTargetTime(Date.now() + restDuration * 1000);
-            setTimer(restDuration);
-            // la notif se programme via l'effet du timer, ouvre le modal après un petit délai
-            setTimeout(() => {
-                setEditingSetIndex(currentSet - 1);
-                setTempReps('');
-                setTempWeight('');
-                setRepsError('');
-                setWeightError('');
-                setIsEditingModalVisible(true);
-            }, 500);
+            if (currentSet === totalSets) {
+                if (!(results[currentSet - 1]?.reps && results[currentSet - 1]?.weight)) {
+                    setEditingSetIndex(currentSet - 1);
+                    setTempReps('');
+                    setTempWeight('');
+                    setRepsError('');
+                    setWeightError('');
+                    setIsEditingModalVisible(true);
+                }
+            } else {
+                setPhase('rest');
+                setTargetTime(Date.now() + restDuration * 1000);
+                setTimer(restDuration);
+                setTimeout(() => {
+                    setEditingSetIndex(currentSet - 1);
+                    setTempReps('');
+                    setTempWeight('');
+                    setRepsError('');
+                    setWeightError('');
+                    setIsEditingModalVisible(true);
+                }, 500);
+            }
         }
     };
 
-    // sauvegarde les données de la série
+    // FONCTION : enregistre les données de la série éditée et ferme la modal
     const saveSetData = () => {
         const repsNum = parseInt(tempReps, 10);
         if (!/^\d+$/.test(tempReps)) {
             setRepsError("Veuillez entrer un entier pour les répétitions.");
             return;
         }
-        if (tempWeight === '') {
-            setWeightError("Veuillez entrer un poids.");
-            return;
-        }
-        if (tempWeight.includes(',')) {
-            const parts = tempWeight.split(',');
-            if (parts.length !== 2 || !['25', '5', '75'].includes(parts[1])) {
-                setWeightError("Le poids doit être un entier ou suivi d'une virgule et de 25, 5 ou 75.");
+        if (exerciseType !== 'bodyweight') {
+            if (tempWeight === '') {
+                setWeightError("Veuillez entrer un poids.");
                 return;
             }
-        } else if (!/^\d+$/.test(tempWeight)) {
-            setWeightError("Veuillez entrer un entier valide pour le poids.");
-            return;
+            if (tempWeight.includes(',')) {
+                const parts = tempWeight.split(',');
+                if (parts.length !== 2 || !['25', '5', '75'].includes(parts[1])) {
+                    setWeightError("Le poids doit être un entier ou suivi d'une virgule et de 25, 5 ou 75.");
+                    return;
+                }
+            } else if (!/^\d+$/.test(tempWeight)) {
+                setWeightError("Veuillez entrer un entier valide pour le poids.");
+                return;
+            }
         }
+
         setRepsError('');
         setWeightError('');
-        const weightNum = parseFloat(tempWeight.replace(',', '.'));
+        const weightNum = exerciseType !== 'bodyweight'
+            ? parseFloat(tempWeight.replace(',', '.'))
+            : undefined;
+
         const updated = [...results];
-        updated[editingSetIndex] = { reps: repsNum, weight: weightNum };
+        updated[editingSetIndex] =
+            exerciseType !== 'bodyweight'
+                ? { reps: repsNum, weight: weightNum }
+                : { reps: repsNum };
         setResults(updated);
         setIsEditingModalVisible(false);
     };
 
-    // termine la session en sauvegardant si besoin
+    // FONCTION : termine la séance en sauvegardant les résultats et quitte l'écran
     const finishSession = async () => {
-        const validResults = results.filter(set => set && set.reps && set.weight);
+        const validResults = results.filter(set =>
+            set &&
+            set.reps &&
+            (exerciseType === 'bodyweight' ? true : set.weight)
+        );
         if (validResults.length === 0) {
             console.log("No valid set data entered. Finishing session without saving.");
-            if (onComplete) onComplete([]);
+            onComplete && onComplete([]);
             if (onClose) {
                 onClose();
             } else {
@@ -441,7 +466,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         } catch (error) {
             console.error('Error saving tracking:', error);
         }
-        if (onComplete) onComplete(validResults);
+        onComplete && onComplete(validResults);
         if (onClose) {
             onClose();
         } else {
@@ -449,7 +474,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
-    // skipRest : annule la notif et repasse en mode travail
+    // FONCTION : permet de passer le repos et passer à la série suivante
     const skipRest = async () => {
         await Notifications.cancelAllScheduledNotificationsAsync();
         setPhase('work');
@@ -462,9 +487,9 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
-    // supprime la session et quitte sans sauvegarder
+    // FONCTION : supprime la session en cours (sans sauvegarder)
     const deleteSession = async () => {
-        if (onComplete) onComplete([]); // passe un tableau vide
+        onComplete && onComplete([]);
         if (onClose) {
             onClose();
         } else {
@@ -472,10 +497,9 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
-    // abandon de l'exo : propose de sauvegarder ou supprimer selon le progrès
+    // FONCTION : demande confirmation pour abandonner l'exercice, avec sauvegarde ou suppression
     const abandonExercise = () => {
-        const hasCompletedSet = results.some(set => set?.reps && set?.weight);
-
+        const hasCompletedSet = results.some(set => set?.reps && (exerciseType === 'bodyweight' ? true : set?.weight));
         if (!hasCompletedSet) {
             Alert.alert(
                 "Abandonner l'exercice",
@@ -518,7 +542,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
-    // annule l'exo en pré-démarrage
+    // FONCTION : annule la pré-séance et revient en arrière
     const cancelPreStartExercise = async () => {
         await Notifications.cancelAllScheduledNotificationsAsync();
         if (onClose) {
@@ -528,19 +552,21 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
-    // affiche les cartes des séries
+    // RENDU DES CARTES DE SÉRIES : affiche l'état de chaque série (à venir, en cours, terminé)
     const renderSetCards = (mode: 'pre' | 'active' | 'rest') => {
         const lastSetCompleted =
             currentSet === totalSets &&
             results[currentSet - 1]?.reps &&
-            results[currentSet - 1]?.weight;
+            (exerciseType === 'bodyweight' ? true : results[currentSet - 1]?.weight);
 
         return (
             <>
                 {Array.from({ length: totalSets }).map((_, index) => {
                     let status = 'À venir';
-                    if (results[index]?.reps && results[index]?.weight) {
-                        status = `Terminé : ${results[index].reps} x ${results[index].weight} kg`;
+                    if (results[index]?.reps && (exerciseType === 'bodyweight' ? true : results[index]?.weight)) {
+                        status =
+                            `Terminé : ${results[index].reps}` +
+                            (exerciseType !== 'bodyweight' ? ` x ${results[index].weight} kg` : '');
                     } else if (mode !== 'pre' && index === currentSet - 1) {
                         status = 'En cours';
                     }
@@ -549,11 +575,13 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                             key={index}
                             style={styles.setContainer}
                             onPress={() => {
-                                if (results[index]?.reps && results[index]?.weight) {
+                                if (results[index]?.reps && (exerciseType === 'bodyweight' ? true : results[index]?.weight)) {
                                     setEditingSetIndex(index);
                                     const existing = results[index] || {};
                                     setTempReps(existing.reps ? existing.reps.toString() : '');
-                                    setTempWeight(existing.weight ? existing.weight.toString() : '');
+                                    if (exerciseType !== 'bodyweight') {
+                                        setTempWeight(existing.weight ? existing.weight.toString() : '');
+                                    }
                                     setIsEditingModalVisible(true);
                                 }
                             }}
@@ -566,7 +594,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                                 <Text style={styles.setTitleText}>{`Série ${index + 1}`}</Text>
                                 <Text style={styles.setStatusText}>{status}</Text>
                             </View>
-                            {results[index]?.reps && results[index]?.weight && (
+                            {results[index]?.reps && (exerciseType === 'bodyweight' ? true : results[index]?.weight) && (
                                 <Ionicons name="checkmark-circle" size={24} color="#b21ae5" style={styles.checkIcon} />
                             )}
                         </TouchableOpacity>
@@ -576,6 +604,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         );
     };
 
+    // GESTION DE LA SAISIE : vérifie et formate la saisie du poids
     const handleWeightChange = (value: string) => {
         if (value === '') {
             setTempWeight('');
@@ -587,6 +616,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         }
     };
 
+    // CALCUL DE LA LARGEUR DE LA BARRE DE PROGRESSION EN FONCTION DU TIMER
     const progressBarWidth = progressAnim.interpolate({
         inputRange: [0, restDuration],
         outputRange: ['0%', '100%'],
@@ -596,7 +626,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     const lastSetCompleted =
         currentSet === totalSets &&
         results[currentSet - 1]?.reps &&
-        results[currentSet - 1]?.weight;
+        (exerciseType === 'bodyweight' ? true : results[currentSet - 1]?.weight);
 
     return (
         <View style={styles.fullScreenContainer}>
@@ -614,10 +644,10 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                             <Text style={ButtonStyles.invertedText}>Annuler l'exercice</Text>
                         </TouchableOpacity>
                         <View style={styles.controlContainer}>
-                            <TouchableOpacity style={styles.controlButton} onPress={() => setSoundsEnabled(!soundsEnabled)}>
+                            <TouchableOpacity style={styles.controlButton} onPress={toggleSound}>
                                 <Ionicons name={soundsEnabled ? 'volume-high' : 'volume-mute'} size={30} color="#b21ae5" />
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.controlButton} onPress={() => setHapticsEnabled(!hapticsEnabled)}>
+                            <TouchableOpacity style={styles.controlButton} onPress={toggleHaptics}>
                                 <MaterialCommunityIcons name={hapticsEnabled ? 'vibrate' : 'vibrate-off'} size={30} color="#b21ae5" />
                             </TouchableOpacity>
                         </View>
@@ -654,10 +684,10 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                             </>
                         )}
                         <View style={styles.controlContainer}>
-                            <TouchableOpacity style={styles.controlButton} onPress={() => setSoundsEnabled(!soundsEnabled)}>
+                            <TouchableOpacity style={styles.controlButton} onPress={toggleSound}>
                                 <Ionicons name={soundsEnabled ? 'volume-high' : 'volume-mute'} size={30} color="#b21ae5" />
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.controlButton} onPress={() => setHapticsEnabled(!hapticsEnabled)}>
+                            <TouchableOpacity style={styles.controlButton} onPress={toggleHaptics}>
                                 <MaterialCommunityIcons name={hapticsEnabled ? 'vibrate' : 'vibrate-off'} size={30} color="#b21ae5" />
                             </TouchableOpacity>
                         </View>
@@ -665,6 +695,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                 )}
             </ScrollView>
 
+            {/* Modal de saisie pour éditer les données de la série */}
             <Modal visible={isEditingModalVisible} transparent animationType="slide">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContainer}>
@@ -694,45 +725,47 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                             error={repsError}
                             keyboardType="numeric"
                         />
-                        <WorkoutInputField
-                            label="Poids effectué (kg)"
-                            value={tempWeight}
-                            onChangeText={(text) => {
-                                setTempWeight(text);
-                                if (text === '') {
-                                    setWeightError('Veuillez entrer un poids.');
-                                } else if (text.includes(',')) {
-                                    const parts = text.split(',');
-                                    if (parts.length !== 2 || !['25', '5', '75'].includes(parts[1])) {
-                                        setWeightError('Le poids doit être un entier ou suivi d\'une virgule et de 25, 5 ou 75.');
+                        {exerciseType !== 'bodyweight' && (
+                            <WorkoutInputField
+                                label="Poids effectué (kg)"
+                                value={tempWeight}
+                                onChangeText={(text) => {
+                                    setTempWeight(text);
+                                    if (text === '') {
+                                        setWeightError('Veuillez entrer un poids.');
+                                    } else if (text.includes(',')) {
+                                        const parts = text.split(',');
+                                        if (parts.length !== 2 || !['25', '5', '75'].includes(parts[1])) {
+                                            setWeightError("Le poids doit être un entier ou suivi d'une virgule et de 25, 5 ou 75.");
+                                        } else {
+                                            setWeightError('');
+                                        }
+                                    } else if (!/^\d+$/.test(text)) {
+                                        setWeightError('Veuillez entrer un entier valide pour le poids.');
                                     } else {
                                         setWeightError('');
                                     }
-                                } else if (!/^\d+$/.test(text)) {
-                                    setWeightError('Veuillez entrer un entier valide pour le poids.');
-                                } else {
-                                    setWeightError('');
-                                }
-                            }}
-                            onBlur={() => {
-                                if (tempWeight === '') {
-                                    setWeightError('Veuillez entrer un poids.');
-                                } else if (tempWeight.includes(',')) {
-                                    const parts = tempWeight.split(',');
-                                    if (parts.length !== 2 || !['25', '5', '75'].includes(parts[1])) {
-                                        setWeightError('Le poids doit être un entier ou suivi d\'une virgule et de 25, 5 ou 75.');
+                                }}
+                                onBlur={() => {
+                                    if (tempWeight === '') {
+                                        setWeightError('Veuillez entrer un poids.');
+                                    } else if (tempWeight.includes(',')) {
+                                        const parts = tempWeight.split(',');
+                                        if (parts.length !== 2 || !['25', '5', '75'].includes(parts[1])) {
+                                            setWeightError("Le poids doit être un entier ou suivi d'une virgule et de 25, 5 ou 75.");
+                                        } else {
+                                            setWeightError('');
+                                        }
+                                    } else if (!/^\d+$/.test(tempWeight)) {
+                                        setWeightError('Veuillez entrer un entier valide pour le poids.');
                                     } else {
                                         setWeightError('');
                                     }
-                                } else if (!/^\d+$/.test(tempWeight)) {
-                                    setWeightError('Veuillez entrer un entier valide pour le poids.');
-                                } else {
-                                    setWeightError('');
-                                }
-                            }}
-                            error={weightError}
-                            keyboardType="numeric"
-                        />
+                                }}
+                                error={weightError}
+                                keyboardType="numeric"
+                            />
+                        )}
                         <TouchableOpacity style={ButtonStyles.container} onPress={saveSetData}>
                             <Text style={ButtonStyles.text}>Enregistrer</Text>
                         </TouchableOpacity>
@@ -740,6 +773,7 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
                 </View>
             </Modal>
 
+            {/* Vue minimisée de la séance */}
             {isMinimized && (
                 <TouchableOpacity style={styles.minimizedContainer} onPress={() => setIsMinimized(false)}>
                     <Text style={TextStyles.simpleText}>{exerciseName}</Text>

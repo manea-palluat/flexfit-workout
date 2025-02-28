@@ -1,46 +1,45 @@
-// src/components/NotLoggedInModal.tsx
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../types/NavigationTypes';
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'MainTabs'>;
+type NavigationProp = StackNavigationProp<RootStackParamList, 'MainTabs'>; //définit le type de navigation pour "MainTabs"
 
 interface NotLoggedInModalProps {
-    visible: boolean;
-    onClose: () => void;
+    visible: boolean; //booléen pour afficher ou non la modale
+    onClose: () => void; //callback pour fermer la modale
 }
 
 const NotLoggedInModal: React.FC<NotLoggedInModalProps> = ({ visible, onClose }) => {
-    const navigation = useNavigation<NavigationProp>();
+    const navigation = useNavigation<NavigationProp>(); //obtient l'objet de navigation
 
     const handleLoginNavigation = () => {
-        onClose();
-        navigation.navigate('Auth', { mode: 'login' });
+        onClose(); //ferme la modale
+        navigation.navigate('Auth', { mode: 'login' }); //redirige vers l'écran d'authentification en mode connexion
     };
 
     const handleSignupNavigation = () => {
-        onClose();
-        navigation.navigate('Auth', { mode: 'signup' });
+        onClose(); //ferme la modale
+        navigation.navigate('Auth', { mode: 'signup' }); //redirige vers l'écran d'authentification en mode inscription
     };
 
     return (
-        <Modal visible={visible} transparent animationType="slide">
-            <View style={styles.container}>
-                <View style={styles.modal}>
-                    <Text style={styles.title}>Connectez-vous</Text>
+        <Modal visible={visible} transparent animationType="slide"> {/*affiche la modale en transparence et en slide*/}
+            <View style={styles.container}> {/*container centré avec fond sombre*/}
+                <View style={styles.modal}> {/*boîte modale blanche avec padding et bord arrondi*/}
+                    <Text style={styles.title}>Connectez-vous</Text> {/*titre de la modale*/}
                     <Text style={styles.message}>
                         Vous devez vous connecter ou vous inscrire pour accéder à cette fonctionnalité.
-                    </Text>
+                    </Text> {/*message informatif*/}
                     <TouchableOpacity style={styles.button} onPress={onClose}>
-                        <Text style={styles.buttonText}>Fermer</Text>
+                        <Text style={styles.buttonText}>Fermer</Text> {/*bouton pour fermer la modale*/}
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.button} onPress={handleLoginNavigation}>
-                        <Text style={styles.buttonText}>Connexion</Text>
+                        <Text style={styles.buttonText}>Connexion</Text> {/*bouton pour aller à la connexion*/}
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.button} onPress={handleSignupNavigation}>
-                        <Text style={styles.buttonText}>Inscription</Text>
+                        <Text style={styles.buttonText}>Inscription</Text> {/*bouton pour aller à l'inscription*/}
                     </TouchableOpacity>
                 </View>
             </View>

@@ -17,15 +17,16 @@ import { TextStyles } from '../styles/TextStyles';
 type Props = StackScreenProps<RootStackParamList, 'ConfirmSignUp'>;
 
 const ConfirmSignUpScreen: React.FC<Props> = ({ route, navigation }) => {
+    // INITIALISATION : récupère le username passé en paramètre
     const { username } = route.params;
-    const [code, setCode] = useState<string>('');
-    const [error, setError] = useState<string>('');
-    const [confirmed, setConfirmed] = useState<boolean>(false);
+    const [code, setCode] = useState<string>(''); //stocke le code saisi
+    const [error, setError] = useState<string>(''); //pour les messages d'erreur
+    const [confirmed, setConfirmed] = useState<boolean>(false); //indique si la confirmation a réussi
 
-    // Timer state for the "Renvoyer le code" button (in seconds)
+    // TIMER : pour désactiver "Renvoyer le code" pendant quelques secondes
     const [resendTimer, setResendTimer] = useState<number>(0);
 
-    // Countdown effect: decrease the timer every second when active.
+    //COMPTE À REBOURS : décrémente le timer chaque seconde quand il est actif
     useEffect(() => {
         let interval: ReturnType<typeof setInterval> | null = null;
         if (resendTimer > 0) {
@@ -38,11 +39,12 @@ const ConfirmSignUpScreen: React.FC<Props> = ({ route, navigation }) => {
         };
     }, [resendTimer]);
 
+    //CONFIRMATION : essaie de confirmer l'inscription avec le code
     const handleConfirm = async () => {
         setError('');
         try {
             await Auth.confirmSignUp(username, code);
-            setConfirmed(true);
+            setConfirmed(true); // confirmation réussie
         } catch (err: any) {
             console.error(err);
             if (err.code === 'CodeMismatchException') {
@@ -55,30 +57,37 @@ const ConfirmSignUpScreen: React.FC<Props> = ({ route, navigation }) => {
         }
     };
 
+    //RENVOI CODE : envoie à nouveau le code de confirmation et démarre le timer
     const handleResendCode = async () => {
         setError('');
         try {
             await Auth.resendSignUp(username);
-            setResendTimer(60); // Disable resend for 60 seconds
+            setResendTimer(60); //désactive le bouton pendant 60 sec
         } catch (err: any) {
             console.error(err);
             setError(err.message || "Erreur lors de l’envoi du nouveau code.");
         }
     };
 
+    //RETOUR LOGIN : redirige vers l'écran de connexion
     const handleGoToLogin = () => {
         navigation.navigate('Auth', { mode: 'login' });
     };
 
+    //SI CONFIRMÉ : affiche un écran de succès
     if (confirmed) {
         return (
             <View style={styles.container}>
+                {/* TITRE SUCCESS */}
+                {/*{/* Titre de confirmation */}
                 <Text style={[TextStyles.title, { marginBottom: 20 }]}>
                     Confirmation réussie !
                 </Text>
+                {/*Message info*/}
                 <Text style={[TextStyles.simpleText, styles.info]}>
                     Super ! Vous pouvez maintenant vous connecter.
                 </Text>
+                {/*Bouton pour aller se connecter*/}
                 <TouchableOpacity style={[ButtonStyles.container, styles.fullWidth]} onPress={handleGoToLogin}>
                     <Text style={ButtonStyles.text}>Connexion</Text>
                 </TouchableOpacity>
@@ -86,11 +95,15 @@ const ConfirmSignUpScreen: React.FC<Props> = ({ route, navigation }) => {
         );
     }
 
+    // ECRAN DE CONFIRMATION : demande le code de vérification à l'utilisateur
     return (
         <View style={styles.container}>
+            {/* TITRE PRINCIPAL */}
+            {/*{/* Affiche le titre de l'écran */}
             <Text style={[TextStyles.title, { marginBottom: 20 }]}>
                 Confirmez votre inscription
             </Text>
+            {/* INFO TEXT : indique à qui le code a été envoyé */}
             <Text style={[TextStyles.simpleText, styles.info]}>
                 Entrez le code de confirmation envoyé à votre email pour {username}
             </Text>
@@ -99,31 +112,34 @@ const ConfirmSignUpScreen: React.FC<Props> = ({ route, navigation }) => {
                     {error}
                 </Text>
             ) : null}
+            {/* INPUT CODE : zone de saisie du code */}
             <View style={[TextInputStyles.container, styles.inputContainer]}>
                 <TextInput
                     style={TextInputStyles.input}
                     placeholder="Code de confirmation"
                     value={code}
-                    onChangeText={setCode}
+                    onChangeText={setCode} //maj du code
                     keyboardType="numeric"
                 />
             </View>
+            {/* BOUTON CONFIRMER */}
             <TouchableOpacity
                 style={[
                     ButtonStyles.container,
                     styles.fullWidth,
-                    code.trim().length !== 6 && { opacity: 0.5 }
+                    code.trim().length !== 6 && { opacity: 0.5 } //désactive si code incomplet
                 ]}
                 onPress={handleConfirm}
                 disabled={code.trim().length !== 6}
             >
                 <Text style={ButtonStyles.text}>Confirmer</Text>
             </TouchableOpacity>
+            {/* BOUTON RENVOYER CODE */}
             <TouchableOpacity
                 style={[
                     ButtonStyles.invertedContainer,
                     styles.fullWidth,
-                    resendTimer > 0 && { opacity: 0.5 }
+                    resendTimer > 0 && { opacity: 0.5 } //désactive si timer actif
                 ]}
                 onPress={handleResendCode}
                 disabled={resendTimer > 0}
@@ -159,7 +175,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         width: '100%',
     },
-    // Use full width relative to the form container (which is set to 80% of the screen)
+    // POUR OCCUPER LA LARGEUR TOTALE DU FORMULAIRE (80% de l'écran)
     fullWidth: {
         width: '100%',
         alignSelf: 'center',

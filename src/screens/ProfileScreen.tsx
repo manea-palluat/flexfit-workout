@@ -1,125 +1,213 @@
 // src/screens/ProfileScreen.tsx
-// IMPORT DES LIBS : on importe react, ses hooks, et les modules de navigation et d'authentification
-import React, { useState, useCallback } from 'react'; // importe react + hooks
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'; // composants RN de base
-import { useNavigation, useFocusEffect } from '@react-navigation/native'; // navigation et focus effect
-import { Auth } from 'aws-amplify'; // pour gérer l'auth
-import { StackNavigationProp } from '@react-navigation/stack'; // typage pour la stack
-import type { RootStackParamList } from '../types/NavigationTypes'; // types pour la navigation
-import { useAuth } from '../context/AuthContext'; // notre context d'auth
+import React, { useState, useCallback } from 'react';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    StyleSheet,
+    ScrollView,
+    Image,
+    Alert
+} from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Auth } from 'aws-amplify';
+import { StackNavigationProp } from '@react-navigation/stack';
+import type { RootStackParamList } from '../types/NavigationTypes';
+import { useAuth } from '../context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
+import { ButtonStyles } from '../styles/ButtonStyles';
+import { TextStyles } from '../styles/TextStyles';
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'MainTabs'>; // typage pour aller vers MainTabs
+type NavigationProp = StackNavigationProp<RootStackParamList, 'MainTabs'>;
 
-// PROFIL SCREEN
 const ProfileScreen: React.FC = () => {
-    const { user, signOut } = useAuth(); // récupère user et signOut depuis le context
-    const navigation = useNavigation<NavigationProp>(); // navigation typée
-    const [currentUser, setCurrentUser] = useState(user); // state pour stocker l'user courant
+    const { user, signOut } = useAuth(); // récupère l'user et la fonction de déconnexion
+    const navigation = useNavigation<NavigationProp>(); // navigation pour passer d'écran en écran
+    const [currentUser, setCurrentUser] = useState(user); // stocke l'utilisateur actuel
 
-    // REFRESH AU FOCUS : recharge l'user dès que l'écran est focus
+    // REFRESH USER: on recharge l'utilisateur à chaque focus de l'écran
     useFocusEffect(
         useCallback(() => {
-            const refreshUser = async () => { // rafraîchit l'user
+            const refreshUser = async () => {
                 try {
-                    const updatedUser = await Auth.currentAuthenticatedUser(); // récupère l'user mis à jour
-                    setCurrentUser(updatedUser); // met à jour le state
+                    const updatedUser = await Auth.currentAuthenticatedUser();
+                    setCurrentUser(updatedUser);
                 } catch (error: any) {
-                    // on ignore les erreurs "not authenticated"
                     if (!error.message || !error.message.toLowerCase().includes('not authenticated')) {
                         console.error('Error refreshing user:', error);
                     }
-                    setCurrentUser(null); // user non connecté
+                    setCurrentUser(null);
                 }
             };
-            refreshUser(); // lance la récup dès que l'écran est focus
+            refreshUser();
         }, [])
     );
 
-    // SI user pas connecté : affiche les boutons de connexion et d'inscription
     if (!currentUser) {
         return (
             <View style={styles.container}>
-                <Text style={styles.title}>Profil</Text>
-                <Text style={styles.detail}>Vous n'êtes pas connecté.</Text>
+                {/* TITRE */}
+                {/*{/* Affiche le titre et invite l'utilisateur à se connecter */}
+                <Text style={[TextStyles.title, { marginBottom: 20 }]}>Profil</Text>
+                <Text style={TextStyles.subSimpleText}>Vous n'êtes pas connecté.</Text>
                 <TouchableOpacity
-                    style={styles.button}
-                    onPress={() => navigation.navigate('Auth', { mode: 'login' })} // redirige vers l'écran de connexion
+                    style={ButtonStyles.container}
+                    onPress={() => navigation.navigate('Auth', { mode: 'login' })}
                 >
-                    <Text style={styles.buttonText}>Connexion</Text>
+                    <Text style={ButtonStyles.text}>Connexion</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={styles.button}
-                    onPress={() => navigation.navigate('Auth', { mode: 'signup' })} // redirige vers l'inscription
+                    style={ButtonStyles.container}
+                    onPress={() => navigation.navigate('Auth', { mode: 'signup' })}
                 >
-                    <Text style={styles.buttonText}>Inscription</Text>
+                    <Text style={ButtonStyles.text}>Inscription</Text>
                 </TouchableOpacity>
             </View>
         );
     }
 
-    // EXTRATION DES INFOS : récupère le pseudo et l'email depuis currentUser
-    const displayName = currentUser.attributes.preferred_username || 'Utilisateur'; // pseudo ou "Utilisateur"
-    const email = currentUser.attributes.email || 'Email non défini'; // email ou message alternatif
+    const displayName = currentUser.attributes.preferred_username || 'Utilisateur'; // nom à afficher
+    const email = currentUser.attributes.email || 'Email non défini'; // email à afficher
+
+    // MENU OPTIONS: définit les options du menu avec leurs icônes
+    const menuOptions: MenuOption[] = [
+        { label: 'Confidentialité', route: 'PrivacyPolicy', icon: 'lock-closed-outline' },
+        { label: 'Historique d’achats', route: 'PurchaseHistory', icon: 'receipt-outline' },
+        { label: 'Aide & Support', route: 'HelpSupport', icon: 'help-circle-outline' },
+        { label: 'Paramètres', route: 'ParameterScreen', icon: 'settings-outline' },
+        { label: 'Options du profil', route: 'ProfileOptions', icon: 'person-circle-outline' },
+        { label: 'Inviter un ami', route: 'InviteFriend', icon: 'person-add-outline' },
+        { label: 'Déconnexion', action: 'logout', icon: 'log-out-outline' },
+    ];
+
+    // HANDLER MENU: gère l'action quand on appuie sur une option
+    const handleMenuPress = (option: MenuOption) => {
+        if (option.action === 'logout') {
+            signOut().catch((error) => console.error('Error signing out:', error));
+        } else if (option.route) {
+            try {
+                navigation.navigate(option.route);
+            } catch (error) {
+                Alert.alert('Info', `La page "${option.label}" n'est pas encore disponible.`);
+            }
+        }
+    };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Profil</Text>
-            <Text style={styles.detail}>Bienvenue, {displayName}!</Text> // message de bienvenue
-            <Text style={styles.detail}>Email: {email}</Text> // affiche l'email
+        <ScrollView contentContainerStyle={styles.container}>
+            {/* PROFILE SECTION */}
+            {/*{/* Affiche la section profil avec image, nom et email */}
+            <View style={styles.profileSection}>
+                <Image
+                    style={styles.profileImage}
+                    source={require('../../assets/axolotl.png')}
+                />
+                <Text style={[TextStyles.title, { marginTop: 16 }]}>{displayName}</Text>
+                <Text style={[TextStyles.subSimpleText, { marginTop: 8 }]}>{email}</Text>
+            </View>
+
+            {/* UPGRADE TO PRO BUTTON */}
+            {/*{/* Bouton pour passer en Premium, fonctionnalité à venir */}
             <TouchableOpacity
-                style={styles.button}
-                onPress={async () => { // bouton pour se déconnecter
-                    try {
-                        await signOut(); // déconnexion via le context
-                    } catch (error) {
-                        console.error('Error signing out:', error);
-                    }
-                }}
+                style={[ButtonStyles.container, styles.proButton]}
+                onPress={() => Alert.alert('Pro', 'Fonctionnalité Premium à venir!')}
             >
-                <Text style={styles.buttonText}>Se déconnecter</Text>
+                <Text style={ButtonStyles.text}>Passer en Premium</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-                style={[styles.button, styles.optionsButton]} // bouton avec style combiné pour les options
-                onPress={() => navigation.navigate('ProfileOptions')} // navigue vers les options du profil
-            >
-                <Text style={styles.buttonText}>Options du profil</Text>
-            </TouchableOpacity>
-        </View>
+
+            {/* MENU LIST */}
+            {/*{/* Liste des options du menu */}
+            <View style={styles.menuContainer}>
+                {menuOptions.map((option, index) => (
+                    <TouchableOpacity
+                        key={index}
+                        style={styles.menuItem}
+                        onPress={() => handleMenuPress(option)}
+                    >
+                        <Ionicons
+                            name={option.icon}
+                            size={24}
+                            color="#b21ae5"
+                            style={styles.menuIcon}
+                        />
+                        <Text style={styles.menuText}>{option.label}</Text>
+                        <Ionicons
+                            name="chevron-forward"
+                            size={24}
+                            color="#b21ae5"
+                            style={styles.menuArrow}
+                        />
+                    </TouchableOpacity>
+                ))}
+            </View>
+        </ScrollView>
     );
 };
 
+// TYPE DU MENU OPTION
+interface MenuOption {
+    label: string;
+    route?: keyof RootStackParamList;
+    action?: string;
+    icon: IconName;
+}
+
+// TYPES DES ICÔNES AUTORISÉES
+type IconName =
+    | "lock-closed-outline"
+    | "receipt-outline"
+    | "help-circle-outline"
+    | "settings-outline"
+    | "person-add-outline"
+    | "log-out-outline"
+    | "person-circle-outline";
+
 const styles = StyleSheet.create({
     container: {
-        flex: 1, // occupe tout l'espace
-        padding: 16, // padding global
-        justifyContent: 'center', // centre verticalement
-        alignItems: 'center', // centre horizontalement
-        backgroundColor: '#fff', // fond blanc
+        flexGrow: 1,
+        padding: 16,
+        backgroundColor: '#fff',
+        alignItems: 'center',
     },
-    title: {
-        fontSize: 24, // taille du titre
-        fontWeight: 'bold',
-        marginBottom: 16, // espace sous le titre
+    profileSection: {
+        alignItems: 'center',
+        marginBottom: 30,
     },
-    detail: {
-        fontSize: 16, // taille du texte detail
-        marginBottom: 8, // petit margin
-        textAlign: 'center', // centré
+    profileImage: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        borderWidth: 2,
+        borderColor: '#b21ae5',
+        resizeMode: 'cover',
+        alignSelf: 'center',
     },
-    button: {
-        backgroundColor: '#007BFF', // bleu pour bouton
-        padding: 12, // padding interne
-        borderRadius: 8, // coins arrondis
-        marginTop: 10, // espace en haut
-        width: '80%', // largeur relative
-        alignItems: 'center', // centre le texte
+    proButton: {
+        marginVertical: 20,
     },
-    optionsButton: {
-        backgroundColor: '#28A745', // vert pour options
+    menuContainer: {
+        width: '100%',
     },
-    buttonText: {
-        color: '#fff', // texte en blanc
-        fontSize: 16, // taille du texte
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F2F0F5',
+        borderRadius: 10,
+        paddingVertical: 15,
+        paddingHorizontal: 20,
+        marginVertical: 8,
+    },
+    menuIcon: {
+        marginRight: 16,
+    },
+    menuText: {
+        flex: 1,
+        fontSize: 16,
+        color: '#333',
+        fontFamily: 'PlusJakartaSans_500Medium',
+    },
+    menuArrow: {
+        marginLeft: 8,
     },
 });
 

@@ -4,15 +4,15 @@ import { ScrollView, Text, StyleSheet } from 'react-native';
 import { legalNoticeText } from '../legal/legalTexts';
 
 const LegalNoticeScreen: React.FC = () => {
-    const lines = legalNoticeText.split('\n');
+    const lines = legalNoticeText.split('\n'); //découpe le texte en lignes
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.mainTitle}>Mentions Légales - FlexFit</Text>
             {lines.map((line, index) => {
-                const trimmed = line.trim();
-                if (trimmed === '') return null;
-                if (/^\d+\./.test(trimmed)) {
+                const trimmed = line.trim(); //enlève les espaces en début et fin
+                if (trimmed === '') return null; //ignore les lignes vides
+                if (/^\d+\./.test(trimmed)) { //si la ligne commence par un chiffre suivi d'un point, c'est un header de section
                     return (
                         <Text key={index} style={styles.sectionHeader}>
                             {trimmed}

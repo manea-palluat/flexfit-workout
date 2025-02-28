@@ -25,11 +25,11 @@ type AddEditExerciseScreenRouteProp = RouteProp<RootStackParamList, 'AddEditExer
 const AddEditExerciseScreen: React.FC = () => {
     const route = useRoute<AddEditExerciseScreenRouteProp>();
     const { exercise } = route.params || {};
-    const exerciseToEdit = exercise; // if provided, we're in edit mode.
+    const exerciseToEdit = exercise; //si fourni, mode édition
     const { user } = useAuth();
     const navigation = useNavigation();
 
-    // Local state for the exercise fields.
+    // ETAT LOCAL : stocke les données de l'exercice
     const [name, setName] = useState(exerciseToEdit ? exerciseToEdit.name : '');
     const [availableMuscleGroups, setAvailableMuscleGroups] = useState<string[]>([]);
     const [muscleGroup, setMuscleGroup] = useState(
@@ -46,12 +46,12 @@ const AddEditExerciseScreen: React.FC = () => {
         exerciseToEdit ? exerciseToEdit.reps.toString() : ''
     );
     const [loading, setLoading] = useState<boolean>(false);
-    // New state: exerciseType is either 'normal' or 'bodyweight'
+    // nouvel état : type d'exercice ('normal' ou 'bodyweight')
     const [exerciseType, setExerciseType] = useState(
         exerciseToEdit ? exerciseToEdit.exerciseType || 'normal' : 'normal'
     );
 
-    // Fetch distinct muscle groups from the user's existing exercises.
+    // FETCH DES GROUPES MUSCULAIRES : récupère les groupes distincts de l'utilisateur
     useEffect(() => {
         const fetchMuscleGroups = async () => {
             try {
@@ -61,22 +61,22 @@ const AddEditExerciseScreen: React.FC = () => {
                     })
                 );
                 const items = response.data.listExercises.items;
-                const groups = items.map((e: any) => e.muscleGroup) as string[];
+                const groups = items.map((e: any) => e.muscleGroup) as string[]; //récupère le groupe de chaque exercice
                 const uniqueGroups = Array.from(new Set(groups)) as string[];
                 setAvailableMuscleGroups(uniqueGroups);
                 if (!exerciseToEdit) {
                     setMuscleGroup(uniqueGroups.length > 0 ? uniqueGroups[0] : '');
                 }
             } catch (error) {
-                console.error('Error fetching muscle groups', error);
+                console.error('Error fetching muscle groups', error); //en cas d'erreur lors du fetch
             }
         };
-        if (user) {
+        if (user) { //on vérifie que l'utilisateur est connecté
             fetchMuscleGroups();
         }
     }, [user, exerciseToEdit]);
 
-    // Helper function: Update all tracking records that have the old exercise name.
+    // FONCTION UTILE : met à jour le nom de l'exercice dans tous les enregistrements de tracking
     const updateTrackingExerciseName = async (oldName: string, newExerciseName: string) => {
         try {
             let nextToken: string | null = null;
@@ -85,7 +85,7 @@ const AddEditExerciseScreen: React.FC = () => {
                 const response: any = await API.graphql(
                     graphqlOperation(listExerciseTrackings, {
                         filter: { exerciseName: { eq: oldName } },
-                        nextToken, // for pagination
+                        nextToken, //pour la pagination
                     })
                 );
                 const { items, nextToken: token } = response.data.listExerciseTrackings;
@@ -97,15 +97,16 @@ const AddEditExerciseScreen: React.FC = () => {
                 const input = {
                     id: tracking.id,
                     exerciseName: newExerciseName,
-                    _version: tracking._version, // adjust if not using versioning
+                    _version: tracking._version, //si versioning utilisé
                 };
                 await API.graphql(graphqlOperation(updateExerciseTracking, { input }));
             }
         } catch (error) {
-            console.error('Error updating tracking exercise names:', error);
+            console.error('Error updating tracking exercise names:', error); //gestion d'erreur
         }
     };
 
+    // FONCTION PRINCIPALE : sauvegarde l'exercice (ajout ou édition)
     const handleSave = async () => {
         if (!name || !muscleGroup || !restTime || !sets || !reps) {
             Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
@@ -132,7 +133,7 @@ const AddEditExerciseScreen: React.FC = () => {
                 return;
             }
             if (exerciseToEdit && exerciseToEdit.exerciseId) {
-                // Edit mode: update the exercise.
+                // mode édition : met à jour l'exercice existant
                 const input = {
                     userId,
                     exerciseId: exerciseToEdit.exerciseId,
@@ -141,15 +142,15 @@ const AddEditExerciseScreen: React.FC = () => {
                     restTime: restTimeNum,
                     sets: setsNum,
                     reps: repsNum,
-                    exerciseType, // new field included here
+                    exerciseType, //nouveau champ inclus
                 };
                 await API.graphql(graphqlOperation(updateExercise, { input }));
                 Alert.alert('Succès', 'Exercice mis à jour.');
-                if (exerciseToEdit.name !== name) {
+                if (exerciseToEdit.name !== name) { //si le nom a changé, on met à jour le tracking
                     await updateTrackingExerciseName(exerciseToEdit.name, name);
                 }
             } else {
-                // Add mode: create a new exercise.
+                // mode ajout : création d'un nouvel exercice
                 const exerciseId = uuidv4();
                 const input = {
                     userId,
@@ -159,12 +160,12 @@ const AddEditExerciseScreen: React.FC = () => {
                     restTime: restTimeNum,
                     sets: setsNum,
                     reps: repsNum,
-                    exerciseType, // new field included here
+                    exerciseType, //nouveau champ inclus
                 };
                 await API.graphql(graphqlOperation(createExercise, { input }));
                 Alert.alert('Succès', 'Exercice créé.');
             }
-            navigation.goBack();
+            navigation.goBack(); //retour à l'écran précédent
         } catch (error) {
             console.error("Erreur lors de la sauvegarde de l'exercice", error);
             Alert.alert(
@@ -182,7 +183,7 @@ const AddEditExerciseScreen: React.FC = () => {
                 {exerciseToEdit ? "Modifier l'exercice" : "Ajouter un exercice"}
             </Text>
             <View style={styles.formContainer}>
-                {/* Exercise Name */}
+                {/* NOM DE L'EXERCICE */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Nom de l'exercice</Text>
                     <TextInput
@@ -190,16 +191,16 @@ const AddEditExerciseScreen: React.FC = () => {
                         placeholder="Nom de l'exercice"
                         placeholderTextColor="#999"
                         value={name}
-                        onChangeText={setName}
+                        onChangeText={setName} //maj du nom
                     />
                 </View>
 
-                {/* Muscle Group Selector */}
+                {/* SÉLECTEUR DE GROUPE MUSCULAIRE */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Groupe musculaire</Text>
                     <TouchableOpacity
                         style={styles.input}
-                        onPress={() => setShowMuscleGroupModal(true)}
+                        onPress={() => setShowMuscleGroupModal(true)} //ouvre le modal de sélection
                     >
                         <Text style={styles.inputText}>
                             {muscleGroup ? muscleGroup : 'Sélectionner un groupe'}
@@ -209,14 +210,14 @@ const AddEditExerciseScreen: React.FC = () => {
                         visible={showMuscleGroupModal}
                         muscleGroups={availableMuscleGroups}
                         onSelect={(selected) => {
-                            setMuscleGroup(selected);
+                            setMuscleGroup(selected); //choix du groupe
                             setShowMuscleGroupModal(false);
                         }}
                         onClose={() => setShowMuscleGroupModal(false)}
                     />
                 </View>
 
-                {/* Rest Time */}
+                {/* TEMPS DE REPOS */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Temps de repos (s)</Text>
                     <TextInput
@@ -225,11 +226,11 @@ const AddEditExerciseScreen: React.FC = () => {
                         placeholderTextColor="#999"
                         keyboardType="numeric"
                         value={restTime}
-                        onChangeText={setRestTime}
+                        onChangeText={setRestTime} //maj du temps de repos
                     />
                 </View>
 
-                {/* Sets */}
+                {/* NOMBRE DE SÉRIES */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Nombre de séries</Text>
                     <TextInput
@@ -238,11 +239,11 @@ const AddEditExerciseScreen: React.FC = () => {
                         placeholderTextColor="#999"
                         keyboardType="numeric"
                         value={sets}
-                        onChangeText={setSets}
+                        onChangeText={setSets} //maj du nombre de sets
                     />
                 </View>
 
-                {/* Repetitions */}
+                {/* NOMBRE DE RÉPÉTITIONS */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Nombre de répétitions par série</Text>
                     <TextInput
@@ -251,39 +252,53 @@ const AddEditExerciseScreen: React.FC = () => {
                         placeholderTextColor="#999"
                         keyboardType="numeric"
                         value={reps}
-                        onChangeText={setReps}
+                        onChangeText={setReps} //maj du nombre de répétitions
                     />
                 </View>
 
-                {/* Exercise Type Selector */}
+                {/* SÉLECTEUR DE TYPE D'EXERCICE */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Type d'exercice</Text>
-                    <View style={styles.row}>
+                    <View style={styles.segmentedControl}>
                         <TouchableOpacity
                             style={[
-                                styles.optionButton,
-                                exerciseType === 'normal' && styles.selectedOption,
+                                styles.segment,
+                                exerciseType === 'normal' && styles.segmentSelected,
                             ]}
-                            onPress={() => setExerciseType('normal')}
+                            onPress={() => setExerciseType('normal')} //choix normal
                         >
-                            <Text style={styles.optionText}>Normal (poids)</Text>
+                            <Text
+                                style={[
+                                    styles.segmentText,
+                                    exerciseType === 'normal' && styles.segmentTextSelected,
+                                ]}
+                            >
+                                Normal (poids)
+                            </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[
-                                styles.optionButton,
-                                exerciseType === 'bodyweight' && styles.selectedOption,
+                                styles.segment,
+                                exerciseType === 'bodyweight' && styles.segmentSelected,
                             ]}
-                            onPress={() => setExerciseType('bodyweight')}
+                            onPress={() => setExerciseType('bodyweight')} //choix poids du corps
                         >
-                            <Text style={styles.optionText}>Poids du corps</Text>
+                            <Text
+                                style={[
+                                    styles.segmentText,
+                                    exerciseType === 'bodyweight' && styles.segmentTextSelected,
+                                ]}
+                            >
+                                Poids du corps
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 </View>
 
-                {/* Save Button (Primary) */}
+                {/* BOUTON DE SAUVEGARDE */}
                 <TouchableOpacity
                     style={[ButtonStyles.container, loading && { opacity: 0.7 }]}
-                    onPress={handleSave}
+                    onPress={handleSave} //lancement de la sauvegarde
                     disabled={loading}
                 >
                     <Text style={ButtonStyles.text}>
@@ -291,10 +306,10 @@ const AddEditExerciseScreen: React.FC = () => {
                     </Text>
                 </TouchableOpacity>
 
-                {/* Cancel Button (Inverted) */}
+                {/* BOUTON D'ANNULATION */}
                 <TouchableOpacity
                     style={ButtonStyles.invertedContainer}
-                    onPress={() => navigation.goBack()}
+                    onPress={() => navigation.goBack()} //retour à l'écran précédent
                 >
                     <Text style={ButtonStyles.invertedText}>Annuler</Text>
                 </TouchableOpacity>
@@ -342,24 +357,27 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#333',
     },
-    row: {
+    // STYLE DU SEGMENTED CONTROL, ressemblant à un champ de saisie
+    segmentedControl: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    optionButton: {
-        flex: 1,
-        paddingVertical: 10,
         backgroundColor: '#F1F1F1',
-        marginHorizontal: 5,
         borderRadius: 5,
+        overflow: 'hidden',
+    },
+    segment: {
+        flex: 1,
+        paddingVertical: 12,
         alignItems: 'center',
     },
-    selectedOption: {
+    segmentSelected: {
         backgroundColor: '#b21ae5',
     },
-    optionText: {
+    segmentText: {
         fontSize: 16,
         color: '#333',
+    },
+    segmentTextSelected: {
+        color: '#fff',
     },
 });
 

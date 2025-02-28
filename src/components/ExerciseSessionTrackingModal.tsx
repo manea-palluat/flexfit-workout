@@ -1,4 +1,4 @@
-// src/components/ExerciseSessionTrackingModal.tsx
+//src/components/ExerciseSessionTrackingModal.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
     Modal,
@@ -16,9 +16,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 export interface Exercise {
     exerciseId: string;
-    name: string;  // expected to be non-null
+    name: string;  //expected to be non-null
     muscleGroup: string;
-    restTime: number; // in seconds
+    restTime: number; //in seconds
     sets: number;
     reps: number;
 }
@@ -31,11 +31,11 @@ export interface SetResult {
 interface ExerciseSessionTrackingModalProps {
     visible: boolean;
     exercise: Exercise;
-    userId: string; // passed from the caller (non-null)
+    userId: string; //donné par le parent
     onClose: () => void;
 }
 
-const COOLDOWN_BAR_WIDTH = 200; // maximum width of the progress bar in pixels
+const COOLDOWN_BAR_WIDTH = 200; //BARRE DE PROGRESSION: largeur max en pixels
 
 const ExerciseSessionTrackingModal: React.FC<ExerciseSessionTrackingModalProps> = ({
     visible,
@@ -43,58 +43,60 @@ const ExerciseSessionTrackingModal: React.FC<ExerciseSessionTrackingModalProps> 
     userId,
     onClose,
 }) => {
-    // We'll reference exercise.name directly in our logic.
+    //récup infos de l'exo
     const { sets, reps, restTime } = exercise;
-    const [currentSet, setCurrentSet] = useState<number>(1);
-    const [isResting, setIsResting] = useState<boolean>(false);
-    const [timer, setTimer] = useState<number>(restTime);
-    const [currentResult, setCurrentResult] = useState<SetResult>({ weight: 0, reps: 0 });
-    const [results, setResults] = useState<SetResult[]>([]);
+    const [currentSet, setCurrentSet] = useState<number>(1); //numéro du set en cours
+    const [isResting, setIsResting] = useState<boolean>(false); //flag: en repos ou pas
+    const [timer, setTimer] = useState<number>(restTime); //timer initialisé sur le temps de repos
+    const [currentResult, setCurrentResult] = useState<SetResult>({ weight: 0, reps: 0 }); //résultat du set actuel
+    const [results, setResults] = useState<SetResult[]>([]); //liste des résultats accumulés
 
-    // Create an Animated.Value to drive the progress bar.
+    //valeur animée pour la barre de progression du repos
     const progressAnim = useRef(new Animated.Value(restTime)).current;
 
-    // Every time timer changes, animate the progressAnim to the new timer value.
+    //Animation de la barre: update de progressAnim en fonction du timer
     useEffect(() => {
         Animated.timing(progressAnim, {
             toValue: timer,
-            duration: 500, // half a second for a smooth transition
+            duration: 500, //durée de transition smooth
             useNativeDriver: false,
         }).start();
     }, [timer, progressAnim]);
 
-    // Countdown effect during rest period.
+    //gestion du décompte pendant le repos
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (isResting) {
             if (timer > 0) {
                 interval = setInterval(() => {
-                    setTimer(prev => prev - 1);
+                    setTimer(prev => prev - 1); //décrémente le timer chaque seconde
                 }, 1000);
             } else {
                 if (interval) clearInterval(interval);
-                // Rest period finished; reset timer and move to next set.
+                //REPOS TERMINÉ: reset timer et passage au set suivant ou soumission
                 setIsResting(false);
                 setTimer(restTime);
                 if (currentSet < sets) {
-                    setCurrentSet(currentSet + 1);
+                    setCurrentSet(currentSet + 1); //passe au set suivant
                 } else {
-                    // All sets completed: submit tracking data.
+                    //TOUS LES SETS FINIS: envoi des données de suivi
                     submitTrackingData();
                 }
             }
         }
         return () => {
-            if (interval) clearInterval(interval);
+            if (interval) clearInterval(interval); //nettoyage de l'intervalle
         };
     }, [isResting, timer, currentSet]);
 
+    //ENVOI DES DONNÉES
     const submitTrackingData = async () => {
-        // Ensure a non-empty exercise name.
+        //verif du nom de l'exo
         const safeExerciseName =
             (typeof exercise.name === 'string' && exercise.name.trim().length > 0)
                 ? exercise.name.trim()
                 : 'Exercice Inconnu';
+        //prépare les données à envoyer
         const trackingInput = {
             id: uuidv4(),
             userId,
@@ -103,36 +105,38 @@ const ExerciseSessionTrackingModal: React.FC<ExerciseSessionTrackingModalProps> 
             date: new Date().toISOString(),
             setsData: JSON.stringify(results),
         };
-        console.log('Submitting tracking record with input:', trackingInput);
+        console.log('Submitting tracking record with input:', trackingInput); //debug: affiche les données
         try {
             await API.graphql(graphqlOperation(createExerciseTracking, { input: trackingInput }));
-            Alert.alert('Succès', 'Données de suivi enregistrées.');
+            Alert.alert('Succès', 'Données de suivi enregistrées.'); //succès: alerte et fermeture du modal
             onClose();
         } catch (error) {
             console.error('Erreur lors de l’enregistrement des données de suivi', error);
-            Alert.alert('Erreur', "Une erreur est survenue lors de l'enregistrement des données de suivi.");
+            Alert.alert('Erreur', "Une erreur est survenue lors de l'enregistrement des données de suivi."); //erreur: alerte l'utilisateur
         }
     };
 
+    //FIN DU SET
     const handleSetCompletion = () => {
         if (currentResult.weight <= 0 || currentResult.reps <= 0) {
-            Alert.alert('Erreur', 'Veuillez entrer un poids et un nombre de répétitions valides.');
+            Alert.alert('Erreur', 'Veuillez entrer un poids et un nombre de répétitions valides.'); //alerte: valeurs invalides
             return;
         }
-        setResults([...results, currentResult]);
+        setResults([...results, currentResult]); //ajoute le résultat et reset
         setCurrentResult({ weight: 0, reps: 0 });
-        setIsResting(true);
+        setIsResting(true); //active le mode repos
     };
 
+    //ANNULER
     const handleCancel = () => {
         setCurrentSet(1);
         setIsResting(false);
         setTimer(restTime);
         setResults([]);
-        onClose();
+        onClose(); //reset de l'état et fermeture du modal
     };
 
-    // Interpolate progressAnim to determine the width of the progress bar.
+    //BARRE DE PROGRESSION: interpolation de la valeur animée pour la largeur
     const progressBarWidth = progressAnim.interpolate({
         inputRange: [0, restTime],
         outputRange: [0, COOLDOWN_BAR_WIDTH],
@@ -276,4 +280,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default ExerciseSessionTrackingModal;
+export default ExerciseSessionTrackingModal; //export du composant

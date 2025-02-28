@@ -1,23 +1,25 @@
-// src/components/WorkoutSessionScreenWrapper.tsx
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import WorkoutSessionScreen from '../screens/WorkoutSessionScreen';
 import type { RootStackParamList } from '../types/NavigationTypes';
 
+//TYPE DE ROUTE:Définit le type de la route pour "WorkoutSession"
 type WorkoutSessionRouteProp = RouteProp<RootStackParamList, 'WorkoutSession'>;
 
 const WorkoutSessionScreenWrapper: React.FC = () => {
-    const route = useRoute<WorkoutSessionRouteProp>();
+    const route = useRoute<WorkoutSessionRouteProp>(); //récupère les paramètres de la route
 
-    // Type assert that route.params may also include an optional onClose property.
-    const { sessionData, onComplete, onClose } = route.params as {
-        sessionData: RootStackParamList['WorkoutSession']['sessionData'];
-        onComplete: (results: any[]) => void;
-        onClose?: () => void;
-    };
+    //EXTRACTION DES PARAMÈTRES:On extrait sessionData, onComplete et onClose depuis la route
+    const { sessionData, onComplete, onClose } = route.params;
 
-    return <WorkoutSessionScreen sessionData={sessionData} onComplete={onComplete} onClose={onClose} />;
+    return (
+        <WorkoutSessionScreen
+            sessionData={sessionData} //données de la session
+            onComplete={onComplete} //callback déclenché à la fin de la session
+            onClose={onClose} //callback pour fermer la session
+        />
+    );
 };
 
 const styles = StyleSheet.create({

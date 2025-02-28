@@ -1,4 +1,3 @@
-// src/components/Navigation.tsx
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import {
@@ -16,7 +15,6 @@ import {
     ClipPath,
 } from 'react-native-svg';
 import { Text } from 'react-native';
-
 import HomeScreen from '../screens/HomeScreen';
 import TrainingScreen from '../screens/TrainingScreen';
 import TrackingScreen from '../screens/TrackingScreen';
@@ -31,18 +29,14 @@ import EditTrackingScreen from '../screens/EditTrackingScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ProfileOptionsScreen from '../screens/ProfileOptionsScreen';
 import WorkoutSessionScreenWrapper from '../components/WorkoutSessionScreenWrapper';
-
-// New legal screens:
 import TermsOfUseScreen from '../screens/TermsOfUseScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import LegalNoticeScreen from '../screens/LegalNoticeScreen';
-// New About screen:
 import AboutScreen from '../screens/AboutScreen';
-
+import ParameterScreen from '../screens/ParameterScreen';
 import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from '../types/NavigationTypes';
 
-// Define separate header title styles.
 const flexfitTitleStyle: StackNavigationOptions['headerTitleStyle'] = {
     fontSize: 30,
     fontWeight: 'bold',
@@ -58,7 +52,6 @@ const defaultTitleStyle: StackNavigationOptions['headerTitleStyle'] = {
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator<RootStackParamList>();
 
-// The dumbbell outline SVG path as provided.
 const dumbbellPath =
     "M24.0499 15.25H23.2999V12.25C23.2999 11.4216 22.6284 10.75 21.7999 10.75H20.2999V10C20.2999 9.17157 19.6284 8.5 18.7999 8.5H16.5499C15.7215 8.5 15.0499 9.17157 15.0499 10V15.25H10.5499V10C10.5499 9.17157 9.87835 8.5 9.04993 8.5H6.79993C5.9715 8.5 5.29993 9.17157 5.29993 10V10.75H3.79993C2.9715 10.75 2.29993 11.4216 2.29993 12.25V15.25H1.54993C1.13571 15.25 0.799927 15.5858 0.799927 16C0.799927 16.4142 1.13571 16.75 1.54993 16.75H2.29993V19.75C2.29993 20.5784 2.9715 21.25 3.79993 21.25H5.29993V22C5.29993 22.8284 5.9715 23.5 6.79993 23.5H9.04993C9.87835 23.5 10.5499 22.8284 10.5499 22V16.75H15.0499V22C15.0499 22.8284 15.7215 23.5 16.5499 23.5H18.7999C19.6284 23.5 20.2999 22.8284 20.2999 22V21.25H21.7999C22.6284 21.25 23.2999 20.5784 23.2999 19.75V16.75H24.0499C24.4641 16.75 24.7999 16.4142 24.7999 16C24.7999 15.5858 24.4641 15.25 24.0499 15.25V15.25ZM3.79993 19.75V12.25H5.29993V19.75H3.79993ZM9.04993 22H6.79993V10H9.04993V22ZM18.7999 22H16.5499V10H18.7999V20.4831C18.7999 20.4888 18.7999 20.4944 18.7999 20.5C18.7999 20.5056 18.7999 20.5112 18.7999 20.5169V22ZM21.7999 19.75H20.2999V12.25H21.7999V19.75Z";
 
@@ -77,32 +70,20 @@ function MainTabs() {
                 tabBarInactiveTintColor: '#ccc',
                 tabBarIcon: ({ focused, color, size }) => {
                     if (route.name === 'Entraînement') {
-                        // Scale up the dumbbell icon by multiplying the base size by 1.5.
                         const iconSize = size * 1.5;
                         return (
                             <Svg width={iconSize} height={iconSize} viewBox="0 0 25 32">
                                 <Defs>
                                     <ClipPath id="clip0_32_575">
-                                        <Rect
-                                            width="24"
-                                            height="24"
-                                            fill="white"
-                                            transform="translate(0.799927 4)"
-                                        />
+                                        <Rect width="24" height="24" fill="white" transform="translate(0.799927 4)" />
                                     </ClipPath>
                                 </Defs>
                                 <G clipPath="url(#clip0_32_575)">
-                                    <Path
-                                        fillRule="evenodd"
-                                        clipRule="evenodd"
-                                        d={dumbbellPath}
-                                        fill={focused ? "#b21ae5" : "#ccc"}
-                                    />
+                                    <Path fillRule="evenodd" clipRule="evenodd" d={dumbbellPath} fill={focused ? "#b21ae5" : "#ccc"} />
                                 </G>
                             </Svg>
                         );
                     } else if (route.name === 'Suivi') {
-                        // Thinner filled "Suivi" icon with a transform to appear thinner.
                         return (
                             <Svg width={size} height={size} viewBox="0 0 20 18">
                                 <G transform="scale(0.8,1) translate(2,0)">
@@ -116,17 +97,11 @@ function MainTabs() {
                             </Svg>
                         );
                     } else if (route.name === 'Profil') {
-                        // "Profil" icon using the provided SVG with dynamic fill.
                         return (
                             <Svg width={size} height={size} viewBox="0 0 25 24" fill="none">
                                 <Defs>
                                     <ClipPath id="clip0_27_232">
-                                        <Rect
-                                            width="24"
-                                            height="24"
-                                            fill="white"
-                                            transform="translate(0.400024)"
-                                        />
+                                        <Rect width="24" height="24" fill="white" transform="translate(0.400024)" />
                                     </ClipPath>
                                 </Defs>
                                 <G clipPath="url(#clip0_27_232)">
@@ -161,32 +136,17 @@ function MainTabs() {
     );
 }
 
-// Define an inline back arrow component using react-native-svg.
-const BackArrow = (props: any) => (
-    <Svg width={24} height={24} viewBox="0 0 24 24" {...props}>
-        <Path
-            d="M15 18l-6-6 6-6"
-            stroke="black"
-            strokeWidth={2}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-    </Svg>
-);
-
 const Navigation: React.FC = () => {
     const { user } = useAuth();
 
     return (
         <NavigationContainer>
             <Stack.Navigator
-                // Global header style with no bottom border, a larger height, and a custom back arrow.
                 screenOptions={{
                     headerStyle: {
                         backgroundColor: '#fff',
-                        elevation: 0, // Removes Android shadow.
-                        shadowOpacity: 0, // Removes iOS shadow.
+                        elevation: 0,
+                        shadowOpacity: 0,
                         borderBottomWidth: 0,
                         height: 80,
                     },
@@ -251,7 +211,6 @@ const Navigation: React.FC = () => {
                                 headerTitle:
                                     route.params?.sessionData?.exerciseName ?? 'Workout Session',
                                 headerTitleStyle: defaultTitleStyle,
-                                // Hides the back arrow on the WorkoutSession screen
                                 headerLeft: () => null,
                             })}
                         />
@@ -302,6 +261,14 @@ const Navigation: React.FC = () => {
                             }}
                         />
                         <Stack.Screen
+                            name="ParameterScreen"
+                            component={ParameterScreen}
+                            options={{
+                                headerTitle: 'Paramètres',
+                                headerTitleStyle: defaultTitleStyle,
+                            }}
+                        />
+                        <Stack.Screen
                             name="About"
                             component={AboutScreen}
                             options={{
@@ -311,7 +278,6 @@ const Navigation: React.FC = () => {
                         />
                     </>
                 )}
-                {/* Legal screens available to all */}
                 <Stack.Screen
                     name="TermsOfUse"
                     component={TermsOfUseScreen}
@@ -340,5 +306,18 @@ const Navigation: React.FC = () => {
         </NavigationContainer>
     );
 };
+
+const BackArrow = (props: any) => (
+    <Svg width={24} height={24} viewBox="0 0 24 24" {...props}>
+        <Path
+            d="M15 18l-6-6 6-6"
+            stroke="black"
+            strokeWidth={2}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </Svg>
+);
 
 export default Navigation;

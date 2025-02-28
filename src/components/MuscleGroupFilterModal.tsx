@@ -11,13 +11,14 @@ import {
 import { ButtonStyles } from '../styles/ButtonStyles';
 
 interface MuscleGroupFilterModalProps {
-    visible: boolean;
-    options: string[];
-    onSelect: (selected: string) => void;
-    onClose: () => void;
-    title?: string;
+    visible: boolean; //affiche la modale
+    options: string[]; //liste des options dispo
+    onSelect: (selected: string) => void; //callback quand une option est sélectionnée
+    onClose: () => void; //ferme la modale
+    title?: string; //titre de la modale, par défaut "Filtrer par groupe musculaire"
 }
 
+//MODAL DE FILTRE: composant qui gère l'affichage de la modale de sélection
 const MuscleGroupFilterModal: React.FC<MuscleGroupFilterModalProps> = ({
     visible,
     options,
@@ -29,7 +30,7 @@ const MuscleGroupFilterModal: React.FC<MuscleGroupFilterModalProps> = ({
         <Modal visible={visible} transparent animationType="slide">
             <View style={styles.modalOverlay}>
                 <View style={styles.modalContainer}>
-                    <Text style={styles.modalTitle}>{title}</Text>
+                    <Text style={styles.modalTitle}>{title}</Text> {/*affiche le titre de la modale*/}
                     <FlatList
                         data={options}
                         keyExtractor={(item, index) => index.toString()}
@@ -37,11 +38,11 @@ const MuscleGroupFilterModal: React.FC<MuscleGroupFilterModalProps> = ({
                             <TouchableOpacity
                                 style={styles.itemContainer}
                                 onPress={() => {
-                                    onSelect(item);
-                                    onClose();
+                                    onSelect(item); //sélection de l'option
+                                    onClose(); //ferme la modale après sélection
                                 }}
                             >
-                                <Text style={styles.itemText}>{item}</Text>
+                                <Text style={styles.itemText}>{item}</Text> {/*affiche le nom de l'option*/}
                             </TouchableOpacity>
                         )}
                     />

@@ -20,25 +20,27 @@ import { TextInputStyles } from '../styles/TextInputStyles';
 import { ButtonStyles } from '../styles/ButtonStyles';
 import { TextStyles } from '../styles/TextStyles';
 
+// NE TOUCHE PAS AUX IMPORTS
+
 type NavigationProp = StackNavigationProp<RootStackParamList, 'ForgotPassword'>;
 
 const ForgotPasswordScreen: React.FC = () => {
     const navigation = useNavigation<NavigationProp>();
 
-    // Step control: step 1 for sending code, step 2 for submitting new password
-    const [step, setStep] = useState<number>(1);
-    const [email, setEmail] = useState<string>('');
-    const [code, setCode] = useState<string>('');
-    const [newPassword, setNewPassword] = useState<string>('');
-    const [loading, setLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string>('');
+    // INITIALISATION DES ETATS POUR LES ETAPES DE L'EXO
+    const [step, setStep] = useState<number>(1); //1: envoyer code, 2: changer mdp
+    const [email, setEmail] = useState<string>(''); //stocke l'email
+    const [code, setCode] = useState<string>(''); //stocke le code de confirmation
+    const [newPassword, setNewPassword] = useState<string>(''); //stocke le nouveau mdp
+    const [loading, setLoading] = useState<boolean>(false); //etat loading
+    const [error, setError] = useState<string>(''); //message d'erreur
 
-    // For new password strength checker
-    const [newPasswordFocused, setNewPasswordFocused] = useState<boolean>(false);
-    const checklistAnim = useRef(new Animated.Value(0)).current;
-    const strengthAnim = useRef(new Animated.Value(0)).current;
+    // POUR LE CHECKER DE FORCE DU MOT DE PASSE
+    const [newPasswordFocused, setNewPasswordFocused] = useState<boolean>(false); //si le champ est focus
+    const checklistAnim = useRef(new Animated.Value(0)).current; //anim opacité checklist
+    const strengthAnim = useRef(new Animated.Value(0)).current; //anim force mdp
 
-    // Animate checklist opacity when new password field is focused or non-empty
+    // ANIMATION CHECKLIST : s'affiche quand focus ou mdp non vide
     useEffect(() => {
         Animated.timing(checklistAnim, {
             toValue: newPasswordFocused || newPassword.length > 0 ? 1 : 0,
@@ -47,7 +49,7 @@ const ForgotPasswordScreen: React.FC = () => {
         }).start();
     }, [newPasswordFocused, newPassword]);
 
-    // Compute password strength (as a percentage) – same as in AuthScreen
+    // CALCUL FORCE MDP : retourne la force du mdp en pourcentage
     const computePasswordStrength = (pwd: string): number => {
         const trimmed = pwd.trim();
         const conditions = [
@@ -60,6 +62,7 @@ const ForgotPasswordScreen: React.FC = () => {
         return satisfiedCount === conditions.length ? 100 : (satisfiedCount / conditions.length) * 100;
     };
 
+    // ANIMATION BARRE FORCE : met à jour la force du mdp quand il change
     useEffect(() => {
         const strength = computePasswordStrength(newPassword);
         Animated.spring(strengthAnim, {
@@ -70,30 +73,32 @@ const ForgotPasswordScreen: React.FC = () => {
         }).start();
     }, [newPassword]);
 
+    // INTERPOLATION POUR LA LARGEUR DE LA BARRE
     const animatedWidth = strengthAnim.interpolate({
         inputRange: [0, 100],
         outputRange: ['0%', '100%'],
         extrapolate: 'clamp',
     });
 
+    // INTERPOLATION POUR LA COULEUR DE LA BARRE
     const animatedColor = strengthAnim.interpolate({
         inputRange: [0, 50, 100],
         outputRange: ['#FF0000', '#FFA500', '#00AA00'],
     });
 
-    // Simple email format validator
+    // VALIDATION EMAIL : vérifie le format de l'email
     const validateEmail = (email: string): boolean => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
     };
 
-    // Validate that the confirmation code is exactly 6 digits
+    // VALIDATION CODE : vérifie que le code est composé de 6 chiffres
     const validateCode = (code: string): boolean => {
         const codeRegex = /^\d{6}$/;
         return codeRegex.test(code);
     };
 
-    // Error handling with friendly French messages
+    // GESTION DES ERREURS : affiche un message sympa en cas de pb
     const handleForgotPasswordErrors = (error: any) => {
         console.error('Forgot Password Error:', error);
         if (error.code === 'UserNotFoundException') {
@@ -115,8 +120,9 @@ const ForgotPasswordScreen: React.FC = () => {
         }
     };
 
+    // ENVOI CODE : envoie le code de confirmation à l'email saisi
     const sendCode = async () => {
-        setError(''); // Clear previous error
+        setError(''); //reset erreur
         if (!email) {
             setError('Veuillez entrer votre adresse email.');
             return;
@@ -129,7 +135,7 @@ const ForgotPasswordScreen: React.FC = () => {
         try {
             await Auth.forgotPassword(email);
             Alert.alert('Succès', 'Un code de confirmation a été envoyé à votre email.');
-            setStep(2);
+            setStep(2); //passe à l'étape suivante
         } catch (err) {
             handleForgotPasswordErrors(err);
         } finally {
@@ -137,8 +143,9 @@ const ForgotPasswordScreen: React.FC = () => {
         }
     };
 
+    // SOUMISSION NOUVEAU MDP : envoie le code et le nouveau mdp pour réinitialiser
     const submitNewPassword = async () => {
-        setError(''); // Clear previous error
+        setError(''); //reset erreur
         if (!email || !code || !newPassword) {
             setError('Veuillez remplir tous les champs.');
             return;
@@ -163,11 +170,11 @@ const ForgotPasswordScreen: React.FC = () => {
         }
     };
 
-    // Render a checklist item for the password criteria
+    // CHECKLIST : rend un item pour le checker de mdp
     const renderCheckItem = (condition: boolean, text: string) => (
         <View style={styles.checkItemContainer}>
             <Ionicons
-                name={condition ? 'checkmark-circle-outline' : 'close-circle-outline'}
+                name={condition ? 'checkmark-circle-outline' : 'close-circle-outline'} // icône selon le résultat
                 size={16}
                 color={condition ? '#00AA00' : '#FF0000'}
                 style={styles.checkIcon}
@@ -178,12 +185,13 @@ const ForgotPasswordScreen: React.FC = () => {
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            {/* Header Title */}
+            {/* TITRE PRINCIPAL */}
+            {/*{/* Affiche le titre de l'écran */}
             <Text style={[TextStyles.title, { marginBottom: 20, textAlign: 'center' }]}>
                 Mot de passe oublié
             </Text>
 
-            {/* Error Message */}
+            {/* MESSAGE D'ERREUR */}
             {error ? (
                 <Text style={[TextInputStyles.errorText, { textAlign: 'center', marginBottom: 20 }]}>
                     {error}
@@ -192,6 +200,7 @@ const ForgotPasswordScreen: React.FC = () => {
 
             {step === 1 && (
                 <View style={styles.formContainer}>
+                    {/* CHAMP EMAIL */}
                     <Text style={[TextStyles.headerText, styles.label]}>
                         Entrez votre adresse email :
                     </Text>
@@ -205,6 +214,7 @@ const ForgotPasswordScreen: React.FC = () => {
                             onChangeText={setEmail}
                         />
                     </View>
+                    {/* BOUTON ENVOYER CODE */}
                     <TouchableOpacity style={ButtonStyles.container} onPress={sendCode} disabled={loading}>
                         <Text style={ButtonStyles.text}>
                             {loading ? 'Envoi en cours...' : 'Envoyer le code'}
@@ -218,7 +228,7 @@ const ForgotPasswordScreen: React.FC = () => {
                     <Text style={[TextStyles.headerText, styles.label]}>
                         Un code vous a été envoyé par email.
                     </Text>
-                    {/* Confirmation Code Input */}
+                    {/* CHAMP CODE */}
                     <View style={[TextInputStyles.container, styles.inputContainer]}>
                         <TextInput
                             style={TextInputStyles.input}
@@ -228,7 +238,7 @@ const ForgotPasswordScreen: React.FC = () => {
                             onChangeText={setCode}
                         />
                     </View>
-                    {/* New Password Input */}
+                    {/* CHAMP NOUVEAU MDP */}
                     <View style={[TextInputStyles.container, styles.inputContainer]}>
                         <TextInput
                             style={[TextInputStyles.input, { paddingRight: 40 }]}
@@ -240,7 +250,7 @@ const ForgotPasswordScreen: React.FC = () => {
                             onBlur={() => setNewPasswordFocused(false)}
                         />
                     </View>
-                    {/* Password Strength Checker & Checklist */}
+                    {/* BARRE DE FORCE & CHECKLIST */}
                     {(newPasswordFocused || newPassword.length > 0) && (
                         <Animated.View style={[styles.checklistContainer, { opacity: checklistAnim }]}>
                             <View style={styles.progressContainer}>
@@ -256,6 +266,7 @@ const ForgotPasswordScreen: React.FC = () => {
                             </View>
                         </Animated.View>
                     )}
+                    {/* BOUTON VALIDER */}
                     <TouchableOpacity style={ButtonStyles.container} onPress={submitNewPassword} disabled={loading}>
                         <Text style={ButtonStyles.text}>
                             {loading ? 'Enregistrement...' : 'Valider'}
@@ -264,7 +275,7 @@ const ForgotPasswordScreen: React.FC = () => {
                 </View>
             )}
 
-            {/* "Retour" button has been removed as it's unnecessary with the header */}
+            {/* Le bouton "Retour" est supprimé car le header gère déjà le retour */}
         </ScrollView>
     );
 };
@@ -291,7 +302,7 @@ const styles = StyleSheet.create({
         width: '100%',
         marginBottom: 20,
     },
-    // Checklist & progress bar styles (inspired by AuthScreen)
+    // Styles pour la checklist et la barre de progression (inspirés de AuthScreen)
     checklistContainer: {
         width: '100%',
         marginBottom: 10,

@@ -12,10 +12,10 @@ import {
 import { ButtonStyles } from '../styles/ButtonStyles';
 
 interface MuscleGroupPickerModalProps {
-    visible: boolean;
-    muscleGroups: string[];
-    onSelect: (selected: string) => void;
-    onClose: () => void;
+    visible: boolean; //affiche la modale
+    muscleGroups: string[]; //liste des groupes dispo
+    onSelect: (selected: string) => void; //callback pour sélectionner un groupe
+    onClose: () => void; //callback pour fermer la modale
 }
 
 const MuscleGroupPickerModal: React.FC<MuscleGroupPickerModalProps> = ({
@@ -24,25 +24,25 @@ const MuscleGroupPickerModal: React.FC<MuscleGroupPickerModalProps> = ({
     onSelect,
     onClose,
 }) => {
-    const [isAdding, setIsAdding] = useState<boolean>(false);
-    const [newGroup, setNewGroup] = useState<string>('');
+    const [isAdding, setIsAdding] = useState<boolean>(false); //mode ajout activé ou pas
+    const [newGroup, setNewGroup] = useState<string>(''); //stocke le nouveau nom saisi
 
     const handleAddNew = () => {
-        const trimmed = newGroup.trim();
-        if (trimmed.length === 0) return;
-        onSelect(trimmed);
-        setNewGroup('');
-        setIsAdding(false);
-        onClose();
+        const trimmed = newGroup.trim(); //nettoie les espaces superflus
+        if (trimmed.length === 0) return; //si vide, rien à faire
+        onSelect(trimmed); //sélectionne le nouveau groupe
+        setNewGroup(''); //réinitialise le champ
+        setIsAdding(false); //désactive le mode ajout
+        onClose(); //ferme la modale
     };
 
     return (
         <Modal visible={visible} transparent animationType="slide">
-            <View style={styles.modalOverlay}>
-                <View style={styles.modalContainer}>
+            <View style={styles.modalOverlay}>{/*OVERLAY: fond sombre de la modale*/}
+                <View style={styles.modalContainer}>{/*CONTENEUR PRINCIPAL DE LA MODALE*/}
                     {!isAdding ? (
                         <>
-                            <Text style={styles.modalTitle}>Choisir un groupe musculaire</Text>
+                            <Text style={styles.modalTitle}>Choisir un groupe musculaire</Text> {/*TITRE: demande de sélection*/}
                             <FlatList
                                 data={muscleGroups}
                                 keyExtractor={(item, index) => index.toString()}
@@ -50,39 +50,42 @@ const MuscleGroupPickerModal: React.FC<MuscleGroupPickerModalProps> = ({
                                     <TouchableOpacity
                                         style={styles.itemContainer}
                                         onPress={() => {
-                                            onSelect(item);
-                                            onClose();
+                                            onSelect(item); //sélectionne l'item cliqué
+                                            onClose(); //ferme la modale après choix
                                         }}
                                     >
-                                        <Text style={styles.itemText}>{item}</Text>
+                                        <Text style={styles.itemText}>{item}</Text> {/*affiche le nom du groupe*/}
                                     </TouchableOpacity>
                                 )}
                             />
                             <TouchableOpacity style={ButtonStyles.container} onPress={() => setIsAdding(true)}>
-                                <Text style={ButtonStyles.text}>Ajouter</Text>
+                                <Text style={ButtonStyles.text}>Ajouter</Text> {/*bouton pour ajouter un nouveau groupe*/}
                             </TouchableOpacity>
                             <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={onClose}>
-                                <Text style={ButtonStyles.invertedText}>Annuler</Text>
+                                <Text style={ButtonStyles.invertedText}>Annuler</Text> {/*bouton pour annuler et fermer*/}
                             </TouchableOpacity>
                         </>
                     ) : (
                         <>
-                            <Text style={styles.modalTitle}>Ajouter un nouveau groupe musculaire</Text>
+                            <Text style={styles.modalTitle}>Ajouter un nouveau groupe musculaire</Text> {/*TITRE: mode ajout activé*/}
                             <TextInput
                                 style={styles.input}
                                 placeholder="Nom du groupe"
                                 placeholderTextColor="#999"
                                 value={newGroup}
-                                onChangeText={setNewGroup}
+                                onChangeText={setNewGroup} //met à jour la saisie en direct
                             />
                             <TouchableOpacity style={ButtonStyles.container} onPress={handleAddNew}>
-                                <Text style={ButtonStyles.text}>Valider</Text>
+                                <Text style={ButtonStyles.text}>Valider</Text> {/*bouton pour confirmer l'ajout*/}
                             </TouchableOpacity>
-                            <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={() => {
-                                setIsAdding(false);
-                                setNewGroup('');
-                            }}>
-                                <Text style={ButtonStyles.invertedText}>Annuler</Text>
+                            <TouchableOpacity
+                                style={ButtonStyles.invertedContainer}
+                                onPress={() => {
+                                    setIsAdding(false); //sort du mode ajout
+                                    setNewGroup(''); //réinitialise le champ
+                                }}
+                            >
+                                <Text style={ButtonStyles.invertedText}>Annuler</Text> {/*annule l'ajout*/}
                             </TouchableOpacity>
                         </>
                     )}
@@ -136,4 +139,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default MuscleGroupPickerModal;
+export default MuscleGroupPickerModal; //export du composant

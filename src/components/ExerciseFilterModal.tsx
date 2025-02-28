@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { ButtonStyles } from '../styles/ButtonStyles';
 
+//INTERFACE MODAL FILTRE (définition des props)
 interface ExerciseFilterModalProps {
     visible: boolean;
     options: string[];
@@ -18,6 +19,7 @@ interface ExerciseFilterModalProps {
     title?: string;
 }
 
+//MODAL FILTRE EXERCICE
 const ExerciseFilterModal: React.FC<ExerciseFilterModalProps> = ({
     visible,
     options,
@@ -27,9 +29,13 @@ const ExerciseFilterModal: React.FC<ExerciseFilterModalProps> = ({
 }) => {
     return (
         <Modal visible={visible} transparent animationType="slide">
+            {/*fond sombre pour le modal*/}
             <View style={styles.modalOverlay}>
+                {/*conteneur principal du modal*/}
                 <View style={styles.modalContainer}>
+                    {/*titre du modal*/}
                     <Text style={styles.modalTitle}>{title}</Text>
+                    {/*liste des options d'exercices*/}
                     <FlatList
                         data={options}
                         keyExtractor={(item, index) => index.toString()}
@@ -41,10 +47,12 @@ const ExerciseFilterModal: React.FC<ExerciseFilterModalProps> = ({
                                     onClose();
                                 }}
                             >
+                                {/*affichage du nom de l'option*/}
                                 <Text style={styles.itemText}>{item}</Text>
                             </TouchableOpacity>
                         )}
                     />
+                    {/*bouton pour annuler et fermer le modal*/}
                     <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={onClose}>
                         <Text style={ButtonStyles.invertedText}>Annuler</Text>
                     </TouchableOpacity>

@@ -21,7 +21,6 @@ import {
 
 export const useAppFonts = () => {
     return useFonts({
-        // Manrope fonts
         Manrope_200ExtraLight,
         Manrope_300Light,
         Manrope_400Regular,
@@ -29,7 +28,6 @@ export const useAppFonts = () => {
         Manrope_600SemiBold,
         Manrope_700Bold,
         Manrope_800ExtraBold,
-        // Plus Jakarta Sans fonts
         PlusJakartaSans_200ExtraLight,
         PlusJakartaSans_300Light,
         PlusJakartaSans_400Regular,

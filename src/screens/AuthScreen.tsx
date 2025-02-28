@@ -18,6 +18,8 @@ import { TextInputStyles } from '../styles/TextInputStyles';
 import { TextStyles } from '../styles/TextStyles';
 import { ButtonStyles } from '../styles/ButtonStyles';
 
+// Ne touche pas aux imports, c'est bon !
+
 type AuthScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Auth'>;
 type AuthScreenRouteProp = RouteProp<RootStackParamList, 'Auth'>;
 
@@ -27,29 +29,30 @@ type Props = {
 };
 
 const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
+    // INITIALISATION : détermine si on est en inscription ou connexion
     const initialMode = route.params?.mode || 'login';
     const [isSignup, setIsSignup] = useState<boolean>(initialMode === 'signup');
-    const [email, setEmail] = useState<string>('');
-    const [displayName, setDisplayName] = useState<string>(''); // For "Nom d'utilisateur"
-    const [password, setPassword] = useState<string>('');
-    const [confirmPassword, setConfirmPassword] = useState<string>(''); // Confirm password input
-    const [error, setError] = useState<string>('');
-    const [loginAttempts, setLoginAttempts] = useState<number>(0);
+    const [email, setEmail] = useState<string>(''); //stocke l'email
+    const [displayName, setDisplayName] = useState<string>(''); //pour le nom d'utilisateur
+    const [password, setPassword] = useState<string>(''); //stocke le mot de passe
+    const [confirmPassword, setConfirmPassword] = useState<string>(''); //confirmation du mot de passe
+    const [error, setError] = useState<string>(''); //message d'erreur global
+    const [loginAttempts, setLoginAttempts] = useState<number>(0); //compteur des tentatives de connexion
     const { signIn, signUp } = useAuth();
 
-    // Field-specific error states
+    // ERREURS CHAMPS : stocke les erreurs spécifiques pour chaque champ
     const [emailError, setEmailError] = useState<string>('');
     const [displayNameError, setDisplayNameError] = useState<string>('');
     const [passwordMatchError, setPasswordMatchError] = useState<string>('');
 
-    // Toggle for password visibility.
+    // VISIBILITÉ MOT DE PASSE : toggle pour afficher ou masquer le mot de passe
     const [showPassword, setShowPassword] = useState<boolean>(false);
-    // Track whether the first password field is focused.
+    //focus sur le champ mot de passe pour afficher la checklist
     const [passwordFocused, setPasswordFocused] = useState<boolean>(false);
-    // Create a ref for the first password input.
+    //référence pour le premier champ de mot de passe
     const passwordRef = useRef<TextInput>(null);
 
-    // Animated values for checklist opacity and password strength.
+    // ANIMATION : valeurs pour l'opacité de la checklist et la force du mot de passe
     const checklistAnim = useRef(new Animated.Value(0)).current;
     const strengthAnim = useRef(new Animated.Value(0)).current;
 
@@ -58,10 +61,10 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
             toValue: passwordFocused || password.length > 0 ? 1 : 0,
             duration: 300,
             useNativeDriver: false,
-        }).start();
+        }).start(); //anime la checklist quand besoin
     }, [passwordFocused, password]);
 
-    // Compute password strength (as a percentage)
+    //CALCUL FORCE MOT DE PASSE : renvoie la force en pourcentage
     const computePasswordStrength = (pwd: string): number => {
         const trimmed = pwd.trim();
         const conditions = [
@@ -83,26 +86,29 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
             friction: 6,
             tension: 80,
             useNativeDriver: false,
-        }).start();
+        }).start(); //anime la barre de force du mot de passe
     }, [password]);
 
-    // Interpolations for animated progress bar.
+    //INTERPOLATION BARRE : définit la largeur de la barre de force
     const animatedWidth = strengthAnim.interpolate({
         inputRange: [0, 100],
         outputRange: ['0%', '100%'],
         extrapolate: 'clamp',
     });
 
+    //INTERPOLATION COULEUR : rouge, orange, vert selon la force
     const animatedColor = strengthAnim.interpolate({
         inputRange: [0, 50, 100],
         outputRange: ['#FF0000', '#FFA500', '#00AA00'], // red → orange → green
     });
 
+    //VALIDATION EMAIL : vérifie le format de l'email
     const validateEmail = (email: string) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
     };
 
+    //VALIDATION MOT DE PASSE : vérifie si le mot de passe respecte les critères
     const validatePassword = (password: string) => {
         const trimmed = password.trim();
         return (
@@ -113,16 +119,19 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
         );
     };
 
+    //VALIDATION NOM UTILISATEUR : doit être <=16 caractères, lettres/chiffres/underscore/point
     const validateDisplayName = (name: string) => {
-        // Maximum 16 characters; allowed: letters, numbers, underscore, dot.
+        //Maximum 16 characters; allowed: letters, numbers, underscore, dot.
         const displayNameRegex = /^[A-Za-z0-9_.]{1,16}$/;
         return displayNameRegex.test(name);
     };
 
+    //STOCKAGE TOKEN : sauvegarde le token en mode sécurisé
     const storeToken = async (token: string) => {
         await SecureStore.setItemAsync('userToken', token);
     };
 
+    //AUTHENTIFICATION : gère la connexion ou l'inscription
     const handleAuth = async () => {
         setError('');
         if (loginAttempts >= 5) {
@@ -172,8 +181,7 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
         }
     };
 
-    // Error handling with friendly French messages.
-    // Additionally, if the error is "UserNotConfirmedException", redirect the user to the confirmation screen.
+    //GESTION ERREURS : affiche un message sympa en cas d'erreur d'authentification
     const handleAuthErrors = (error: any) => {
         console.error('Auth Error:', error);
         if (error.code === 'UsernameExistsException') {
@@ -185,18 +193,18 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
         } else if (error.code === 'NotAuthorizedException') {
             setError('Mot de passe incorrect.');
         } else if (error.code === 'UserNotConfirmedException') {
-            // Redirect user to the confirmation screen if not confirmed.
+            //redirection vers la confirmation si besoin
             navigation.navigate('ConfirmSignUp', { username: email });
         } else {
             setError(error.message || 'Erreur lors de la connexion.');
         }
     };
 
-    // Render a checklist item for the password criteria
+    //CHECKLIST : retourne un item de vérification pour le mot de passe
     const renderCheckItem = (condition: boolean, text: string) => (
         <View style={styles.checkItemContainer}>
             <Ionicons
-                name={condition ? 'checkmark-circle-outline' : 'close-circle-outline'}
+                name={condition ? 'checkmark-circle-outline' : 'close-circle-outline'} //icône ok ou pas ok
                 size={16}
                 color={condition ? '#00AA00' : '#FF0000'}
                 style={styles.checkIcon}
@@ -205,8 +213,7 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
         </View>
     );
 
-    // Determine if the "S'inscrire" button should be enabled.
-    // For sign-up: email, displayName, password, and confirmPassword must be valid.
+    //DISPONIBILITÉ SOUMISSION : active le bouton si tous les champs sont valides
     const canSubmit = isSignup
         ? (
             validateEmail(email) &&
@@ -226,7 +233,8 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
 
     return (
         <View style={styles.container}>
-            {/* Title with extra bottom margin */}
+            {/* TITRE PRINCIPAL */}
+            {/*{/* Title with extra bottom margin */}
             <Text style={[TextStyles.title, { marginBottom: 20 }]}>
                 {isSignup ? 'Inscription' : 'Connexion'}
             </Text>
@@ -236,14 +244,14 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                 </Text>
             ) : null}
 
-            {/* Common form container */}
+            {/* CONTENEUR DU FORMULAIRE */}
             <View style={styles.formContainer}>
-                {/* Email Input */}
+                {/*EMAIL INPUT */}
                 <View style={[TextInputStyles.container, styles.inputContainer]}>
                     <TextInput
                         placeholder="Email"
                         value={email}
-                        onChangeText={text => { setEmail(text); setEmailError(''); }}
+                        onChangeText={text => { setEmail(text); setEmailError(''); }} //maj email et réinitialise erreur
                         onBlur={() => {
                             if (!validateEmail(email)) {
                                 setEmailError("L'adresse email n'est pas valide.");
@@ -260,13 +268,13 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                     ) : null}
                 </View>
 
-                {/* Username Input (only for signup) */}
+                {/*USERNAME INPUT (uniquement pour l'inscription) */}
                 {isSignup && (
                     <View style={[TextInputStyles.container, styles.inputContainer]}>
                         <TextInput
                             placeholder="Nom d'utilisateur"
                             value={displayName}
-                            onChangeText={text => { setDisplayName(text); setDisplayNameError(''); }}
+                            onChangeText={text => { setDisplayName(text); setDisplayNameError(''); }} //maj du nom et reset erreur
                             onBlur={() => {
                                 if (!validateDisplayName(displayName)) {
                                     setDisplayNameError("Le nom d'utilisateur doit comporter au maximum 16 caractères et ne contenir que des lettres, chiffres, underscores et points.");
@@ -283,17 +291,17 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                     </View>
                 )}
 
-                {/* Password Input with Eye Icon */}
+                {/*PASSWORD INPUT AVEC ICÔNE */}
                 <View style={styles.passwordContainer}>
                     <TextInput
                         ref={passwordRef}
                         placeholder="Mot de passe"
                         value={password}
-                        onChangeText={setPassword}
+                        onChangeText={setPassword} //maj du mot de passe
                         style={[TextInputStyles.input, { paddingRight: 40 }]}
-                        secureTextEntry={!showPassword}
+                        secureTextEntry={!showPassword} //masque le mot de passe
                         autoComplete="password"
-                        onFocus={() => setPasswordFocused(true)}
+                        onFocus={() => setPasswordFocused(true)} //active la checklist
                         onBlur={() => {
                             setPasswordFocused(false);
                             if (isSignup && confirmPassword.length > 0 && password !== confirmPassword) {
@@ -304,7 +312,7 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                         }}
                     />
                     <TouchableOpacity
-                        onPress={() => setShowPassword(prev => !prev)}
+                        onPress={() => setShowPassword(prev => !prev)} //change la visibilité
                         style={styles.eyeButton}
                     >
                         <Ionicons
@@ -315,20 +323,20 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                     </TouchableOpacity>
                 </View>
 
-                {/* Confirm Password Input (only for signup) */}
+                {/*CONFIRM PASSWORD INPUT (uniquement pour inscription) */}
                 {isSignup && (
                     <View style={[TextInputStyles.container, styles.inputContainer]}>
                         <TextInput
                             placeholder="Confirmer le mot de passe"
                             value={confirmPassword}
-                            onChangeText={setConfirmPassword}
+                            onChangeText={setConfirmPassword} //maj confirmation
                             style={TextInputStyles.input}
                             secureTextEntry={!showPassword}
                             onFocus={() => {
                                 if (passwordRef.current) {
-                                    passwordRef.current.blur(); // Unfocus the first password input
+                                    passwordRef.current.blur(); //enlève focus sur le premier mot de passe
                                 }
-                                setPasswordFocused(false); // Close the checklist
+                                setPasswordFocused(false); //ferme la checklist
                             }}
                         />
                         {passwordMatchError ? (
@@ -337,7 +345,7 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                     </View>
                 )}
 
-                {/* Render the password checklist only on sign-up when the first password input is focused */}
+                {/*CHECKLIST MOT DE PASSE (affichée en inscription si champ focus) */}
                 {isSignup && passwordFocused && (
                     <Animated.View style={styles.checklistContainer}>
                         <View style={styles.progressContainer}>
@@ -354,10 +362,10 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                     </Animated.View>
                 )}
 
-                {/* Main Authentication Button */}
+                {/*BOUTON PRINCIPAL */}
                 <TouchableOpacity
                     style={[ButtonStyles.container, !canSubmit && { opacity: 0.5 }]}
-                    onPress={handleAuth}
+                    onPress={handleAuth} //lance l'authentif
                     disabled={!canSubmit}
                 >
                     <Text style={ButtonStyles.text}>
@@ -365,7 +373,7 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                     </Text>
                 </TouchableOpacity>
 
-                {/* Toggle between Sign In and Sign Up using the inverted style */}
+                {/*BOUTON TOGGLE : bascule entre inscription et connexion */}
                 <TouchableOpacity
                     style={ButtonStyles.invertedContainer}
                     onPress={() => {
@@ -382,7 +390,7 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
                     </Text>
                 </TouchableOpacity>
 
-                {/* "Forgot Password" link styled as simple text */}
+                {/*LIEN "Forgot Password" (uniquement en mode connexion) */}
                 {!isSignup && (
                     <TouchableOpacity
                         style={styles.forgotPasswordButton}

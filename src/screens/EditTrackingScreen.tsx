@@ -23,6 +23,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 type EditTrackingRouteProp = RouteProp<RootStackParamList, 'EditTracking'>;
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
+// DEFINITIONS DES TYPES POUR LES RESULTATS DES SETS
 interface SetResult {
     weight: number;
     reps: number;
@@ -43,27 +44,27 @@ const EditTrackingScreen: React.FC = () => {
     const { tracking } = route.params as { tracking: TrackingRecord };
     const { user } = useAuth();
 
-    // Pre-populate the date.
+    // INITIALISATION DATE : pré-remplit la date à partir du suivi existant
     const [date, setDate] = useState<Date>(new Date(tracking.date));
-    // NEW: State for modal date picker visibility (for Android)
+    // POUR ANDROID : état pour afficher le modal du date picker
     const [showDatePickerModal, setShowDatePickerModal] = useState<boolean>(false);
-    // For iOS, we use the standard picker.
+    // POUR iOS : état pour afficher le date picker standard
     const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
 
-    // Parse the existing sets data.
+    // PARSAGE DES DONNEES : récupère les sets existants depuis le suivi
     let initialSets: SetResult[] = [];
     try {
         initialSets = JSON.parse(tracking.setsData);
     } catch (error) {
-        console.error('Error parsing setsData', error);
+        console.error('Error parsing setsData', error); //si le JSON foire
     }
     const [setResults, setSetResults] = useState<SetResult[]>(initialSets);
 
-    // Local state for new set inputs (if adding a new set)
-    const [tempReps, setTempReps] = useState<string>('');
-    const [tempWeight, setTempWeight] = useState<string>('');
+    // ETAT TEMPORAIRE : pour la saisie d'une nouvelle série
+    const [tempReps, setTempReps] = useState<string>(''); //nombre de répétitions temporaire
+    const [tempWeight, setTempWeight] = useState<string>(''); //poids temporaire
 
-    // Date picker handler: fix time to noon.
+    // DATE PICKER HANDLER : ajuste la date choisie en fixant l'heure à midi
     const onChangeDate = (event: any, selectedDate?: Date) => {
         setShowDatePicker(Platform.OS === 'ios');
         if (selectedDate) {
@@ -73,7 +74,7 @@ const EditTrackingScreen: React.FC = () => {
         }
     };
 
-    // For Android, using the modal date picker.
+    // POUR ANDROID : gère la confirmation du choix de date dans le modal
     const handleConfirmDate = (selectedDate: Date) => {
         setShowDatePickerModal(false);
         if (selectedDate) {
@@ -83,7 +84,7 @@ const EditTrackingScreen: React.FC = () => {
         }
     };
 
-    // Update an existing set in the array.
+    // MISE A JOUR D'UNE SERIE EXISTANTE : modifie le nombre de répétitions ou le poids
     const updateSet = (index: number, field: 'reps' | 'weight', value: string) => {
         const updated = [...setResults];
         if (field === 'reps') {
@@ -94,7 +95,7 @@ const EditTrackingScreen: React.FC = () => {
         setSetResults(updated);
     };
 
-    // Add a new set.
+    // AJOUT D'UNE NOUVELLE SERIE : vérifie et ajoute une nouvelle série au suivi
     const addSet = () => {
         const repsNum = parseInt(tempReps, 10);
         const weightNum = parseFloat(tempWeight);
@@ -107,6 +108,7 @@ const EditTrackingScreen: React.FC = () => {
         setTempWeight('');
     };
 
+    // SAUVEGARDE : prépare et envoie les données mises à jour du suivi
     const handleSave = async () => {
         const userId = user?.attributes?.sub || user?.username;
         if (!userId) {
@@ -128,7 +130,7 @@ const EditTrackingScreen: React.FC = () => {
         try {
             await API.graphql(graphqlOperation(updateExerciseTracking, { input: trackingInput }));
             Alert.alert('Succès', 'Données de suivi mises à jour.');
-            // Pop two screens and navigate to TrackingDetail with updated data.
+            // Retourne de deux écrans et navigue vers TrackingDetail avec les données mises à jour
             navigation.pop(2);
             navigation.navigate('TrackingDetail', { tracking: trackingInput });
         } catch (error) {
@@ -139,14 +141,17 @@ const EditTrackingScreen: React.FC = () => {
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
+            {/* TITRE PRINCIPAL */}
+            {/*{/* Affiche le titre de l'écran */}
             <Text style={styles.header}>Modifier le suivi</Text>
 
+            {/*SECTION DATE*/}
             <Text style={styles.label}>Date :</Text>
             <TouchableOpacity onPress={() => {
                 if (Platform.OS === 'android') {
-                    setShowDatePickerModal(true);
+                    setShowDatePickerModal(true); //ouvre modal pour Android
                 } else {
-                    setShowDatePicker(true);
+                    setShowDatePicker(true); //ouvre le date picker standard pour iOS
                 }
             }} style={styles.dateButton}>
                 <Text style={styles.dateButtonText}>{date.toLocaleDateString('fr-FR')}</Text>
@@ -170,6 +175,7 @@ const EditTrackingScreen: React.FC = () => {
                 )
             )}
 
+            {/*SECTION MODIFICATION DES SERIES*/}
             <Text style={styles.label}>Modifier les séries :</Text>
             {setResults.map((set, index) => (
                 <View key={index} style={styles.setRow}>
@@ -179,18 +185,19 @@ const EditTrackingScreen: React.FC = () => {
                         placeholder="Répétitions"
                         keyboardType="numeric"
                         value={set.reps.toString()}
-                        onChangeText={(value) => updateSet(index, 'reps', value)}
+                        onChangeText={(value) => updateSet(index, 'reps', value)} //maj répétitions
                     />
                     <TextInput
                         style={[styles.input, styles.smallInput]}
                         placeholder="Poids (kg)"
                         keyboardType="numeric"
                         value={set.weight.toString()}
-                        onChangeText={(value) => updateSet(index, 'weight', value)}
+                        onChangeText={(value) => updateSet(index, 'weight', value)} //maj poids
                     />
                 </View>
             ))}
 
+            {/*SECTION AJOUT D'UNE SERIE*/}
             <Text style={styles.label}>Ajouter une nouvelle série :</Text>
             <View style={styles.setInputContainer}>
                 <TextInput
@@ -198,25 +205,26 @@ const EditTrackingScreen: React.FC = () => {
                     placeholder="Répétitions"
                     keyboardType="numeric"
                     value={tempReps}
-                    onChangeText={setTempReps}
+                    onChangeText={setTempReps} //maj temp reps
                 />
                 <TextInput
                     style={[styles.input, styles.smallInput]}
                     placeholder="Poids (kg)"
                     keyboardType="numeric"
                     value={tempWeight}
-                    onChangeText={setTempWeight}
+                    onChangeText={setTempWeight} //maj temp poids
                 />
                 <TouchableOpacity style={styles.addSetButton} onPress={addSet}>
                     <Text style={styles.addSetButtonText}>Ajouter série</Text>
                 </TouchableOpacity>
             </View>
 
+            {/*SECTION BOUTONS*/}
             <View style={styles.buttonContainer}>
-                <Button title="Sauvegarder" onPress={handleSave} />
+                <Button title="Sauvegarder" onPress={handleSave} /> {/*lance la sauvegarde*/}
             </View>
             <View style={styles.buttonContainer}>
-                <Button title="Annuler" onPress={() => navigation.goBack()} color="#888" />
+                <Button title="Annuler" onPress={() => navigation.goBack()} color="#888" /> {/*retour en cas d'annulation*/}
             </View>
         </ScrollView>
     );

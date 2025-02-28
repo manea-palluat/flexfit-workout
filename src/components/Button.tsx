@@ -2,15 +2,17 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 
-interface ButtonProps {
-    title: string;
-    onPress: () => void;
+interface ButtonProps { //props du btn
+    title: string; //titre du btn
+    onPress: () => void; //callback au click
 }
 
-const Button: React.FC<ButtonProps> = ({ title, onPress }) => {
+const Button: React.FC<ButtonProps> = ({ title, onPress }) => { //BOUTON
     return (
         <TouchableOpacity style={styles.button} onPress={onPress}>
+            {/* btn tactile */}
             <Text style={styles.text}>{title}</Text>
+            {/* texte affiché */}
         </TouchableOpacity>
     );
 };

@@ -10,27 +10,29 @@ import { TextStyles } from '../styles/TextStyles';
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Auth'>;
 
 const HomeScreen: React.FC = () => {
-    const navigation = useNavigation<NavigationProp>();
+    const navigation = useNavigation<NavigationProp>(); //récupère la navigation
 
     return (
         <View style={styles.container}>
-            <Image style={styles.logo} source={require('../../assets/axolotl.png')} />
+            {/*LOGO*/}
+            <Image style={styles.logo} source={require('../../assets/axolotl.png')} />{/*affiche le logo, c'est trop mignon*/}
+            {/* TITRE */}
             <Text style={[TextStyles.title, styles.titleMargin]}>Bienvenue sur FlexFit.</Text>
-
+            {/* BOUTON CONNEXION */}
             <TouchableOpacity
                 style={ButtonStyles.container}
-                onPress={() => navigation.navigate('Auth', { mode: 'login' })}
+                onPress={() => navigation.navigate('Auth', { mode: 'login' })} //redirige vers l'écran d'auth en mode connexion
             >
                 <Text style={ButtonStyles.text}>Connexion</Text>
             </TouchableOpacity>
-
+            {/* BOUTON INSCRIPTION */}
             <TouchableOpacity
                 style={ButtonStyles.invertedContainer}
-                onPress={() => navigation.navigate('Auth', { mode: 'signup' })}
+                onPress={() => navigation.navigate('Auth', { mode: 'signup' })} //redirige vers l'écran d'auth en mode inscription
             >
                 <Text style={ButtonStyles.invertedText}>Inscription</Text>
             </TouchableOpacity>
-
+            {/* BOUTON À PROPOS */}
             <TouchableOpacity style={styles.aboutButton} onPress={() => navigation.navigate('About')}>
                 <Text style={styles.aboutButtonText}>À propos</Text>
             </TouchableOpacity>

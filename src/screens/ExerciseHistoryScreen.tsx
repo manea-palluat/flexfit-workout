@@ -9,7 +9,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { API, graphqlOperation } from 'aws-amplify';
-import { listExerciseTrackings } from '../graphql/queries'; // Ensure this query exists
+import { listExerciseTrackings } from '../graphql/queries'; // Ne touche pas aux imports
 import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { RouteProp, useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -18,23 +18,25 @@ import { StackNavigationProp } from '@react-navigation/stack';
 type ExerciseHistoryRouteProp = RouteProp<RootStackParamList, 'ExerciseHistory'>;
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
+// DEFINITIONS : type du suivi d'exercice
 interface TrackingRecord {
     id: string;
     userId: string;
     exerciseId: string;
     exerciseName: string;
-    date: string; // ISO string
-    setsData: string; // JSON string containing an array of set results
+    date: string; // chaîne ISO
+    setsData: string; // chaîne JSON contenant un tableau de résultats de séries
 }
 
 const ExerciseHistoryScreen: React.FC = () => {
-    const route = useRoute<ExerciseHistoryRouteProp>();
-    const navigation = useNavigation<NavigationProp>();
-    const { exerciseName } = route.params; // The exercise name to filter by
-    const { user } = useAuth();
-    const [trackings, setTrackings] = useState<TrackingRecord[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
+    const route = useRoute<ExerciseHistoryRouteProp>(); // récupère les params de la route
+    const navigation = useNavigation<NavigationProp>(); // pour naviguer entre écrans
+    const { exerciseName } = route.params; // filtre sur le nom de l'exo
+    const { user } = useAuth(); // récupère l'utilisateur
+    const [trackings, setTrackings] = useState<TrackingRecord[]>([]); // stocke l'historique
+    const [loading, setLoading] = useState<boolean>(true); // pour afficher le loader
 
+    // FONCTION : récupère l'historique depuis l'API
     const fetchHistory = async () => {
         if (!user) {
             setLoading(false);
@@ -48,30 +50,31 @@ const ExerciseHistoryScreen: React.FC = () => {
                         userId: { eq: userId },
                         exerciseName: { eq: exerciseName },
                     },
-                    sortDirection: "DESC", // Most recent first
+                    sortDirection: "DESC", // le plus récent en premier
                 })
             );
             let items: TrackingRecord[] = response.data.listExerciseTrackings.items;
-            // Sort items by date descending (most recent first)
+            // trie les items par date décroissante (le plus récent en premier)
             items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             setTrackings(items);
         } catch (error) {
-            console.error('Error fetching exercise history', error);
+            console.error('Error fetching exercise history', error); // erreur de fetch
         } finally {
             setLoading(false);
         }
     };
 
-    // Re-fetch the history every time this screen gains focus.
+    // UTILISATION DE USEFOCUSEFFECT : refait le fetch à chaque fois que l'écran est focus
     useFocusEffect(
         React.useCallback(() => {
             fetchHistory();
         }, [user, exerciseName])
     );
 
+    // FONCTION : rend chaque item de suivi
     const renderItem = ({ item }: { item: TrackingRecord }) => {
         const dateObj = new Date(item.date);
-        // Format the date as "DD/MM/YYYY HH:MM"
+        // formate la date en "DD/MM/YYYY HH:MM"
         const formattedDate = dateObj.toLocaleString('fr-FR', {
             day: '2-digit',
             month: '2-digit',
@@ -83,12 +86,12 @@ const ExerciseHistoryScreen: React.FC = () => {
         try {
             setsData = JSON.parse(item.setsData);
         } catch (e) {
-            console.error('Error parsing setsData', e);
+            console.error('Error parsing setsData', e); // pb de parsing
         }
         return (
             <TouchableOpacity
                 style={styles.trackingItem}
-                onPress={() => navigation.navigate('TrackingDetail', { tracking: item })}
+                onPress={() => navigation.navigate('TrackingDetail', { tracking: item })} // ouvre le détail du suivi
             >
                 <Text style={styles.trackingDate}>{formattedDate}</Text>
                 {setsData.map((set, index) => (
@@ -103,7 +106,7 @@ const ExerciseHistoryScreen: React.FC = () => {
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#007BFF" />
+                <ActivityIndicator size="large" color="#007BFF" /> {/* affichage loader */}
             </View>
         );
     }
@@ -112,7 +115,7 @@ const ExerciseHistoryScreen: React.FC = () => {
         return (
             <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>
-                    Tu n'as encore jamais effectué de session avec cet exercice !
+                    Tu n'as encore jamais effectué de session avec cet exo !
                 </Text>
                 <TouchableOpacity style={styles.retourButton} onPress={() => navigation.goBack()}>
                     <Text style={styles.retourButtonText}>Retour</Text>
@@ -123,6 +126,7 @@ const ExerciseHistoryScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
+            {/* ENTÊTE */}
             <View style={styles.headerContainer}>
                 <Text style={styles.headerTitle}>{exerciseName}</Text>
             </View>
@@ -144,7 +148,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
         paddingHorizontal: 16,
-        paddingTop: 50, // extra top spacing
+        paddingTop: 50, // espacement top en plus
     },
     headerContainer: {
         alignItems: 'center',

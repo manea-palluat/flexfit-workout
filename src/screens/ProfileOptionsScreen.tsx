@@ -1,34 +1,103 @@
 // src/screens/ProfileOptionsScreen.tsx
-// IMPORTS : on charge React, ses hooks, et les modules de base (Auth, API, navigation, etc.)
-import React, { useState } from 'react'; // importe react et useState pour gérer les states
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native'; // composants RN basiques
-import { Auth, API, graphqlOperation } from 'aws-amplify'; // pour les opérations d'auth et API
-import { useNavigation } from '@react-navigation/native'; // navigation entre écrans
-import type { RootStackParamList } from '../types/NavigationTypes'; // types pour la navigation
-import { StackNavigationProp } from '@react-navigation/stack'; // typage pour la stack navigation
-import { deleteExerciseTracking } from '../graphql/mutations'; // mutation pour supprimer un suivi (à définir)
-import { listExerciseTrackings } from '../graphql/queries'; // requête pour lister les suivis
+import React, { useState, useRef, useEffect } from 'react';
+import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    StyleSheet,
+    Alert,
+    ScrollView,
+    Image,
+    Animated,
+} from 'react-native';
+import { Auth, API, graphqlOperation } from 'aws-amplify';
+import { useNavigation } from '@react-navigation/native';
+import type { RootStackParamList } from '../types/NavigationTypes';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { Ionicons } from '@expo/vector-icons';
+import { deleteExerciseTracking } from '../graphql/mutations';
+import { listExerciseTrackings } from '../graphql/queries';
+import { ButtonStyles } from '../styles/ButtonStyles';
+import { TextInputStyles } from '../styles/TextInputStyles';
+import { TextStyles } from '../styles/TextStyles';
 
-type ProfileOptionsNavigationProp = StackNavigationProp<RootStackParamList, 'ProfileOptions'>; // typage pour ce screen
+type ProfileOptionsNavigationProp = StackNavigationProp<RootStackParamList, 'ProfileOptions'>;
 
-// PROFILE OPTIONS SCREEN : options de modification du profil, changement de mot de passe, et suppression du compte
 const ProfileOptionsScreen: React.FC = () => {
-    const navigation = useNavigation<ProfileOptionsNavigationProp>(); // navigation typée
+    const navigation = useNavigation<ProfileOptionsNavigationProp>(); // récupère la navigation
 
-    // ETATS : pour mettre à jour le nom affiché
-    const [displayName, setDisplayName] = useState<string>(''); // state pour nouveau pseudo
-    // ETATS : pour changer le mot de passe
-    const [oldPassword, setOldPassword] = useState<string>(''); // ancien mot de passe
-    const [newPassword, setNewPassword] = useState<string>(''); // nouveau mot de passe
-    const [confirmPassword, setConfirmPassword] = useState<string>(''); // confirmation du nouveau mot de passe
+    // MODIFICATION DU NOM : état pour le nouveau nom
+    const [displayName, setDisplayName] = useState<string>(''); //nom à mettre à jour
+    // CHANGEMENT DU MOT DE PASSE : états pour l'ancien, nouveau, et confirmation
+    const [oldPassword, setOldPassword] = useState<string>(''); //ancien mdp
+    const [newPassword, setNewPassword] = useState<string>(''); //nouveau mdp
+    const [confirmPassword, setConfirmPassword] = useState<string>(''); //confirmation mdp
+    const [passwordError, setPasswordError] = useState<string>(''); // erreur sur le nouveau mdp
+    const [confirmError, setConfirmError] = useState<string>(''); // erreur de confirmation
 
-    // FONCTION : MAJ DU NOM D'AFFICHAGE
+    // ANIMATION FORCE MDP : création de la barre animée pour la force du mdp
+    const strengthAnim = useRef(new Animated.Value(0)).current;
+    const animatedWidth = strengthAnim.interpolate({
+        inputRange: [0, 100],
+        outputRange: ['0%', '100%'],
+        extrapolate: 'clamp',
+    }); // largeur de la barre selon la force
+    const animatedColor = strengthAnim.interpolate({
+        inputRange: [0, 50, 100],
+        outputRange: ['#FF0000', '#FFA500', '#b21ae5'], // rouge → orange → violet
+    }); // couleur change en fonction de la force
+
+    // IMAGE DE PROFIL : utilisation d'une image axolotl pour le profil
+    const profileImage = require('../../assets/axolotl.png'); // image du profil
+
+    // VALIDATION DU MOT DE PASSE : vérifie que le mdp respecte les critères
+    const validatePassword = (pwd: string): boolean => {
+        const trimmed = pwd.trim();
+        return (
+            trimmed.length >= 8 &&
+            /[A-Z]/.test(trimmed) &&
+            /[0-9]/.test(trimmed) &&
+            /[!@#$%^&*_]/.test(trimmed)
+        );
+    };
+
+    useEffect(() => {
+        // Calcule la force du mdp: si valide, force = 100, sinon proportionnelle à la longueur
+        const strength = validatePassword(newPassword) ? 100 : (newPassword.trim().length / 8) * 100;
+        Animated.spring(strengthAnim, {
+            toValue: strength,
+            friction: 6,
+            tension: 80,
+            useNativeDriver: false,
+        }).start(); // lance l'animation de la barre de force
+    }, [newPassword]);
+
+    // Activation du bouton "Changer le mot de passe" seulement si tout est OK
+    const canChangePassword =
+        oldPassword.trim() !== '' &&
+        newPassword.trim() !== '' &&
+        validatePassword(newPassword) &&
+        newPassword === confirmPassword; // tous les critères doivent être remplis
+
+    // CHECKLIST : rend un item de vérification pour la force du mdp
+    const renderCheckItem = (condition: boolean, text: string) => (
+        <View style={styles.checkItemContainer}>
+            <Ionicons
+                name={condition ? 'checkmark-circle-outline' : 'close-circle-outline'} // icône selon le résultat
+                size={16}
+                color={condition ? '#00AA00' : '#FF0000'}
+                style={styles.checkIcon}
+            />
+            <Text style={styles.checkText}>{text}</Text>
+        </View>
+    );
+
+    // MISE À JOUR DU PROFIL : update du nom via Auth
     const handleUpdateProfile = async () => {
         try {
-            // on vérifie si un nouveau nom est saisi
             if (displayName.trim().length > 0) {
-                const user = await Auth.currentAuthenticatedUser(); // récupère l'user courant
-                // On suppose que le pseudo est stocké dans 'preferred_username'
+                const user = await Auth.currentAuthenticatedUser();
                 await Auth.updateUserAttributes(user, { preferred_username: displayName });
                 Alert.alert('Succès', 'Nom mis à jour.');
             }
@@ -38,16 +107,15 @@ const ProfileOptionsScreen: React.FC = () => {
         }
     };
 
-    // FONCTION : CHANGEMENT DE MOT DE PASSE
+    // CHANGEMENT DU MOT DE PASSE : appelle Auth.changePassword avec les valeurs saisies
     const handleChangePassword = async () => {
-        // si les deux nouveaux mdp ne correspondent pas
-        if (newPassword !== confirmPassword) {
-            Alert.alert('Erreur', 'Les nouveaux mots de passe ne correspondent pas.');
+        if (!canChangePassword) {
+            Alert.alert('Erreur', 'Vérifiez que le nouveau mot de passe est valide et correspond à sa confirmation.');
             return;
         }
         try {
-            const user = await Auth.currentAuthenticatedUser(); // récupère l'user
-            await Auth.changePassword(user, oldPassword, newPassword); // change le mdp
+            const user = await Auth.currentAuthenticatedUser();
+            await Auth.changePassword(user, oldPassword, newPassword);
             Alert.alert('Succès', 'Mot de passe mis à jour.');
         } catch (error) {
             console.error('Error changing password:', error);
@@ -55,33 +123,30 @@ const ProfileOptionsScreen: React.FC = () => {
         }
     };
 
-    // FONCTION : SUPPRESSION DES DONNÉES DE SUIVI DE L'USER
+    // SUPPRESSION DES DONNÉES : supprime toutes les données de suivi de l'utilisateur
     const deleteUserData = async (userId: string) => {
         try {
             let nextToken: string | null = null;
             const allTrackings: any[] = [];
-            // BOUCLE POUR LA PAGINATION : récupère tous les suivis de l'user
             do {
                 const response: any = await API.graphql(
                     graphqlOperation(listExerciseTrackings, {
                         filter: { userId: { eq: userId } },
-                        nextToken, // pagination
+                        nextToken,
                     })
                 );
                 const { items, nextToken: token } = response.data.listExerciseTrackings;
-                console.log(`Fetched ${items.length} tracking records for user ${userId}`);
+                console.log(`Fetched ${items.length} tracking records for user ${userId}`); // log du nombre d'enregistrements
                 allTrackings.push(...items);
                 nextToken = token;
             } while (nextToken);
 
             console.log(`Total tracking records to delete: ${allTrackings.length}`);
-
-            // Suppression de chaque suivi
             for (const tracking of allTrackings) {
                 const input = {
-                    id: tracking.id, // id du suivi
-                    userId, // requis dans certains schémas
-                    _version: tracking._version, // version, à ajuster si non utilisé
+                    id: tracking.id,
+                    userId,
+                    _version: tracking._version,
                 };
                 await API.graphql(graphqlOperation(deleteExerciseTracking, { input }));
                 console.log(`Deleted tracking record with id: ${tracking.id}`);
@@ -89,15 +154,15 @@ const ProfileOptionsScreen: React.FC = () => {
             console.log('All tracking records deleted successfully.');
         } catch (error) {
             console.error('Error deleting tracking exercise data:', error);
-            throw error; // relance l'erreur
+            throw error;
         }
     };
 
-    // FONCTION : SUPPRESSION DU COMPTE
+    // SUPPRESSION DU COMPTE : demande confirmation puis supprime toutes les données et le compte
     const handleDeleteAccount = async () => {
         Alert.alert(
-            "Supprimer le compte", // TITRE
-            "Es-tu sûr de vouloir supprimer ton compte ? Toutes tes données seront effacées.", // MESSAGE
+            "Supprimer le compte",
+            "Es-tu sûr de vouloir supprimer ton compte ? Toutes tes données seront effacées.",
             [
                 { text: "Annuler", style: "cancel" },
                 {
@@ -105,14 +170,11 @@ const ProfileOptionsScreen: React.FC = () => {
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            const user = await Auth.currentAuthenticatedUser(); // récupère l'user
-                            const userId = user.attributes.sub; // identifiant de l'user
-                            // Suppression de toutes les données de suivi
+                            const user = await Auth.currentAuthenticatedUser();
+                            const userId = user.attributes.sub;
                             await deleteUserData(userId);
-                            // Suppression du compte Cognito
                             await Auth.deleteUser();
                             Alert.alert("Compte supprimé", "Votre compte a été supprimé avec succès.");
-                            // RESET DE LA NAVIGATION : redirige vers l'écran de connexion
                             navigation.reset({ index: 0, routes: [{ name: 'Auth', params: { mode: 'login' } }] });
                         } catch (error) {
                             console.error("Erreur lors de la suppression du compte:", error);
@@ -124,115 +186,225 @@ const ProfileOptionsScreen: React.FC = () => {
         );
     };
 
-    // RENDER : AFFICHAGE DES OPTIONS DU PROFIL
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.header}>Options du profil</Text>
+            {/* PROFILE HEADER */}
+            <View style={styles.profileHeader}>
+                <Image source={profileImage} style={styles.profileImage} />{/*affiche la photo de profil*/}
+                <Text style={[TextStyles.title, { marginTop: 16 }]}>Options du profil</Text>
+            </View>
 
-            <Text style={styles.sectionTitle}>Modifier le nom</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Nouveau nom d'utilisateur" // placeholder
-                value={displayName}
-                onChangeText={setDisplayName} // update le state
-            />
-            <TouchableOpacity style={styles.button} onPress={handleUpdateProfile}>
-                <Text style={styles.buttonText}>Mettre à jour le nom</Text>
-            </TouchableOpacity>
+            {/* CARD: MODIFIER LE NOM */}
+            <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                    <Ionicons name="person-outline" size={20} color="#b21ae5" style={styles.cardIcon} />{/*icône de profil*/}
+                    <Text style={styles.cardTitle}>Modifier le nom</Text>
+                </View>
+                <TextInput
+                    style={[TextInputStyles.input, styles.inputSpacing]}
+                    placeholder="Nouveau nom d'utilisateur"
+                    value={displayName}
+                    onChangeText={setDisplayName} //maj du nom
+                />
+                <TouchableOpacity style={[ButtonStyles.container, styles.cardButton]} onPress={handleUpdateProfile}>
+                    <Text style={ButtonStyles.text}>Mettre à jour le nom</Text>
+                </TouchableOpacity>
+            </View>
 
-            <Text style={styles.sectionTitle}>Changer le mot de passe</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Ancien mot de passe"
-                secureTextEntry
-                value={oldPassword}
-                onChangeText={setOldPassword}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Nouveau mot de passe"
-                secureTextEntry
-                value={newPassword}
-                onChangeText={setNewPassword}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Confirmer le nouveau mot de passe"
-                secureTextEntry
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-            />
-            <TouchableOpacity style={styles.button} onPress={handleChangePassword}>
-                <Text style={styles.buttonText}>Changer le mot de passe</Text>
-            </TouchableOpacity>
+            {/* CARD: CHANGER LE MOT DE PASSE */}
+            <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                    <Ionicons name="key-outline" size={20} color="#b21ae5" style={styles.cardIcon} />{/*icône clé*/}
+                    <Text style={styles.cardTitle}>Changer le mot de passe</Text>
+                </View>
+                <View style={styles.inputGroup}>
+                    <TextInput
+                        style={[TextInputStyles.input, styles.inputSpacing]}
+                        placeholder="Ancien mot de passe"
+                        secureTextEntry
+                        value={oldPassword}
+                        onChangeText={setOldPassword} //maj ancien mdp
+                    />
+                    <TextInput
+                        style={[TextInputStyles.input, styles.inputSpacing]}
+                        placeholder="Nouveau mot de passe"
+                        secureTextEntry
+                        value={newPassword}
+                        onChangeText={(text) => {
+                            setNewPassword(text); //maj nouveau mdp
+                            if (!validatePassword(text)) {
+                                setPasswordError(
+                                    'Le mot de passe doit contenir au moins 8 caractères, une majuscule, un chiffre et un caractère spécial.'
+                                );
+                            } else {
+                                setPasswordError('');
+                            }
+                        }}
+                    />
+                    {/* ANIMATION BARRE ET CHECKLIST */}
+                    {newPassword.length > 0 && (
+                        <Animated.View style={styles.checklistContainer}>
+                            <View style={styles.progressContainer}>
+                                <Animated.View
+                                    style={[
+                                        styles.progressBar,
+                                        { width: animatedWidth, backgroundColor: animatedColor },
+                                    ]}
+                                />
+                            </View>
+                            <View style={styles.checklist}>
+                                {renderCheckItem(newPassword.trim().length >= 8, 'Au moins 8 caractères')}
+                                {renderCheckItem(/[A-Z]/.test(newPassword.trim()), 'Au moins une majuscule')}
+                                {renderCheckItem(/[0-9]/.test(newPassword.trim()), 'Au moins un chiffre')}
+                                {renderCheckItem(/[!@#$%^&*_]/.test(newPassword.trim()), 'Au moins un caractère spécial')}
+                            </View>
+                        </Animated.View>
+                    )}
+                    <TextInput
+                        style={[TextInputStyles.input, styles.inputSpacing]}
+                        placeholder="Confirmer le nouveau mot de passe"
+                        secureTextEntry
+                        value={confirmPassword}
+                        onChangeText={(text) => {
+                            setConfirmPassword(text); //maj confirmation
+                            if (newPassword !== text) {
+                                setConfirmError('Les mots de passe ne correspondent pas.');
+                            } else {
+                                setConfirmError('');
+                            }
+                        }}
+                    />
+                    {passwordError ? (
+                        <Text style={styles.validationErrorText}>{passwordError}</Text>
+                    ) : null}
+                    {confirmError ? (
+                        <Text style={styles.validationErrorText}>{confirmError}</Text>
+                    ) : null}
+                </View>
+                <TouchableOpacity
+                    style={[
+                        ButtonStyles.container,
+                        styles.cardButton,
+                        !canChangePassword && { opacity: 0.5 },
+                    ]}
+                    onPress={handleChangePassword}
+                    disabled={!canChangePassword}
+                >
+                    <Text style={ButtonStyles.text}>Changer le mot de passe</Text>
+                </TouchableOpacity>
+            </View>
 
-            <Text style={styles.sectionTitle}>Supprimer le compte</Text>
-            <TouchableOpacity style={[styles.button, styles.deleteButton]} onPress={handleDeleteAccount}>
-                <Text style={styles.buttonText}>Supprimer mon compte</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
-                <Text style={styles.cancelButtonText}>Retour</Text>
-            </TouchableOpacity>
+            {/* CARD: SUPPRIMER LE COMPTE */}
+            <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                    <Ionicons name="trash-outline" size={20} color="#b21ae5" style={styles.cardIcon} />{/*icône poubelle*/}
+                    <Text style={[styles.cardTitle, { color: '#b21ae5' }]}>Supprimer le compte</Text>
+                </View>
+                <TouchableOpacity
+                    style={[ButtonStyles.container, styles.cardButton, styles.deleteButton]}
+                    onPress={handleDeleteAccount}
+                >
+                    <Text style={ButtonStyles.text}>Supprimer mon compte</Text>
+                </TouchableOpacity>
+            </View>
         </ScrollView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        padding: 20, // padding global
-        backgroundColor: '#fff', // fond blanc
+        padding: 20,
+        backgroundColor: '#fff',
         flexGrow: 1,
-        alignItems: 'center', // centre horizontalement
-        paddingTop: 40, // pour que le header ne colle pas en haut
+        alignItems: 'center',
+        paddingTop: 40,
     },
-    header: {
-        fontSize: 28, // TITRE PRINCIPAL
-        fontWeight: 'bold',
+    profileHeader: {
+        alignItems: 'center',
         marginBottom: 30,
-        textAlign: 'center',
     },
-    sectionTitle: {
-        fontSize: 20, // TITRE DE SECTION
-        marginTop: 20,
+    profileImage: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        borderWidth: 2,
+        borderColor: '#b21ae5',
+        resizeMode: 'cover',
+        alignSelf: 'center',
+    },
+    card: {
+        width: '100%',
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        padding: 20,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginBottom: 10,
     },
-    input: {
-        width: '90%', // largeur relative
-        borderWidth: 1, // bordure simple
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: 12, // padding interne
-        marginBottom: 20,
-        fontSize: 16,
+    cardIcon: {
+        marginRight: 8,
     },
-    button: {
-        backgroundColor: '#007BFF', // bleu pour bouton
-        width: '90%',
-        padding: 15,
-        borderRadius: 8,
+    cardTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    inputGroup: {
+        marginBottom: 10,
+    },
+    inputSpacing: {
+        marginBottom: 10,
+    },
+    checklistContainer: {
+        marginBottom: 10,
+    },
+    progressContainer: {
+        width: '100%',
+        height: 6,
+        backgroundColor: '#eee',
+        borderRadius: 3,
+        overflow: 'hidden',
+        marginBottom: 10,
+    },
+    progressBar: {
+        height: '100%',
+        borderRadius: 3,
+    },
+    checklist: {
+        // rien de spécial ici
+    },
+    checkItemContainer: {
+        flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 15,
+        marginBottom: 2,
+    },
+    checkIcon: {
+        marginRight: 4,
+    },
+    checkText: {
+        fontSize: 14,
+        color: '#333',
+        fontFamily: 'PlusJakartaSans_500Medium',
+    },
+    cardButton: {
+        marginTop: 10,
     },
     deleteButton: {
-        backgroundColor: '#DC3545', // rouge pour supprimer
+        backgroundColor: '#DC3545',
     },
-    buttonText: {
-        color: '#fff', // texte en blanc
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    cancelButton: {
-        marginTop: 30,
-        width: '90%',
-        padding: 15,
-        borderRadius: 8,
-        alignItems: 'center',
-        backgroundColor: '#6C757D', // gris pour annuler
-    },
-    cancelButtonText: {
-        color: '#fff',
-        fontSize: 16,
+    validationErrorText: {
+        color: '#FF0000',
+        fontSize: 14,
+        marginBottom: 10,
+        fontFamily: 'PlusJakartaSans_400Regular',
     },
 });
 

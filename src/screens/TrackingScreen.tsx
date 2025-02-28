@@ -1,6 +1,5 @@
-// src/screens/TrackingScreen.tsx
-// IMPORT DES LIBS : on charge React, ses hooks et plein d'autres modules utiles
-import React, { useState, useEffect, useMemo, useCallback } from 'react'; // hooks pour gérer l'état, les effets et les mémos
+// src/screens/TrainingScreen.tsx
+import React, { useState, useEffect, useMemo, useCallback } from 'react';//import de React et hooks
 import {
     View,
     Text,
@@ -10,85 +9,91 @@ import {
     RefreshControl,
     Alert,
     TextInput,
-} from 'react-native'; // composants de base RN
-import { API, graphqlOperation } from 'aws-amplify'; // pour faire des appels GraphQL
-import { listExerciseTrackings, listExercises } from '../graphql/queries'; // requêtes pour récupérer les suivis et les exos
-import { useAuth } from '../context/AuthContext'; // récupère le contexte d'authentification
-import { useNavigation, useFocusEffect } from '@react-navigation/native'; // navigation et effet au focus
-import type { RootStackParamList } from '../types/NavigationTypes'; // types de navigation
-import { StackNavigationProp } from '@react-navigation/stack'; // type pour la navigation en stack
-import { ButtonStyles } from '../styles/ButtonStyles'; // styles custom des boutons
-import Ionicons from 'react-native-vector-icons/Ionicons'; // icônes Ionicons
-import ExerciseFilterBar from '../components/ExerciseFilterBar'; // barre de filtre pour les exos
-import MuscleGroupFilterBar from '../components/MuscleGroupFilterBar'; // barre de filtre pour les groupes musculaires
+} from 'react-native';//composants de base
+import { API, graphqlOperation } from 'aws-amplify';//pour l'API backend
+import { listExerciseTrackings, listExercises } from '../graphql/queries';//requêtes GraphQL
+import { useAuth } from '../context/AuthContext';//contexte d'authentification
+import { useNavigation, useFocusEffect } from '@react-navigation/native';//navigation et focus effect
+import type { RootStackParamList } from '../types/NavigationTypes';//types de navigation
+import { StackNavigationProp } from '@react-navigation/stack';//type navigation stack
+import { ButtonStyles } from '../styles/ButtonStyles';//styles bouton
+import Ionicons from 'react-native-vector-icons/Ionicons';//icônes Ionicons
+import ExerciseFilterBar from '../components/ExerciseFilterBar';//composant de filtre par exo
+import MuscleGroupFilterBar from '../components/MuscleGroupFilterBar';//composant de filtre par groupe
 
 // TYPE : structure d'un enregistrement de suivi
 interface TrackingRecord {
-    id: string; // id du suivi
-    userId: string; // id de l'user
-    exerciseId: string; // id de l'exo
-    exerciseName: string; // nom de l'exo
-    date: string; // date en ISO string
-    setsData: string; // données des séries sous forme de JSON string
+    id: string;
+    userId: string;
+    exerciseId: string;
+    exerciseName: string;
+    date: string;
+    setsData: string;
 }
 
-type NavigationProp = StackNavigationProp<RootStackParamList>; // typage de la navigation
+// TYPE : mapping pour stocker le groupe musculaire et le type d'exo
+interface ExerciseInfo {
+    muscleGroup: string;
+    exerciseType?: string;
+}
+
+type NavigationProp = StackNavigationProp<RootStackParamList>;//type navigation
 
 const TrackingScreen: React.FC = () => {
-    const [trackings, setTrackings] = useState<TrackingRecord[]>([]); // liste des suivis
-    const [loading, setLoading] = useState<boolean>(true); // état de chargement
-    const [refreshing, setRefreshing] = useState<boolean>(false); // état pour pull-to-refresh
-    const { user } = useAuth(); // récupère l'user courant
-    const navigation = useNavigation<NavigationProp>(); // navigation typée
+    const [trackings, setTrackings] = useState<TrackingRecord[]>([]);//stocke tous les suivis
+    const [loading, setLoading] = useState<boolean>(true);//etat loading
+    const [refreshing, setRefreshing] = useState<boolean>(false);//pour pull-to-refresh
+    const { user } = useAuth(); //récupère l'utilisateur
+    const navigation = useNavigation<NavigationProp>(); //pour naviguer
 
-    // ETAT : barre de recherche
-    const [searchQuery, setSearchQuery] = useState<string>(''); // query de recherche
+    // BARRE DE RECHERCHE : état pour le texte recherché
+    const [searchQuery, setSearchQuery] = useState<string>(''); //texte recherché
 
-    // ETAT : filtre par exo (géré via ExerciseFilterBar)
-    const [filterExercise, setFilterExercise] = useState<string>('All'); // filtre sur l'exo sélectionné
+    // FILTRE PAR EXERCICE : sélection de l'exo à filtrer
+    const [filterExercise, setFilterExercise] = useState<string>('All'); //filtre exo
 
-    // ETAT : filtre par groupe musculaire
-    const [filterMuscleGroup, setFilterMuscleGroup] = useState<string>('All'); // filtre sur le groupe musculaire
+    // FILTRE PAR GROUPE MUSCULAIRE : sélection du groupe à filtrer
+    const [filterMuscleGroup, setFilterMuscleGroup] = useState<string>('All'); //filtre groupe musculaire
 
-    // ETAT : liste des groupes musculaires dispo et mapping nom exo => groupe
-    const [availableMuscleGroups, setAvailableMuscleGroups] = useState<string[]>([]); // groupes dispo
-    const [exerciseMapping, setExerciseMapping] = useState<{ [key: string]: string }>({}); // mapping exo -> groupe
+    // ETAT DES FILTRES DISPONIBLES
+    const [availableMuscleGroups, setAvailableMuscleGroups] = useState<string[]>([]);//liste des groupes dispo
+    const [exerciseMapping, setExerciseMapping] = useState<{ [key: string]: ExerciseInfo }>({});//mapping exo -> infos
 
-    // MEMO : récupère la liste unique d'exos à partir des suivis
+    // MEMO : liste unique des exos présents dans les suivis
     const uniqueExercises = useMemo(() => {
-        return Array.from(new Set(trackings.map((t) => t.exerciseName))); // unique par nom
-    }, [trackings]);
+        return Array.from(new Set(trackings.map((t) => t.exerciseName)));
+    }, [trackings]); //on évite le recalcul inutile
 
-    // MEMO : filtre les exos pour la barre de filtre en fonction du groupe sélectionné
+    // MEMO : filtre la liste des exos selon le groupe musculaire sélectionné
     const filteredExercises = useMemo(() => {
         if (filterMuscleGroup !== 'All') {
             return uniqueExercises.filter(
-                (ex) => exerciseMapping[ex] === filterMuscleGroup
+                (ex) => exerciseMapping[ex]?.muscleGroup === filterMuscleGroup
             );
         }
         return uniqueExercises;
     }, [uniqueExercises, exerciseMapping, filterMuscleGroup]);
 
-    // PULL-TO-REFRESH : rafraîchit les suivis
+    // PULL-TO-REFRESH : rafraîchit les données de suivi
     const onRefresh = async () => {
-        setRefreshing(true); // démarre le refresh
-        await fetchTrackings(); // recharge les données
-        setRefreshing(false); // stop refresh
+        setRefreshing(true); //active l'animation refresh
+        await fetchTrackings(); // recharge les suivis
+        setRefreshing(false); // désactive refresh
     };
 
-    // Recharge les suivis dès que l'écran reprend le focus
+    // RAFRAICHISSEMENT : recharge les suivis quand l'écran reprend le focus
     useFocusEffect(
         useCallback(() => {
-            fetchTrackings(); // recharge quand l'écran est focus
+            fetchTrackings();
         }, [user])
     );
 
-    // recharge aussi au montage ou quand l'user change
+    // Au chargement ou au changement d'utilisateur, on récupère les données
     useEffect(() => {
         fetchTrackings();
     }, [user]);
 
-    // FONCTION : récupère les enregistrements de suivi depuis le backend
+    // FONCTION : récupère les suivis depuis le backend
     const fetchTrackings = async () => {
         if (!user) {
             setLoading(false);
@@ -98,20 +103,20 @@ const TrackingScreen: React.FC = () => {
             const response: any = await API.graphql(
                 graphqlOperation(listExerciseTrackings, {
                     filter: { userId: { eq: user?.attributes?.sub || user?.username } },
-                    sortDirection: 'DESC',
+                    sortDirection: 'DESC', // plus récent d'abord
                 })
             );
             const items: TrackingRecord[] = response.data.listExerciseTrackings.items;
-            setTrackings(items); // stocke les suivis
+            setTrackings(items);
         } catch (error) {
-            console.error('Error fetching tracking data', error);
+            console.error('Error fetching tracking data', error); //pb de récupération
             Alert.alert('Erreur', 'Une erreur est survenue lors du chargement des données.');
         } finally {
             setLoading(false);
         }
     };
 
-    // Récupère les groupes musculaires dispo et crée le mapping exo => groupe
+    // MAPPING DES GROUPES MUSCULAIRES : récupère les exos pour établir le mapping et la liste des groupes
     useEffect(() => {
         const fetchMuscleGroups = async () => {
             if (!user) return;
@@ -122,16 +127,19 @@ const TrackingScreen: React.FC = () => {
                     })
                 );
                 const items = response.data.listExercises.items;
-                const mapping: { [key: string]: string } = {};
+                const mapping: { [key: string]: ExerciseInfo } = {};
                 const groups: string[] = [];
                 items.forEach((e: any) => {
                     if (e.name && e.muscleGroup) {
-                        mapping[e.name] = e.muscleGroup; // associe nom => groupe
-                        groups.push(e.muscleGroup); // stocke le groupe
+                        mapping[e.name] = {
+                            muscleGroup: e.muscleGroup,
+                            exerciseType: e.exerciseType, // capture le type d'exo
+                        };
+                        groups.push(e.muscleGroup);
                     }
                 });
                 setExerciseMapping(mapping);
-                setAvailableMuscleGroups(Array.from(new Set(groups))); // groupe unique
+                setAvailableMuscleGroups(Array.from(new Set(groups)));
             } catch (error) {
                 console.error('Error fetching muscle groups', error);
                 Alert.alert('Erreur', 'Impossible de charger les groupes musculaires.');
@@ -140,22 +148,22 @@ const TrackingScreen: React.FC = () => {
         fetchMuscleGroups();
     }, [user]);
 
-    // CALCULS : stats de synthèse
-    const totalSessions = trackings.length; // nb total de séances
+    // STATISTIQUES : calcule le nombre total de séances et le poids total soulevé
+    const totalSessions = trackings.length; // nombre de séances
     const totalWeightLifted = trackings.reduce((sum, record) => {
         try {
-            const setsData = JSON.parse(record.setsData); // parse les données JSON
+            const setsData = JSON.parse(record.setsData);
             const recordTotal = setsData.reduce(
                 (s: number, set: { reps: number; weight: number }) => s + set.reps * set.weight,
                 0
             );
-            return sum + recordTotal; // ajoute le total de l'enregistrement
+            return sum + recordTotal;
         } catch (e) {
             return sum;
         }
     }, 0);
 
-    // FILTRAGE : on filtre les suivis selon la recherche et les filtres appliqués
+    // FILTRAGE : on filtre les suivis en fonction de la recherche et des filtres appliqués
     const filteredTrackings = trackings.filter((tracking) => {
         let exerciseMatch = true;
         if (searchQuery) {
@@ -167,12 +175,12 @@ const TrackingScreen: React.FC = () => {
         }
         const muscleMatch =
             filterMuscleGroup !== 'All'
-                ? exerciseMapping[tracking.exerciseName] === filterMuscleGroup
+                ? exerciseMapping[tracking.exerciseName]?.muscleGroup === filterMuscleGroup
                 : true;
         return exerciseMatch && muscleMatch;
     });
 
-    // ACTIVE FILTERS : badges affichés pour les filtres actifs
+    // BADGES DES FILTRES ACTIFS
     const activeFilters: string[] = [];
     if (filterMuscleGroup && filterMuscleGroup !== 'All')
         activeFilters.push(`Groupe: ${filterMuscleGroup}`);
@@ -180,10 +188,10 @@ const TrackingScreen: React.FC = () => {
         activeFilters.push(`Exercice: ${filterExercise}`);
     if (searchQuery) activeFilters.push(`Recherche: ${searchQuery}`);
 
-    // RENDER : comment afficher chaque enregistrement de suivi
+    // RENDER DE CHAQUE ENREGISTREMENT
     const renderItem = ({ item }: { item: TrackingRecord }) => {
         const dateObj = new Date(item.date);
-        // Format de la date au style dd/mm
+        // formate la date en DD/MM
         const formattedDate = `${dateObj.getDate().toString().padStart(2, '0')}/${(
             dateObj.getMonth() + 1
         )
@@ -193,9 +201,17 @@ const TrackingScreen: React.FC = () => {
         let setSummary = '';
         try {
             const setsData = JSON.parse(item.setsData);
-            setSummary = setsData
-                .map((set: { reps: number; weight: number }) => `${set.reps} x ${set.weight} kg`)
-                .join('\n'); // résumé de chaque set
+            const exerciseType = exerciseMapping[item.exerciseName]?.exerciseType?.toLowerCase();
+            if (exerciseType === 'bodyweight') {
+                // pour les exos poids du corps, affiche uniquement les reps
+                setSummary = setsData
+                    .map((set: { reps: number; weight: number }) => `${set.reps} reps`)
+                    .join('\n');
+            } else {
+                setSummary = setsData
+                    .map((set: { reps: number; weight: number }) => `${set.reps} x ${set.weight} kg`)
+                    .join('\n');
+            }
         } catch (e) {
             console.error('Error parsing setsData', e);
         }
@@ -203,7 +219,9 @@ const TrackingScreen: React.FC = () => {
         return (
             <TouchableOpacity
                 style={styles.recordItem}
-                onPress={() => navigation.navigate('TrackingDetail', { tracking: item })} // navigate vers le détail
+                onPress={() =>
+                    navigation.navigate('TrackingDetail', { tracking: item })
+                } //ouvre le détail du suivi
                 onLongPress={() => {
                     Alert.alert(
                         'Supprimer',
@@ -221,7 +239,7 @@ const TrackingScreen: React.FC = () => {
                         { cancelable: true }
                     );
                 }}
-                accessibilityLabel={`Enregistrement du ${formattedDate} pour ${item.exerciseName}`} // accessibilité
+                accessibilityLabel={`Enregistrement du ${formattedDate} pour ${item.exerciseName}`}
             >
                 <Text style={styles.recordTitle}>
                     {item.exerciseName} - {formattedDate}
@@ -231,7 +249,6 @@ const TrackingScreen: React.FC = () => {
         );
     };
 
-    // SI chargement => affiche écran de chargement
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -248,41 +265,36 @@ const TrackingScreen: React.FC = () => {
                 <Text style={styles.summaryText}>Poids total: {totalWeightLifted.toFixed(0)} kg</Text>
             </View>
 
-            {/* BARRE DE RECHERCHE */}
+            //BARRE DE RECHERCHE
             <TextInput
                 style={styles.searchBar}
-                placeholder="Rechercher un exercice..." // placeholder
+                placeholder="Rechercher un exercice..."
                 placeholderTextColor="#999"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
             />
 
-            {/* FILTRE PAR GROUPE MUSCULAIRE */}
+            // FILTRE PAR GROUPE MUSCULAIRE
             <MuscleGroupFilterBar
-                groups={availableMuscleGroups} // groupes dispo
-                activeGroup={filterMuscleGroup} // groupe sélectionné
+                groups={availableMuscleGroups}
+                activeGroup={filterMuscleGroup}
                 onFilterChange={(selectedGroup) => {
                     setFilterMuscleGroup(selectedGroup);
-                    // Reset du filtre d'exo si l'exo courant ne correspond plus
-                    if (
-                        filterExercise !== 'Tout' &&
-                        exerciseMapping[filterExercise] !== selectedGroup
-                    ) {
+                    if (filterExercise !== 'Tout' && exerciseMapping[filterExercise]?.muscleGroup !== selectedGroup) {
                         setFilterExercise('Tout');
                     }
                 }}
             />
 
-            {/* FILTRE PAR EXERCICE */}
+            // FILTRE PAR EXERCICE
             <ExerciseFilterBar
-                exercises={filteredExercises} // exos filtrés
+                exercises={filteredExercises}
                 onFilterChange={(selectedExercise, query) => {
                     setFilterExercise(selectedExercise);
-                    // la recherche est gérée séparément
                 }}
             />
 
-            {/* BADGES DES FILTRES ACTIFS */}
+            // BADGES DES FILTRES ACTIFS
             {activeFilters.length > 0 && (
                 <View style={styles.activeFiltersContainer}>
                     {activeFilters.map((filter, idx) => (
@@ -293,13 +305,13 @@ const TrackingScreen: React.FC = () => {
                 </View>
             )}
 
-            {/* LISTE DES SUIVIS */}
+            // LISTE DES SUIVIS
             <FlatList
                 data={filteredTrackings}
                 keyExtractor={(item) => item.id}
                 renderItem={renderItem}
                 contentContainerStyle={styles.contentContainer}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} // pull-to-refresh
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 ListEmptyComponent={
                     <View style={styles.emptyStateContainer}>
                         <Text style={styles.emptyStateText}>
@@ -309,7 +321,7 @@ const TrackingScreen: React.FC = () => {
                 }
             />
 
-            {/* BOUTON ACTION PERMANENT */}
+            // BOUTON ACTION PERMANENT
             <TouchableOpacity
                 style={styles.persistentButton}
                 onPress={() => navigation.navigate('ManualTracking')}
@@ -326,7 +338,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
         padding: 16,
-        paddingBottom: 80, // espace en bas pour le bouton
+        paddingBottom: 80,
     },
     summaryHeader: {
         flexDirection: 'row',
@@ -405,7 +417,7 @@ const styles = StyleSheet.create({
         bottom: 16,
         left: 16,
         right: 16,
-        ...ButtonStyles.container, // styles du bouton custom
+        ...ButtonStyles.container,
     },
 });
 

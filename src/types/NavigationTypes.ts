@@ -1,44 +1,45 @@
-// src/types/NavigationTypes.ts
-
 export interface WorkoutSessionData {
-    exerciseName: string;
-    totalSets: number;
-    plannedReps: number;
-    restDuration: number;
+    exerciseName: string; // nom de l'exo
+    totalSets: number; // nb total de séries prévues
+    plannedReps: number; // nb de répétitions planifiées
+    restDuration: number; // durée du repos en secondes
+    exerciseType?: string; // type d'exo, optionnel (ex: bodyweight, normal)
 }
 
 export interface SetResult {
-    reps?: number;
-    weight?: number;
+    reps?: number; // résultat : nombre de reps effectuées
+    weight?: number; // résultat : poids utilisé, optionnel
 }
 
+// NAVIGATION STACK : ici on définit les routes et leurs params pour la navigation
 export type RootStackParamList = {
-    Home: undefined;
-    MainTabs: undefined;
-    Auth: { mode: 'login' | 'signup' } | undefined;
-    ConfirmSignUp: { username: string };
+    Home: undefined; // écran d'accueil, rien de spécial à passer
+    MainTabs: undefined; // onglets principaux
+    Auth: { mode: 'login' | 'signup' } | undefined; // mode de connexion ou d'inscription
+    ConfirmSignUp: { username: string }; // confirmation d'inscription avec le username
     AddEditExercise: {
         exercise?: {
-            exerciseId: string;
-            name: string;
-            muscleGroup: string;
-            restTime: number;
-            sets: number;
-            reps: number;
+            exerciseId: string; // id unique de l'exo
+            name: string; // nom de l'exo
+            muscleGroup: string; // groupe musculaire ciblé
+            restTime: number; // temps de repos en secondes
+            sets: number; // nb de séries
+            reps: number; // nb de répétitions
+            exerciseType?: string | null; // type d'exo, optionnel ou null
         };
-    } | undefined;
+    } | undefined; // écran pour ajouter ou modifier un exo
     TrackingDetail: {
         tracking: {
-            id: string;
-            userId: string;
-            exerciseId: string;
-            exerciseName: string;
-            date: string;
-            setsData: string;
+            id: string; // id du tracking
+            userId: string; // id de l'utilisateur
+            exerciseId: string; // id de l'exo
+            exerciseName: string; // nom de l'exo
+            date: string; // date de la séance
+            setsData: string; // données des séries sous forme de string (JSON par exemple)
         };
     };
-    ExerciseHistory: { exerciseName: string };
-    ManualTracking: undefined;
+    ExerciseHistory: { exerciseName: string }; // historique d'un exo par son nom
+    ManualTracking: undefined; // tracking manuel
     EditTracking: {
         tracking: {
             id: string;
@@ -48,17 +49,17 @@ export type RootStackParamList = {
             date: string;
             setsData: string;
         };
-    };
-    ForgotPassword: undefined;
+    }; // édition d'un tracking existant
+    ForgotPassword: undefined; // écran de réinitialisation de mot de passe
     WorkoutSession: {
-        sessionData: WorkoutSessionData;
-        onComplete: (results: SetResult[]) => void;
+        sessionData: WorkoutSessionData; // données de la séance d'exercice
+        onComplete: (results: SetResult[]) => void; // callback quand la séance est terminée
+        onClose?: () => void; // callback optionnel pour fermer la séance
     };
-    ProfileOptions: undefined;
-    // New legal screens:
-    TermsOfUse: undefined;
-    PrivacyPolicy: undefined;
-    LegalNotice: undefined;
-    // New About screen:
-    About: undefined;
+    ProfileOptions: undefined; // options du profil
+    TermsOfUse: undefined; // conditions d'utilisation
+    PrivacyPolicy: undefined; // politique de confidentialité
+    LegalNotice: undefined; // mentions légales
+    About: undefined; // à propos de l'app
+    ParameterScreen: undefined; // écran des paramètres
 };

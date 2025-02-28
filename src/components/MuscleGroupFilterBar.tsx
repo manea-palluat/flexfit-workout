@@ -3,11 +3,12 @@ import React from 'react';
 import { ScrollView, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 
 interface MuscleGroupFilterBarProps {
-    groups: string[];              // Array of available muscle groups.
-    activeGroup: string;           // Currently selected muscle group ("All" means no filter).
-    onFilterChange: (selectedGroup: string) => void; // Callback when a group is selected.
+    groups: string[];              //liste des groupes musculaires dispo
+    activeGroup: string;           //groupe sélectionné (All = pas de filtre)
+    onFilterChange: (selectedGroup: string) => void; //callback quand un groupe est choisi
 }
 
+//BARRE DE FILTRE: Composant qui gère l'affichage des boutons de sélection des groupes
 const MuscleGroupFilterBar: React.FC<MuscleGroupFilterBarProps> = ({
     groups,
     activeGroup,
@@ -15,6 +16,7 @@ const MuscleGroupFilterBar: React.FC<MuscleGroupFilterBarProps> = ({
 }) => {
     return (
         <View style={styles.wrapper}>
+            {/*affichage horizontal des puces de filtre*/}
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -25,19 +27,19 @@ const MuscleGroupFilterBar: React.FC<MuscleGroupFilterBarProps> = ({
                         key={group}
                         style={[
                             styles.chip,
-                            index === 0 && styles.firstChip, // Remove left margin for "All"
-                            activeGroup === group && styles.activeChip,
+                            index === 0 && styles.firstChip, //pour "All", pas de marge à gauche
+                            activeGroup === group && styles.activeChip, //si sélectionné, style actif
                         ]}
-                        onPress={() => onFilterChange(group)}
-                        accessibilityLabel={`Filter by ${group}`}
+                        onPress={() => onFilterChange(group)} //déclenche la sélection du groupe
+                        accessibilityLabel={`Filter by ${group}`} //accessibilité
                     >
                         <Text
                             style={[
                                 styles.chipText,
-                                activeGroup === group && styles.activeChipText,
+                                activeGroup === group && styles.activeChipText, //texte en surbrillance si actif
                             ]}
                         >
-                            {group}
+                            {group} {/*affiche le nom du groupe*/}
                         </Text>
                     </TouchableOpacity>
                 ))}
@@ -48,26 +50,26 @@ const MuscleGroupFilterBar: React.FC<MuscleGroupFilterBarProps> = ({
 
 const styles = StyleSheet.create({
     wrapper: {
-        height: 50, // Fixed height container.
+        height: 50,
         marginBottom: 8,
-        paddingRight: 16, // Only right padding.
+        paddingRight: 16,
         backgroundColor: '#fff',
         justifyContent: 'center',
     },
     chipsContainer: {
         alignItems: 'center',
-        // No left padding so the first chip is flush.
+
     },
     chip: {
-        height: 36, // Fixed chip height.
+        height: 36,
         justifyContent: 'center',
         paddingHorizontal: 16,
         backgroundColor: '#F1F1F1',
         borderRadius: 20,
-        marginLeft: 10, // Use left margin for spacing.
+        marginLeft: 10,
     },
     firstChip: {
-        marginLeft: 0, // "All" chip flush to left.
+        marginLeft: 0,
     },
     activeChip: {
         backgroundColor: '#b21ae5',

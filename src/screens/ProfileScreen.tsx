@@ -72,11 +72,11 @@ const ProfileScreen: React.FC = () => {
     // MENU OPTIONS: définit les options du menu avec leurs icônes
     const menuOptions: MenuOption[] = [
         { label: 'Confidentialité', route: 'PrivacyPolicy', icon: 'lock-closed-outline' },
-        { label: 'Historique d’achats', route: 'PurchaseHistory', icon: 'receipt-outline' },
-        { label: 'Aide & Support', route: 'HelpSupport', icon: 'help-circle-outline' },
+        //{ label: 'Historique d’achats', route: 'PurchaseHistory', icon: 'receipt-outline' },
+        //{ label: 'Aide & Support', route: 'HelpSupport', icon: 'help-circle-outline' },
         { label: 'Paramètres', route: 'ParameterScreen', icon: 'settings-outline' },
         { label: 'Options du profil', route: 'ProfileOptions', icon: 'person-circle-outline' },
-        { label: 'Inviter un ami', route: 'InviteFriend', icon: 'person-add-outline' },
+        //{ label: 'Inviter un ami', route: 'InviteFriend', icon: 'person-add-outline' },
         { label: 'Déconnexion', action: 'logout', icon: 'log-out-outline' },
     ];
 
@@ -110,7 +110,7 @@ const ProfileScreen: React.FC = () => {
             {/*{/* Bouton pour passer en Premium, fonctionnalité à venir */}
             <TouchableOpacity
                 style={[ButtonStyles.container, styles.proButton]}
-                onPress={() => Alert.alert('Pro', 'Fonctionnalité Premium à venir!')}
+                onPress={() => Alert.alert('Premium', 'Les fonctionnalités Premium viendront bientôt ! #Richesse #Standing #PremièreClasse')}
             >
                 <Text style={ButtonStyles.text}>Passer en Premium</Text>
             </TouchableOpacity>

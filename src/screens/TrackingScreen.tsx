@@ -1,4 +1,4 @@
-// src/screens/TrainingScreen.tsx
+// src/screens/TrackingScreen.tsx 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';//import de React et hooks
 import {
     View,
@@ -402,15 +402,15 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     recordTitle: {
+        fontFamily: 'PlusJakartaSans_500Medium',
         fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 8,
-        color: '#333',
+        lineHeight: 25,
+        color: '#141217',
+        marginBottom: 4,
     },
     recordSummary: {
-        fontSize: 14,
-        color: '#444',
-        lineHeight: 20,
+        fontSize: 16,
+        color: '#756387',
     },
     persistentButton: {
         position: 'absolute',

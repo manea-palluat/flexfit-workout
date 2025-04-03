@@ -22,7 +22,7 @@ const MuscleGroupFilterBar: React.FC<MuscleGroupFilterBarProps> = ({
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.chipsContainer}
             >
-                {['All', ...groups].map((group, index) => (
+                {['Tous', ...groups].map((group, index) => (
                     <TouchableOpacity
                         key={group}
                         style={[

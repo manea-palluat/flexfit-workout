@@ -1,51 +1,48 @@
-// src/components/ExerciseFilterBar.tsx
 import React, { useState, useEffect } from 'react';
 import { ScrollView, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 
-interface ExerciseFilterBarProps { //props:liste d'exercices,callback de filtre et filtre init
-    exercises: string[]; //liste des noms d'exercices
-    onFilterChange: (selectedExercise: string, searchQuery: string) => void; //callback quand le filtre change
-    initialActiveFilter?: string; //filtre initial optionnel
+interface ExerciseFilterBarProps {
+    exercises: string[];
+    onFilterChange: (selectedExercise: string, searchQuery: string) => void;
+    initialActiveFilter?: string;
 }
 
 const ExerciseFilterBar: React.FC<ExerciseFilterBarProps> = ({
     exercises,
     onFilterChange,
-    initialActiveFilter = 'All',
+    initialActiveFilter = 'Tous',
 }) => {
-    const [activeFilter, setActiveFilter] = useState<string>(initialActiveFilter); //etat pour le filtre actif
+    const [activeFilter, setActiveFilter] = useState<string>(initialActiveFilter);
 
     useEffect(() => {
-        onFilterChange(activeFilter === 'All' ? '' : activeFilter, ''); //met à jour le filtre via callback (All = pas de filtre)
+        // Ne pas transformer "Tous" en chaîne vide ici, laisser le parent gérer
+        onFilterChange(activeFilter, '');
     }, [activeFilter, onFilterChange]);
 
     const handleChipPress = (chip: string) => {
-        setActiveFilter(chip); //change l'etat quand on clique sur un chip
+        setActiveFilter(chip);
     };
 
     return (
         <View style={styles.wrapper}>
-            {/* EXERCISE FILTER BAR */}
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.chipsContainer}
             >
-                {/* container des chips en scroll horizontal */}
-                {['All', ...exercises].map((chip, index) => (
+                {['Tous', ...exercises].map((chip, index) => (
                     <TouchableOpacity
                         key={chip}
                         style={[
                             styles.chip,
-                            /* premier chip sans marge gauche */ index === 0 && styles.firstChip,
-                            /* chip actif a un style particulier */ activeFilter === chip && styles.chipActive,
+                            index === 0 && styles.firstChip,
+                            activeFilter === chip && styles.chipActive,
                         ]}
                         onPress={() => handleChipPress(chip)}
                         accessibilityLabel={`Filter by ${chip}`}
                     >
                         <Text style={[styles.chipText, activeFilter === chip && styles.chipTextActive]}>
                             {chip}
-                            {/* affiche le nom du chip */}
                         </Text>
                     </TouchableOpacity>
                 ))}

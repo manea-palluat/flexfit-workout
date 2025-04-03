@@ -234,7 +234,6 @@ const AuthScreen: React.FC<Props> = ({ navigation, route }) => {
     return (
         <View style={styles.container}>
             {/* TITRE PRINCIPAL */}
-            {/*{/* Title with extra bottom margin */}
             <Text style={[TextStyles.title, { marginBottom: 20 }]}>
                 {isSignup ? 'Inscription' : 'Connexion'}
             </Text>

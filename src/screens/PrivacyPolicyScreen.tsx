@@ -10,10 +10,10 @@ const PrivacyPolicyScreen: React.FC = () => {
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            // TITRE PRINCIPAL
-            <Text style={styles.mainTitle}>Politique de Confidentialité - FlexFit</Text>
-            // Date de mise à jour
-            <Text style={styles.date}>Dernière mise à jour : [Date]</Text>
+
+            <Text style={styles.mainTitle}>Politique de confidentialité - FlexFit</Text>
+
+            <Text style={styles.date}>Dernière mise à jour : 02/04/2025</Text>
             {lines.map((line, index) => {
                 const trimmed = line.trim(); // enlève les espaces superflus
                 if (trimmed === '') return null; // si ligne vide, passe

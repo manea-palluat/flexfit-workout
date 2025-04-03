@@ -1,5 +1,4 @@
-// src/screens/RecentExercisesDetailScreen.tsx
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -15,7 +14,6 @@ import { listExerciseTrackings, listExercises } from '../graphql/queries';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import ExerciseFilterBar from '../components/ExerciseFilterBar';
 import MuscleGroupFilterBar from '../components/MuscleGroupFilterBar';
 import { TextStyles } from '../styles/TextStyles';
@@ -61,6 +59,7 @@ const RecentExercisesDetailScreen: React.FC = () => {
                 })
             );
             const items: TrackingRecord[] = response.data.listExerciseTrackings.items;
+            console.log('fetchTrackings:', items.length);
             setTrackings(items);
         } catch (error) {
             console.error('Erreur lors du chargement des suivis', error);
@@ -87,6 +86,7 @@ const RecentExercisesDetailScreen: React.FC = () => {
                     groups.push(ex.muscleGroup);
                 }
             });
+            console.log('fetchExercises:', { mapping, groups });
             setExerciseMapping(mapping);
             setAvailableMuscleGroups(Array.from(new Set(groups)));
         } catch (error) {
@@ -97,45 +97,59 @@ const RecentExercisesDetailScreen: React.FC = () => {
 
     useFocusEffect(
         useCallback(() => {
+            console.log('useFocusEffect triggered');
             fetchTrackings();
-            fetchExercises();
         }, [user])
     );
 
     useEffect(() => {
+        console.log('useEffect for trackings triggered');
         fetchTrackings();
+    }, [user]);
+
+    useEffect(() => {
+        console.log('useEffect for exercises triggered');
         fetchExercises();
     }, [user]);
 
     const onRefresh = async () => {
         setRefreshing(true);
         await fetchTrackings();
+        await fetchExercises();
         setRefreshing(false);
     };
 
-    // Filtrage des suivis selon les filtres et la recherche
-    const filteredTrackings = useMemo(() => {
-        return trackings.filter((tracking) => {
-            const exerciseMatch = filterExercise === 'Tous' || tracking.exerciseName === filterExercise;
-            const muscleMatch =
-                filterMuscleGroup === 'Tous' ||
-                (exerciseMapping[tracking.exerciseName]?.muscleGroup === filterMuscleGroup);
-            const searchMatch =
-                searchQuery.trim() === '' ||
-                tracking.exerciseName.toLowerCase().includes(searchQuery.toLowerCase());
-            return exerciseMatch && muscleMatch && searchMatch;
-        });
-    }, [trackings, filterExercise, filterMuscleGroup, searchQuery, exerciseMapping]);
-
-    // Liste des exercices filtrée en fonction du groupe musculaire sélectionné
-    const filteredExercises = useMemo(() => {
-        if (filterMuscleGroup !== 'Tous') {
-            return Object.keys(exerciseMapping).filter(
-                (ex) => exerciseMapping[ex].muscleGroup === filterMuscleGroup
-            );
+    const handleMuscleGroupChange = (selectedGroup: string) => {
+        console.log('handleMuscleGroupChange:', selectedGroup);
+        setFilterMuscleGroup(selectedGroup);
+        if (filterExercise !== 'Tous' && exerciseMapping[filterExercise]?.muscleGroup !== selectedGroup) {
+            console.log('Resetting filterExercise to Tous due to muscle group change');
+            setFilterExercise('Tous');
         }
-        return Object.keys(exerciseMapping);
-    }, [exerciseMapping, filterMuscleGroup]);
+    };
+
+    const handleExerciseFilterChange = (selectedExercise: string, _searchQuery: string) => {
+        console.log('handleExerciseFilterChange:', { selectedExercise, _searchQuery });
+        setFilterExercise(selectedExercise);
+    };
+
+    const uniqueExercises = Array.from(new Set(trackings.map((t) => t.exerciseName)));
+    const filteredExercises = filterMuscleGroup === 'Tous'
+        ? uniqueExercises
+        : uniqueExercises.filter((ex) => exerciseMapping[ex]?.muscleGroup === filterMuscleGroup);
+
+    const filteredTrackings = trackings.filter((tracking) => {
+        const exerciseMatch = filterExercise === 'Tous' || tracking.exerciseName === filterExercise;
+        const muscleMatch =
+            filterMuscleGroup === 'Tous' ||
+            exerciseMapping[tracking.exerciseName]?.muscleGroup === filterMuscleGroup;
+        const searchMatch =
+            searchQuery.trim() === '' ||
+            tracking.exerciseName.toLowerCase().includes(searchQuery.toLowerCase());
+        const result = exerciseMatch && muscleMatch && searchMatch;
+        console.log('Filtering:', { tracking: tracking.exerciseName, exerciseMatch, muscleMatch, searchMatch, result });
+        return result;
+    });
 
     const renderTrackingItem = ({ item }: { item: TrackingRecord }) => {
         const dateObj = new Date(item.date);
@@ -179,6 +193,8 @@ const RecentExercisesDetailScreen: React.FC = () => {
         );
     }
 
+    console.log('Rendering with:', { trackings: trackings.length, filteredTrackings: filteredTrackings.length, filterExercise, filterMuscleGroup });
+
     return (
         <View style={styles.container}>
             <Text style={[TextStyles.headerText, styles.headerText]}>
@@ -194,18 +210,14 @@ const RecentExercisesDetailScreen: React.FC = () => {
             <MuscleGroupFilterBar
                 groups={availableMuscleGroups}
                 activeGroup={filterMuscleGroup}
-                onFilterChange={(selectedGroup) => {
-                    setFilterMuscleGroup(selectedGroup);
-                    // Réinitialise filterExercise si l'exercice sélectionné ne correspond plus au groupe choisi
-                    if (filterExercise !== 'Tous' && exerciseMapping[filterExercise]?.muscleGroup !== selectedGroup) {
-                        setFilterExercise('Tous');
-                    }
-                }}
+                onFilterChange={handleMuscleGroupChange}
             />
             <ExerciseFilterBar
                 exercises={filteredExercises}
-                onFilterChange={setFilterExercise}
+                initialActiveFilter={filterExercise}
+                onFilterChange={handleExerciseFilterChange}
             />
+
             <FlatList
                 data={filteredTrackings}
                 keyExtractor={(item) => item.id}

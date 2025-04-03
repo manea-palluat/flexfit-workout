@@ -10,31 +10,35 @@ import { TextStyles } from '../styles/TextStyles';
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Auth'>;
 
 const HomeScreen: React.FC = () => {
-    const navigation = useNavigation<NavigationProp>(); //récupère la navigation
+    const navigation = useNavigation<NavigationProp>();
 
     return (
         <View style={styles.container}>
-            {/*LOGO*/}
-            <Image style={styles.logo} source={require('../../assets/axolotl.png')} />{/*affiche le logo, c'est trop mignon*/}
+            {/* LOGO */}
+            <Image style={styles.logo} source={require('../../assets/axolotl.png')} />
             {/* TITRE */}
             <Text style={[TextStyles.title, styles.titleMargin]}>Bienvenue sur FlexFit.</Text>
             {/* BOUTON CONNEXION */}
             <TouchableOpacity
                 style={ButtonStyles.container}
-                onPress={() => navigation.navigate('Auth', { mode: 'login' })} //redirige vers l'écran d'auth en mode connexion
+                onPress={() => navigation.navigate('Auth', { mode: 'login' })}
             >
                 <Text style={ButtonStyles.text}>Connexion</Text>
             </TouchableOpacity>
             {/* BOUTON INSCRIPTION */}
             <TouchableOpacity
                 style={ButtonStyles.invertedContainer}
-                onPress={() => navigation.navigate('Auth', { mode: 'signup' })} //redirige vers l'écran d'auth en mode inscription
+                onPress={() => navigation.navigate('Auth', { mode: 'signup' })}
             >
                 <Text style={ButtonStyles.invertedText}>Inscription</Text>
             </TouchableOpacity>
             {/* BOUTON À PROPOS */}
-            <TouchableOpacity style={styles.aboutButton} onPress={() => navigation.navigate('About')}>
-                <Text style={styles.aboutButtonText}>À propos</Text>
+            <TouchableOpacity
+                style={styles.aboutButton}
+                onPress={() => navigation.navigate('About')}
+            >
+                <Text style={styles.infoCircle}>ⓘ</Text>
+                <Text style={styles.aboutButtonText}> À propos</Text>
             </TouchableOpacity>
         </View>
     );
@@ -52,12 +56,20 @@ const styles = StyleSheet.create({
         marginVertical: 20,
     },
     aboutButton: {
-        marginTop: 20,
-        padding: 10,
+        position: 'absolute',
+        bottom: 40,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    infoCircle: {
+        fontSize: 16,
+        color: '#000000',
+        fontFamily: ButtonStyles.text.fontFamily,
     },
     aboutButtonText: {
-        color: '#007BFF',
         fontSize: 16,
+        color: '#000000',
+        fontFamily: TextStyles.simpleText.fontFamily,
     },
     logo: {
         width: 200,

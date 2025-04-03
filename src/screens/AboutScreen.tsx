@@ -1,92 +1,110 @@
-//src/screens/AboutScreen.tsx
+// src/screens/AboutScreen.tsx
 import React from 'react';
-import { ScrollView, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, StyleSheet, View, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { RootStackParamList } from '../types/NavigationTypes';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Ionicons } from '@expo/vector-icons';
 
 type AboutNavigationProp = StackNavigationProp<RootStackParamList, 'About'>;
 
 const AboutScreen: React.FC = () => {
-    const navigation = useNavigation<AboutNavigationProp>(); //on récupère la navigation
+    const navigation = useNavigation<AboutNavigationProp>();
 
     return (
-        //CONTENEUR PRINCIPAL
         <ScrollView contentContainerStyle={styles.container}>
+            <Image
+                source={require('../../assets/axolotl-juge.png')}
+                style={styles.axolotlImage}
+            />
+
             <Text style={styles.header}>À propos de FlexFit</Text>
-            <TouchableOpacity
-                style={styles.button}
-                onPress={() => navigation.navigate('TermsOfUse')}
-            >
-                <Text style={styles.buttonText}>
-                    Conditions Générales d’Utilisation
-                </Text>
-                {/*bouton pour les CGU*/}
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={styles.button}
-                onPress={() => navigation.navigate('PrivacyPolicy')}
-            >
-                <Text style={styles.buttonText}>
-                    Politique de Confidentialité
-                </Text>
-                {/*bouton pour la politique de confidentialité*/}
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={styles.button}
-                onPress={() => navigation.navigate('LegalNotice')}
-            >
-                <Text style={styles.buttonText}>Mentions Légales</Text>
-                {/*bouton pour les mentions légales*/}
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-            >
-                <Text style={styles.backButtonText}>Retour</Text>
-                {/*retour à l'écran précédent*/}
-            </TouchableOpacity>
+            <View style={styles.menuContainer}>
+                <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => navigation.navigate('TermsOfUse')}
+                >
+                    <Ionicons
+                        name="document-text-outline"
+                        size={24}
+                        color="#b21ae5"
+                        style={styles.menuIcon}
+                    />
+                    <Text style={styles.menuText}>Conditions générales d'utilisation</Text>
+                    <Ionicons name="chevron-forward" size={24} color="#b21ae5" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => navigation.navigate('PrivacyPolicy')}
+                >
+                    <Ionicons
+                        name="shield-checkmark-outline"
+                        size={24}
+                        color="#b21ae5"
+                        style={styles.menuIcon}
+                    />
+                    <Text style={styles.menuText}>Politique de confidentialité</Text>
+                    <Ionicons name="chevron-forward" size={24} color="#b21ae5" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => navigation.navigate('LegalNotice')}
+                >
+                    <Ionicons
+                        name="information-circle-outline"
+                        size={24}
+                        color="#b21ae5"
+                        style={styles.menuIcon}
+                    />
+                    <Text style={styles.menuText}>Mentions légales</Text>
+                    <Ionicons name="chevron-forward" size={24} color="#b21ae5" />
+                </TouchableOpacity>
+            </View>
         </ScrollView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        flexGrow: 1,                //permet au container de s'étendre
-        justifyContent: 'center',   //centre verticalement le contenu
-        alignItems: 'center',       //centre horizontalement le contenu
+        flexGrow: 1,
         padding: 16,
-        backgroundColor: '#fff',    //fond blanc
+        backgroundColor: '#fff',
+        alignItems: 'center',
+    },
+    axolotlImage: {
+        width: 150,
+        height: 150,
+        marginBottom: 20,
+        resizeMode: 'contain',
     },
     header: {
         fontSize: 26,
         fontWeight: 'bold',
         marginBottom: 20,
-        textAlign: 'center',        //texte centré
+        textAlign: 'center',
+        color: '#333',
     },
-    button: {
-        backgroundColor: '#007BFF', //couleur bleue pour le bouton
-        padding: 15,
-        borderRadius: 8,
-        width: '90%',               //largeur de 90% du container
-        alignItems: 'center',       //centre le texte du bouton
+    menuContainer: {
+        width: '100%',
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F2F0F5',
+        borderRadius: 10,
+        paddingVertical: 15,
+        paddingHorizontal: 20,
         marginVertical: 8,
     },
-    buttonText: {
-        color: '#fff',              //texte blanc
-        fontSize: 16,
+    menuIcon: {
+        marginRight: 16,
     },
-    backButton: {
-        marginTop: 30,
-        padding: 10,
-        backgroundColor: '#6C757D',  //bouton de retour en gris
-        borderRadius: 8,
-        width: '90%',
-        alignItems: 'center',
-    },
-    backButtonText: {
-        color: '#fff',              //texte blanc
+    menuText: {
+        flex: 1,
         fontSize: 16,
+        color: '#333',
     },
 });
 

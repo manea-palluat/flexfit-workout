@@ -62,4 +62,5 @@ export type RootStackParamList = {
     LegalNotice: undefined; // mentions légales
     About: undefined; // à propos de l'app
     ParameterScreen: undefined; // écran des paramètres
+    RecentExercisesDetail: undefined; // écran de détail des exercices récents
 };

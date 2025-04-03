@@ -1,5 +1,4 @@
-// src/screens/WorkoutSessionScreen.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
 import {
     View,
     Text,
@@ -12,6 +11,8 @@ import {
     TextInput,
     Alert,
     AppState,
+    TouchableWithoutFeedback,
+    Keyboard,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { API, graphqlOperation, Auth } from 'aws-amplify';
@@ -25,10 +26,10 @@ import { TextStyles } from '../styles/TextStyles';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
-import Svg, { Rect } from 'react-native-svg';
+import Svg, { Rect, Circle } from 'react-native-svg';
 import { loadSettingsFromFile, saveSettingsToFile } from '../utils/settingsStorage';
 
-// CONFIG NOTIFICATIONS : on configure la gestion des notifications pour l'app
+// Configuration des notifications
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
         shouldShowAlert: true,
@@ -37,7 +38,7 @@ Notifications.setNotificationHandler({
     }),
 });
 
-// INTERFACES POUR LES TYPES
+// Interfaces TypeScript
 export interface SetResult {
     reps?: number;
     weight?: number;
@@ -55,22 +56,96 @@ export interface WorkoutSessionScreenProps {
     onClose?: () => void;
 }
 
-// FONCTION UTILITAIRE : formatte le temps en minutes:secondes
+// Utilitaires
 const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
-// ANIMATION SVG : création d'un composant animé pour les bordures
-const AnimatedRect = Animated.createAnimatedComponent(Rect);
+const validateReps = (value: string): string => {
+    if (!/^\d+$/.test(value)) return "Veuillez entrer un entier.";
+    return "";
+};
 
-interface AnimatedBorderProps {
-    size: number;
-    borderRadius: number;
-    strokeWidth: number;
-}
-const AnimatedBorder: React.FC<AnimatedBorderProps> = ({ size, borderRadius, strokeWidth }) => {
+const validateWeight = (value: string): string => {
+    if (value === "") return "Veuillez entrer un poids.";
+    if (value.includes(",")) {
+        const [intPart, decPart] = value.split(",");
+        if (!["25", "5", "75"].includes(decPart)) return "Décimales : 25, 5, 75.";
+    } else if (!/^\d+$/.test(value)) return "Entier requis.";
+    return "";
+};
+
+// Custom Hook pour le Timer
+const useTimer = (
+    initialDuration: number,
+    phase: 'work' | 'rest' | 'paused',
+    onComplete: () => void,
+    isPaused: boolean
+) => {
+    const [timeLeft, setTimeLeft] = useState(initialDuration);
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const remainingTimeRef = useRef<number>(initialDuration);
+
+    const startTimer = useCallback(() => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+
+        const targetTime = Date.now() + remainingTimeRef.current * 1000;
+
+        intervalRef.current = setInterval(() => {
+            const now = Date.now();
+            const remaining = Math.max(Math.ceil((targetTime - now) / 1000), 0);
+            setTimeLeft(remaining);
+            remainingTimeRef.current = remaining;
+            if (remaining === 0) {
+                clearInterval(intervalRef.current!);
+                intervalRef.current = null;
+                onComplete();
+            }
+        }, 1000);
+    }, [onComplete]);
+
+    const stopTimer = useCallback(() => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+    }, []);
+
+    useEffect(() => {
+        console.log('useTimer: phase=', phase, 'isPaused=', isPaused, 'timeLeft=', timeLeft, 'intervalRef.current=', !!intervalRef.current);
+
+        if (phase !== 'rest') {
+            stopTimer();
+            return;
+        }
+
+        if (isPaused) {
+            stopTimer();
+        } else if (!intervalRef.current && timeLeft > 0) {
+            startTimer();
+        }
+
+        return () => {
+            stopTimer();
+        };
+    }, [phase, isPaused, startTimer, stopTimer]);
+
+    const reset = useCallback((newDuration?: number) => {
+        const duration = newDuration || initialDuration;
+        setTimeLeft(duration);
+        remainingTimeRef.current = duration;
+        stopTimer();
+    }, [initialDuration, stopTimer]);
+
+    return { timeLeft, reset };
+};
+
+// Composant Animé SVG pour les bordures
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
+interface AnimatedBorderProps { size: number; borderRadius: number; strokeWidth: number; }
+const AnimatedBorder = memo<AnimatedBorderProps>(({ size, borderRadius, strokeWidth }) => {
     const straightLength = (size - strokeWidth) * 4 - 8 * borderRadius;
     const curvedLength = 2 * Math.PI * borderRadius;
     const perimeter = straightLength + curvedLength;
@@ -80,7 +155,6 @@ const AnimatedBorder: React.FC<AnimatedBorderProps> = ({ size, borderRadius, str
     const dashOffsetAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        // boucle d'animation pour faire défiler le tiret
         Animated.loop(
             Animated.timing(dashOffsetAnim, {
                 toValue: -perimeter,
@@ -109,25 +183,20 @@ const AnimatedBorder: React.FC<AnimatedBorderProps> = ({ size, borderRadius, str
             />
         </Svg>
     );
-};
+});
 
-// COMPOSANT : icône indiquant le numéro de la série avec une bordure animée si active
-interface SetNumberIconProps {
-    number: number;
-    active?: boolean;
-}
-const SetNumberIcon: React.FC<SetNumberIconProps> = ({ number, active }) => {
-    return (
-        <View style={styles.setNumberIconContainer}>
-            <View style={styles.setNumberIcon}>
-                <Text style={styles.setNumberIconText}>{number}</Text>
-            </View>
-            {active && <AnimatedBorder size={70} borderRadius={20} strokeWidth={3} />}
+// Composant SetNumberIcon
+interface SetNumberIconProps { number: number; active?: boolean; }
+const SetNumberIcon = memo<SetNumberIconProps>(({ number, active }) => (
+    <View style={styles.setNumberIconContainer}>
+        <View style={styles.setNumberIcon}>
+            <Text style={styles.setNumberIconText}>{number}</Text>
         </View>
-    );
-};
+        {active && <AnimatedBorder size={70} borderRadius={20} strokeWidth={3} />}
+    </View>
+));
 
-// COMPOSANT : champ de saisie personnalisé pour la séance d'exo
+// Composant WorkoutInputField avec texte centré et shake contrôlable
 interface WorkoutInputFieldProps {
     label: string;
     value: string;
@@ -135,39 +204,77 @@ interface WorkoutInputFieldProps {
     onBlur?: () => void;
     error?: string;
     keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+    shake: () => void;
 }
-const WorkoutInputField: React.FC<WorkoutInputFieldProps> = ({
-    label,
-    value,
-    onChangeText,
-    onBlur,
-    error,
-    keyboardType = 'default',
-}) => {
+const WorkoutInputField = memo<WorkoutInputFieldProps>(({ label, value, onChangeText, onBlur, error, keyboardType = 'default', shake }) => {
+    const shakeAnim = useRef(new Animated.Value(0)).current;
+
+    const triggerShake = () => {
+        Animated.sequence([
+            Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+        ]).start();
+    };
+
+    useEffect(() => {
+        if (error) triggerShake();
+    }, [error]);
+
+    useEffect(() => {
+        shake = triggerShake;
+    }, [shake]);
+
     return (
-        <View style={[TextInputStyles.container, styles.inputContainer]}>
+        <Animated.View style={[TextInputStyles.container, styles.inputContainer, { transform: [{ translateX: shakeAnim }] }]}>
             <TextInput
                 placeholder={label}
                 placeholderTextColor="#999"
                 value={value}
                 onChangeText={onChangeText}
                 onBlur={onBlur}
-                style={TextInputStyles.input}
+                style={[TextInputStyles.input, error && { borderColor: 'red' }, { textAlign: 'center' }]}
                 keyboardType={keyboardType}
+                accessibilityLabel={label}
             />
             {error ? <Text style={TextInputStyles.errorText}>{error}</Text> : null}
-        </View>
+        </Animated.View>
     );
-};
+});
 
-// ECRAN PRINCIPAL DE LA SÉANCE : gère toute la logique de la session d'exercice
-const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
-    sessionData,
-    onComplete,
-    onClose,
-}) => {
+// Axolotl SVG Animation
+const AxolotlAnimation = memo(({ isPaused }: { isPaused: boolean }) => {
+    const bounceAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (!isPaused) {
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(bounceAnim, { toValue: 10, duration: 500, useNativeDriver: true }),
+                    Animated.timing(bounceAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+                ])
+            ).start();
+        } else {
+            bounceAnim.stopAnimation();
+            bounceAnim.setValue(0);
+        }
+    }, [isPaused]);
+
+    return (
+        <Animated.View style={{ transform: [{ translateY: bounceAnim }], marginVertical: 20 }}>
+            <Svg width={50} height={50}>
+                <Circle cx="25" cy="25" r="20" fill="#b21ae5" />
+                <Circle cx="18" cy="20" r="5" fill="white" />
+                <Circle cx="32" cy="20" r="5" fill="white" />
+            </Svg>
+            <Text style={styles.axolotlText}>{isPaused ? "Petite pause !" : "Au boulot !"}</Text>
+        </Animated.View>
+    );
+});
+
+// Composant Principal
+const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({ sessionData, onComplete, onClose }) => {
     if (!sessionData) {
-        // Gestion d'erreur si les données de session sont manquantes
         return (
             <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>Erreur: Les paramètres de session sont manquants.</Text>
@@ -176,30 +283,60 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
     }
 
     const navigation = useNavigation();
-    const { exerciseName, totalSets, plannedReps, restDuration } = sessionData;
-    const exerciseType =
-        sessionData.exerciseType?.toLowerCase() === 'bodyweight' ? 'bodyweight' : 'normal';
+    const { exerciseName, totalSets, plannedReps, restDuration: initialRestDuration } = sessionData;
+    const exerciseType = sessionData.exerciseType?.toLowerCase() === 'bodyweight' ? 'bodyweight' : 'normal';
 
-    // STATES LOCAUX : gestion de l'état de la séance, des timers, et des saisies utilisateur
-    const [hasStarted, setHasStarted] = useState<boolean>(false); // indique si la séance a démarré
-    const [currentSet, setCurrentSet] = useState<number>(1); // série en cours
-    const [phase, setPhase] = useState<'work' | 'rest'>('work'); // phase de travail ou de repos
-    const [targetTime, setTargetTime] = useState<number>(Date.now() + restDuration * 1000); // timestamp cible pour le repos
-    const [timer, setTimer] = useState<number>(restDuration); // temps restant
-    const [results, setResults] = useState<any[]>(Array(totalSets).fill({})); // stocke les résultats de chaque série
-    const [isEditingModalVisible, setIsEditingModalVisible] = useState<boolean>(false); // contrôle la modal de saisie
-    const [editingSetIndex, setEditingSetIndex] = useState<number>(0); // série en cours d'édition
-    const [tempReps, setTempReps] = useState<string>(''); // saisie temporaire pour les répétitions
-    const [tempWeight, setTempWeight] = useState<string>(''); // saisie temporaire pour le poids
-    const [isMinimized, setIsMinimized] = useState<boolean>(false); // état minimisé de l'écran
-    const [repsError, setRepsError] = useState<string>(''); // message d'erreur pour les répétitions
-    const [weightError, setWeightError] = useState<string>(''); // message d'erreur pour le poids
+    // États
+    const [hasStarted, setHasStarted] = useState(false);
+    const [currentSet, setCurrentSet] = useState(1);
+    const [phase, setPhase] = useState<'work' | 'rest' | 'paused'>('work');
+    const [restDuration, setRestDuration] = useState(initialRestDuration);
+    const [isPaused, setIsPaused] = useState(false);
+    const [results, setResults] = useState<SetResult[]>(Array(totalSets).fill({}));
+    const [isEditingModalVisible, setIsEditingModalVisible] = useState(false);
+    const [editingSetIndex, setEditingSetIndex] = useState(0);
+    const [tempReps, setTempReps] = useState('');
+    const [tempWeight, setTempWeight] = useState('');
+    const [repsError, setRepsError] = useState('');
+    const [weightError, setWeightError] = useState('');
+    const [soundsEnabled, setSoundsEnabled] = useState(true);
+    const [hapticsEnabled, setHapticsEnabled] = useState(true);
 
-    // NOUVEAU : préférences pour le son et les vibrations
-    const [soundsEnabled, setSoundsEnabled] = useState<boolean>(true);
-    const [hapticsEnabled, setHapticsEnabled] = useState<boolean>(true);
+    // Références pour déclencher le shake
+    const repsInputShakeRef = useRef<() => void>(() => { });
+    const weightInputShakeRef = useRef<() => void>(() => { });
 
-    // CHARGEMENT DES PARAMÈTRES : on récupère les settings depuis le fichier JSON au démarrage
+    // Déclarer handleRestComplete avant useTimer
+    const handleRestComplete = useCallback(() => {
+        setPhase('work');
+        resetTimer();
+        if (currentSet < totalSets) setCurrentSet((prev) => prev + 1);
+        else finishSession();
+    }, [currentSet, totalSets, restDuration]);
+
+    // Timer
+    const { timeLeft, reset: resetTimer } = useTimer(restDuration, phase, handleRestComplete, isPaused);
+
+    // Sons
+    const [countdownSound, setCountdownSound] = useState<Audio.Sound | null>(null);
+    const [whistleSound, setWhistleSound] = useState<Audio.Sound | null>(null);
+
+    useEffect(() => {
+        const loadSounds = async () => {
+            const { sound: loadedCountdown } = await Audio.Sound.createAsync(require('../assets/sounds/beep.mp3'));
+            setCountdownSound(loadedCountdown);
+            const { sound: loadedWhistle } = await Audio.Sound.createAsync(require('../assets/sounds/whistle.mp3'));
+            setWhistleSound(loadedWhistle);
+        };
+        loadSounds();
+        Audio.setAudioModeAsync({ playsInSilentModeIOS: true, staysActiveInBackground: true });
+        return () => {
+            countdownSound?.unloadAsync();
+            whistleSound?.unloadAsync();
+        };
+    }, []);
+
+    // Chargement des paramètres
     useEffect(() => {
         const loadSettings = async () => {
             const settings = await loadSettingsFromFile();
@@ -209,721 +346,517 @@ const WorkoutSessionScreen: React.FC<WorkoutSessionScreenProps> = ({
         loadSettings();
     }, []);
 
-    // FONCTIONS DE TOGGLE : met à jour les préférences et sauvegarde dans le fichier JSON
     const toggleSound = async () => {
         const newVal = !soundsEnabled;
         setSoundsEnabled(newVal);
-        const currentSettings = await loadSettingsFromFile();
-        await saveSettingsToFile({ ...currentSettings, audioEnabled: newVal });
+        await saveSettingsToFile({ ...(await loadSettingsFromFile()), audioEnabled: newVal });
     };
 
     const toggleHaptics = async () => {
         const newVal = !hapticsEnabled;
         setHapticsEnabled(newVal);
-        const currentSettings = await loadSettingsFromFile();
-        await saveSettingsToFile({ ...currentSettings, hapticsEnabled: newVal });
+        await saveSettingsToFile({ ...(await loadSettingsFromFile()), hapticsEnabled: newVal });
     };
 
-    // CONFIG AUDIO : on autorise la lecture en mode silencieux sur iOS et en arrière-plan
-    useEffect(() => {
-        Audio.setAudioModeAsync({
-            playsInSilentModeIOS: true,
-            staysActiveInBackground: true,
-        });
-    }, []);
-
-    // CHARGEMENT DES SONS : on charge les fichiers audio pour le compte à rebours et le sifflet
-    const [countdownSound, setCountdownSound] = useState<Audio.Sound | null>(null);
-    const [whistleSound, setWhistleSound] = useState<Audio.Sound | null>(null);
-
-    useEffect(() => {
-        const loadSounds = async () => {
-            try {
-                const { sound: loadedCountdown } = await Audio.Sound.createAsync(
-                    require('../assets/sounds/beep.mp3')
-                );
-                setCountdownSound(loadedCountdown);
-                const { sound: loadedWhistle } = await Audio.Sound.createAsync(
-                    require('../assets/sounds/whistle.mp3')
-                );
-                setWhistleSound(loadedWhistle);
-            } catch (error) {
-                console.error('Error loading sounds:', error);
-            }
-        };
-        loadSounds();
-        return () => {
-            if (countdownSound) countdownSound.unloadAsync();
-            if (whistleSound) whistleSound.unloadAsync();
-        };
-    }, []);
-
-    // ANIMATION DE PROGRESSION : animation de la barre de progression durant le repos
+    // Animation de progression
     const progressAnim = useRef(new Animated.Value(restDuration)).current;
     useEffect(() => {
         Animated.timing(progressAnim, {
-            toValue: timer,
+            toValue: timeLeft,
             duration: 500,
             easing: Easing.linear,
             useNativeDriver: false,
         }).start();
-    }, [timer]);
+    }, [timeLeft]);
 
-    // GESTION DU TIMER ET DES NOTIFICATIONS EN PHASE DE REPOS
+    // Gestion du timer, sons et vibrations
     useEffect(() => {
-        let interval: ReturnType<typeof setInterval> | undefined;
-        let notificationId: string | undefined;
+        if (phase !== 'rest' || isPaused) return;
 
-        if (phase === 'rest') {
-            (async () => {
-                await Notifications.cancelAllScheduledNotificationsAsync();
-                notificationId = await Notifications.scheduleNotificationAsync({
-                    content: {
-                        title: "Au boulot !",
-                        body: `Il est temps de faire la série ${currentSet + 1} de l'exercice ${exerciseName}`,
-                        sound: true,
-                    },
-                    trigger: {
-                        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-                        seconds: restDuration,
-                        repeats: false,
-                    } as any,
-                });
-            })();
+        const handleTimerEffects = async () => {
+            if (timeLeft <= 3 && timeLeft > 0) {
+                if (soundsEnabled && countdownSound) await countdownSound.replayAsync();
+                if (hapticsEnabled) await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            }
+            if (timeLeft === 0 && soundsEnabled && whistleSound) await whistleSound.replayAsync();
+        };
+        handleTimerEffects();
 
-            interval = setInterval(async () => {
-                const remaining = Math.max(Math.ceil((targetTime - Date.now()) / 1000), 0);
-                setTimer(remaining);
-
-                // son et vibrations pour les 3 dernières secondes du repos
-                if (remaining > 0 && remaining <= 3) {
-                    if (soundsEnabled && countdownSound) {
-                        await countdownSound.replayAsync();
-                    }
-                    if (hapticsEnabled) {
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                    }
-                }
-
-                if (remaining === 0) {
-                    if (interval) clearInterval(interval);
-                    if (soundsEnabled && whistleSound) {
-                        await whistleSound.replayAsync();
-                    }
-                    handleRestComplete();
-                }
-            }, 1000);
-        }
+        const scheduleNotification = async () => {
+            await Notifications.cancelAllScheduledNotificationsAsync();
+            await Notifications.scheduleNotificationAsync({
+                content: {
+                    title: "Au boulot !",
+                    body: `Série ${currentSet + 1} de ${exerciseName}`,
+                    sound: true,
+                },
+                trigger: {
+                    type: 'timeInterval',
+                    seconds: restDuration,
+                    repeats: false,
+                } as Notifications.TimeIntervalTriggerInput,
+            });
+        };
+        scheduleNotification();
 
         return () => {
-            if (interval) clearInterval(interval);
-            if (notificationId) {
-                Notifications.cancelScheduledNotificationAsync(notificationId);
-            }
+            Notifications.cancelAllScheduledNotificationsAsync();
         };
-    }, [phase, targetTime, countdownSound, whistleSound, soundsEnabled, hapticsEnabled]);
+    }, [phase, timeLeft, soundsEnabled, hapticsEnabled, currentSet, exerciseName, restDuration, countdownSound, whistleSound]);
 
-    // ANNULATION DES NOTIFICATIONS SI L'APPLI REDEVIENT ACTIVE
     useEffect(() => {
-        const subscription = AppState.addEventListener('change', (nextAppState) => {
-            if (nextAppState === 'active') {
-                Notifications.cancelAllScheduledNotificationsAsync();
-            }
+        const subscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') Notifications.cancelAllScheduledNotificationsAsync();
         });
-        return () => {
-            subscription.remove();
-        };
+        return () => subscription.remove();
     }, []);
 
-    // FONCTION : fin de la phase de repos, passe en mode "work" ou termine la séance
-    const handleRestComplete = () => {
-        setPhase('work');
-        setTimer(restDuration);
-        setTargetTime(Date.now() + restDuration * 1000);
-        if (currentSet < totalSets) {
-            setCurrentSet((prev) => prev + 1);
-        } else {
-            finishSession();
-        }
-    };
-
-    // FONCTION : termine la série courante et déclenche l'édition des données
+    // Logique
     const finishCurrentSet = () => {
-        if (exerciseType === 'bodyweight') {
-            if (currentSet === totalSets) {
-                if (!results[currentSet - 1]?.reps) {
-                    setEditingSetIndex(currentSet - 1);
-                    setTempReps('');
-                    setRepsError('');
-                    setIsEditingModalVisible(true);
-                }
-            } else {
-                setPhase('rest');
-                setTargetTime(Date.now() + restDuration * 1000);
-                setTimer(restDuration);
-                setTimeout(() => {
-                    setEditingSetIndex(currentSet - 1);
-                    setTempReps('');
-                    setRepsError('');
-                    setIsEditingModalVisible(true);
-                }, 500);
-            }
-        } else {
-            if (currentSet === totalSets) {
-                if (!(results[currentSet - 1]?.reps && results[currentSet - 1]?.weight)) {
-                    setEditingSetIndex(currentSet - 1);
-                    setTempReps('');
-                    setTempWeight('');
-                    setRepsError('');
-                    setWeightError('');
-                    setIsEditingModalVisible(true);
-                }
-            } else {
-                setPhase('rest');
-                setTargetTime(Date.now() + restDuration * 1000);
-                setTimer(restDuration);
-                setTimeout(() => {
-                    setEditingSetIndex(currentSet - 1);
-                    setTempReps('');
-                    setTempWeight('');
-                    setRepsError('');
-                    setWeightError('');
-                    setIsEditingModalVisible(true);
-                }, 500);
-            }
+        if (currentSet === totalSets && !results[currentSet - 1]?.reps) openEditModal();
+        else {
+            setPhase('rest');
+            resetTimer();
+            setTimeout(openEditModal, 500);
         }
     };
 
-    // FONCTION : enregistre les données de la série éditée et ferme la modal
-    const saveSetData = () => {
-        const repsNum = parseInt(tempReps, 10);
-        if (!/^\d+$/.test(tempReps)) {
-            setRepsError("Veuillez entrer un entier pour les répétitions.");
-            return;
-        }
-        if (exerciseType !== 'bodyweight') {
-            if (tempWeight === '') {
-                setWeightError("Veuillez entrer un poids.");
-                return;
-            }
-            if (tempWeight.includes(',')) {
-                const parts = tempWeight.split(',');
-                if (parts.length !== 2 || !['25', '5', '75'].includes(parts[1])) {
-                    setWeightError("Le poids doit être un entier ou suivi d'une virgule et de 25, 5 ou 75.");
-                    return;
-                }
-            } else if (!/^\d+$/.test(tempWeight)) {
-                setWeightError("Veuillez entrer un entier valide pour le poids.");
-                return;
-            }
-        }
-
+    const openEditModal = () => {
+        setEditingSetIndex(currentSet - 1);
+        setTempReps('');
+        setTempWeight('');
         setRepsError('');
         setWeightError('');
-        const weightNum = exerciseType !== 'bodyweight'
-            ? parseFloat(tempWeight.replace(',', '.'))
-            : undefined;
+        setIsEditingModalVisible(true);
+    };
+
+    const saveSetData = () => {
+        const repsErr = validateReps(tempReps);
+        const weightErr = exerciseType !== 'bodyweight' ? validateWeight(tempWeight) : '';
+        setRepsError(repsErr);
+        setWeightError(weightErr);
+
+        if (repsErr || weightErr) {
+            if (repsErr) repsInputShakeRef.current();
+            if (weightErr) weightInputShakeRef.current();
+            return;
+        }
 
         const updated = [...results];
-        updated[editingSetIndex] =
-            exerciseType !== 'bodyweight'
-                ? { reps: repsNum, weight: weightNum }
-                : { reps: repsNum };
+        updated[editingSetIndex] = exerciseType !== 'bodyweight'
+            ? { reps: parseInt(tempReps), weight: parseFloat(tempWeight.replace(',', '.')) }
+            : { reps: parseInt(tempReps) };
         setResults(updated);
         setIsEditingModalVisible(false);
     };
 
-    // FONCTION : termine la séance en sauvegardant les résultats et quitte l'écran
     const finishSession = async () => {
-        const validResults = results.filter(set =>
-            set &&
-            set.reps &&
-            (exerciseType === 'bodyweight' ? true : set.weight)
-        );
-        if (validResults.length === 0) {
-            console.log("No valid set data entered. Finishing session without saving.");
-            onComplete && onComplete([]);
-            if (onClose) {
-                onClose();
-            } else {
-                navigation.goBack();
-            }
-            return;
-        }
+        const validResults = results.filter((set) => set.reps && (exerciseType === 'bodyweight' || set.weight));
         try {
-            const userObj = await Auth.currentAuthenticatedUser();
-            const userId = userObj.attributes.sub;
+            const user = await Auth.currentAuthenticatedUser();
             const trackingInput = {
                 id: uuidv4(),
-                userId,
+                userId: user.attributes.sub,
                 exerciseId: '',
                 exerciseName,
                 date: new Date().toISOString(),
                 setsData: JSON.stringify(validResults),
             };
             await API.graphql(graphqlOperation(createExerciseTracking, { input: trackingInput }));
-            console.log('Tracking saved:', trackingInput);
         } catch (error) {
-            console.error('Error saving tracking:', error);
+            Alert.alert("Erreur", "Impossible de sauvegarder la séance. Réessayez plus tard.");
+            console.error(error);
         }
-        onComplete && onComplete(validResults);
-        if (onClose) {
-            onClose();
-        } else {
-            navigation.goBack();
-        }
+        onComplete(validResults);
+        if (onClose) onClose();
+        else navigation.goBack();
     };
 
-    // FONCTION : permet de passer le repos et passer à la série suivante
-    const skipRest = async () => {
-        await Notifications.cancelAllScheduledNotificationsAsync();
+    const skipRest = () => {
+        Notifications.cancelAllScheduledNotificationsAsync();
         setPhase('work');
-        setTimer(restDuration);
-        setTargetTime(Date.now() + restDuration * 1000);
-        if (currentSet < totalSets) {
-            setCurrentSet(prev => prev + 1);
-        } else {
-            finishSession();
+        resetTimer();
+        if (currentSet < totalSets) setCurrentSet((prev) => prev + 1);
+        else finishSession();
+    };
+
+    const togglePause = () => {
+        setIsPaused((prev) => !prev);
+        if (!isPaused) Notifications.cancelAllScheduledNotificationsAsync();
+    };
+
+    const goToPreviousState = () => {
+        if (phase === 'work') {
+            setPhase('rest');
+            resetTimer();
+        } else if (phase === 'rest') {
+            if (timeLeft > restDuration - 3 && currentSet > 1) {
+                setCurrentSet((prev) => prev - 1);
+                setPhase('work');
+            } else {
+                resetTimer();
+            }
         }
     };
 
-    // FONCTION : supprime la session en cours (sans sauvegarder)
-    const deleteSession = async () => {
-        onComplete && onComplete([]);
-        if (onClose) {
-            onClose();
-        } else {
-            navigation.goBack();
+    const goToNextState = () => {
+        if (phase === 'work' && currentSet < totalSets) {
+            setCurrentSet((prev) => prev + 1);
+        } else if (phase === 'rest' && currentSet < totalSets) {
+            setPhase('work');
+            resetTimer();
+            setCurrentSet((prev) => prev + 1);
         }
     };
 
-    // FONCTION : demande confirmation pour abandonner l'exercice, avec sauvegarde ou suppression
     const abandonExercise = () => {
-        const hasCompletedSet = results.some(set => set?.reps && (exerciseType === 'bodyweight' ? true : set?.weight));
-        if (!hasCompletedSet) {
+        const validResults = results.filter((set) => set.reps && (exerciseType === 'bodyweight' || set.weight));
+        if (validResults.length === 0) {
             Alert.alert(
-                "Abandonner l'exercice",
-                "Vous n'avez pas encore réalisé la première série. Voulez-vous vraiment abandonner l'exercice ?",
+                "Abandonner",
+                "Aucune série complétée. Voulez-vous quitter ?",
                 [
                     { text: "Annuler", style: "cancel" },
-                    {
-                        text: "Abandonner",
-                        style: "destructive",
-                        onPress: async () => {
-                            await Notifications.cancelAllScheduledNotificationsAsync();
-                            deleteSession();
-                        },
-                    },
+                    { text: "Quitter", style: "destructive", onPress: deleteSession },
                 ]
             );
         } else {
             Alert.alert(
-                "Abandonner l'exercice",
-                "Voulez-vous sauvegarder la séance en cours ou supprimer toutes les données ?",
+                "Abandonner",
+                `Séries complétées : ${validResults.length}/${totalSets}. Sauvegarder ou supprimer ?`,
                 [
                     { text: "Annuler", style: "cancel" },
-                    {
-                        text: "Sauvegarder",
-                        onPress: async () => {
-                            await Notifications.cancelAllScheduledNotificationsAsync();
-                            finishSession();
-                        },
-                    },
-                    {
-                        text: "Supprimer",
-                        style: "destructive",
-                        onPress: async () => {
-                            await Notifications.cancelAllScheduledNotificationsAsync();
-                            deleteSession();
-                        },
-                    },
+                    { text: "Sauvegarder", onPress: finishSession },
+                    { text: "Supprimer", style: "destructive", onPress: deleteSession },
                 ]
             );
         }
     };
 
-    // FONCTION : annule la pré-séance et revient en arrière
-    const cancelPreStartExercise = async () => {
-        await Notifications.cancelAllScheduledNotificationsAsync();
-        if (onClose) {
-            onClose();
-        } else {
-            navigation.goBack();
-        }
+    const deleteSession = () => {
+        Notifications.cancelAllScheduledNotificationsAsync();
+        onComplete([]);
+        if (onClose) onClose();
+        else navigation.goBack();
     };
 
-    // RENDU DES CARTES DE SÉRIES : affiche l'état de chaque série (à venir, en cours, terminé)
+    const cancelPreStartExercise = () => {
+        Notifications.cancelAllScheduledNotificationsAsync();
+        if (onClose) onClose();
+        else navigation.goBack();
+    };
+
+    // Rendu des cartes de séries
     const renderSetCards = (mode: 'pre' | 'active' | 'rest') => {
-        const lastSetCompleted =
-            currentSet === totalSets &&
-            results[currentSet - 1]?.reps &&
-            (exerciseType === 'bodyweight' ? true : results[currentSet - 1]?.weight);
-
-        return (
-            <>
-                {Array.from({ length: totalSets }).map((_, index) => {
-                    let status = 'À venir';
-                    if (results[index]?.reps && (exerciseType === 'bodyweight' ? true : results[index]?.weight)) {
-                        status =
-                            `Terminé : ${results[index].reps}` +
-                            (exerciseType !== 'bodyweight' ? ` x ${results[index].weight} kg` : '');
-                    } else if (mode !== 'pre' && index === currentSet - 1) {
-                        status = 'En cours';
-                    }
-                    return (
-                        <TouchableOpacity
-                            key={index}
-                            style={styles.setContainer}
-                            onPress={() => {
-                                if (results[index]?.reps && (exerciseType === 'bodyweight' ? true : results[index]?.weight)) {
-                                    setEditingSetIndex(index);
-                                    const existing = results[index] || {};
-                                    setTempReps(existing.reps ? existing.reps.toString() : '');
-                                    if (exerciseType !== 'bodyweight') {
-                                        setTempWeight(existing.weight ? existing.weight.toString() : '');
-                                    }
-                                    setIsEditingModalVisible(true);
-                                }
-                            }}
-                        >
-                            <SetNumberIcon
-                                number={index + 1}
-                                active={hasStarted && index === currentSet - 1 && !lastSetCompleted}
-                            />
-                            <View style={styles.setDetailsContainer}>
-                                <Text style={styles.setTitleText}>{`Série ${index + 1}`}</Text>
-                                <Text style={styles.setStatusText}>{status}</Text>
-                            </View>
-                            {results[index]?.reps && (exerciseType === 'bodyweight' ? true : results[index]?.weight) && (
-                                <Ionicons name="checkmark-circle" size={24} color="#b21ae5" style={styles.checkIcon} />
-                            )}
-                        </TouchableOpacity>
-                    );
-                })}
-            </>
-        );
+        const lastSetCompleted: boolean = currentSet === totalSets && !!results[currentSet - 1]?.reps && (exerciseType === 'bodyweight' || !!results[currentSet - 1]?.weight);
+        return Array.from({ length: totalSets }).map((_, index) => {
+            const status = results[index]?.reps && (exerciseType === 'bodyweight' || results[index]?.weight)
+                ? `Terminé : ${results[index].reps}${exerciseType !== 'bodyweight' ? ` x ${results[index].weight} kg` : ''}`
+                : (mode !== 'pre' && index === currentSet - 1 ? 'En cours' : 'À venir');
+            return (
+                <TouchableOpacity
+                    key={index}
+                    style={styles.setContainer}
+                    onPress={() => {
+                        if (results[index]?.reps) {
+                            setEditingSetIndex(index);
+                            setTempReps(results[index].reps?.toString() || '');
+                            setTempWeight(results[index].weight?.toString() || '');
+                            setIsEditingModalVisible(true);
+                        }
+                    }}
+                    accessibilityLabel={`Série ${index + 1}: ${status}`}
+                >
+                    <SetNumberIcon number={index + 1} active={hasStarted && index === currentSet - 1 && !lastSetCompleted} />
+                    <View style={styles.setDetailsContainer}>
+                        <Text style={styles.setTitleText}>{`Série ${index + 1}`}</Text>
+                        <Text style={styles.setStatusText}>{status}</Text>
+                    </View>
+                    {results[index]?.reps && <Ionicons name="checkmark-circle" size={24} color="#b21ae5" style={styles.checkIcon} />}
+                </TouchableOpacity>
+            );
+        });
     };
 
-    // GESTION DE LA SAISIE : vérifie et formate la saisie du poids
-    const handleWeightChange = (value: string) => {
-        if (value === '') {
-            setTempWeight('');
-            return;
-        }
-        const regex = /^[0-9]+(,[0-9]{0,2})?$/;
-        if (regex.test(value)) {
-            setTempWeight(value);
-        }
-    };
-
-    // CALCUL DE LA LARGEUR DE LA BARRE DE PROGRESSION EN FONCTION DU TIMER
     const progressBarWidth = progressAnim.interpolate({
         inputRange: [0, restDuration],
         outputRange: ['0%', '100%'],
         extrapolate: 'clamp',
     });
 
-    const lastSetCompleted =
-        currentSet === totalSets &&
-        results[currentSet - 1]?.reps &&
-        (exerciseType === 'bodyweight' ? true : results[currentSet - 1]?.weight);
+    const lastSetCompleted: boolean = currentSet === totalSets && !!results[currentSet - 1]?.reps && (exerciseType === 'bodyweight' || !!results[currentSet - 1]?.weight);
 
     return (
         <View style={styles.fullScreenContainer}>
-            <ScrollView contentContainerStyle={styles.contentContainer}>
+            <ScrollView contentContainerStyle={[styles.contentContainer, { paddingBottom: 100 }]}>
                 <Text style={[TextStyles.title, { textAlign: 'center', marginBottom: 10 }]}>{exerciseName}</Text>
 
                 {!hasStarted ? (
                     <>
                         <Text style={[TextStyles.subTitle, { textAlign: 'center', marginBottom: 20 }]}>Prêt ?</Text>
                         <View style={styles.seriesListContainer}>{renderSetCards('pre')}</View>
-                        <TouchableOpacity style={ButtonStyles.container} onPress={() => setHasStarted(true)}>
+                        <TouchableOpacity style={ButtonStyles.container} onPress={() => setHasStarted(true)} accessibilityLabel="Démarrer l'exercice">
                             <Text style={ButtonStyles.text}>Démarrer l'exercice</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={cancelPreStartExercise}>
+                        <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={cancelPreStartExercise} accessibilityLabel="Annuler l'exercice">
                             <Text style={ButtonStyles.invertedText}>Annuler l'exercice</Text>
                         </TouchableOpacity>
-                        <View style={styles.controlContainer}>
-                            <TouchableOpacity style={styles.controlButton} onPress={toggleSound}>
-                                <Ionicons name={soundsEnabled ? 'volume-high' : 'volume-mute'} size={30} color="#b21ae5" />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.controlButton} onPress={toggleHaptics}>
-                                <MaterialCommunityIcons name={hapticsEnabled ? 'vibrate' : 'vibrate-off'} size={30} color="#b21ae5" />
-                            </TouchableOpacity>
-                        </View>
                     </>
                 ) : (
                     <>
                         {phase === 'work' ? (
                             <>
                                 <Text style={[TextStyles.subTitle, { textAlign: 'center', marginBottom: 20 }]}>{plannedReps} reps</Text>
+                                <AxolotlAnimation isPaused={isPaused} />
                                 <View style={styles.seriesListContainer}>{renderSetCards('active')}</View>
-                                <TouchableOpacity style={ButtonStyles.container} onPress={lastSetCompleted ? finishSession : finishCurrentSet}>
+                                <TouchableOpacity
+                                    style={ButtonStyles.container}
+                                    onPress={lastSetCompleted ? finishSession : finishCurrentSet}
+                                    accessibilityLabel={lastSetCompleted ? "Terminer l'exercice" : "Série terminée"}
+                                >
                                     <Text style={ButtonStyles.text}>{lastSetCompleted ? "Terminer l'exercice" : "Série terminée"}</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={abandonExercise}>
+                                <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={abandonExercise} accessibilityLabel="Arrêter l'exercice">
                                     <Text style={ButtonStyles.invertedText}>Arrêter l'exercice</Text>
                                 </TouchableOpacity>
                             </>
                         ) : (
                             <>
                                 <View style={styles.progressWrapper}>
-                                    <Text style={TextStyles.simpleText}>Repos</Text>
+                                    <Text style={TextStyles.simpleText}>{isPaused ? 'En pause' : 'Repos'}</Text>
                                     <View style={styles.progressContainer}>
                                         <Animated.View style={[styles.progressBar, { width: progressBarWidth }]} />
                                     </View>
-                                    <Text style={styles.timerText}>{formatTime(timer)}</Text>
+                                    <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
                                 </View>
                                 <View style={styles.seriesListContainer}>{renderSetCards('rest')}</View>
-                                <TouchableOpacity style={ButtonStyles.container} onPress={skipRest}>
+                                <TouchableOpacity style={ButtonStyles.container} onPress={skipRest} accessibilityLabel="Passer le repos">
                                     <Text style={ButtonStyles.text}>Passer le repos</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={abandonExercise}>
+                                <TouchableOpacity style={ButtonStyles.invertedContainer} onPress={abandonExercise} accessibilityLabel="Arrêter l'exercice">
                                     <Text style={ButtonStyles.invertedText}>Arrêter l'exercice</Text>
                                 </TouchableOpacity>
                             </>
                         )}
-                        <View style={styles.controlContainer}>
-                            <TouchableOpacity style={styles.controlButton} onPress={toggleSound}>
-                                <Ionicons name={soundsEnabled ? 'volume-high' : 'volume-mute'} size={30} color="#b21ae5" />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.controlButton} onPress={toggleHaptics}>
-                                <MaterialCommunityIcons name={hapticsEnabled ? 'vibrate' : 'vibrate-off'} size={30} color="#b21ae5" />
-                            </TouchableOpacity>
-                        </View>
                     </>
                 )}
+                <View style={styles.controlContainer}>
+                    <TouchableOpacity style={styles.controlButton} onPress={toggleSound} accessibilityLabel={soundsEnabled ? "Désactiver le son" : "Activer le son"}>
+                        <Ionicons name={soundsEnabled ? 'volume-high' : 'volume-mute'} size={30} color="#b21ae5" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.controlButton} onPress={toggleHaptics} accessibilityLabel={hapticsEnabled ? "Désactiver les vibrations" : "Activer les vibrations"}>
+                        <MaterialCommunityIcons name={hapticsEnabled ? 'vibrate' : 'vibrate-off'} size={30} color="#b21ae5" />
+                    </TouchableOpacity>
+                </View>
             </ScrollView>
 
-            {/* Modal de saisie pour éditer les données de la série */}
-            <Modal visible={isEditingModalVisible} transparent animationType="slide">
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContainer}>
-                        <Text style={[TextStyles.subTitle, { marginBottom: 20 }]}>
-                            {editingSetIndex === currentSet - 1
-                                ? `Repos – Série ${editingSetIndex + 1}`
-                                : `Modifier la Série ${editingSetIndex + 1}`}
-                        </Text>
-                        <WorkoutInputField
-                            label="Répétitions effectuées"
-                            value={tempReps}
-                            onChangeText={(text) => {
-                                setTempReps(text);
-                                if (!/^\d*$/.test(text)) {
-                                    setRepsError('Veuillez entrer un entier.');
-                                } else {
-                                    setRepsError('');
-                                }
-                            }}
-                            onBlur={() => {
-                                if (!/^\d+$/.test(tempReps)) {
-                                    setRepsError('Veuillez entrer un entier.');
-                                } else {
-                                    setRepsError('');
-                                }
-                            }}
-                            error={repsError}
-                            keyboardType="numeric"
+            {/* Boutons fixes en bas */}
+            {hasStarted && (
+                <View style={styles.fixedControlButtonsContainer}>
+                    <TouchableOpacity
+                        style={styles.controlButtonIcon}
+                        onPress={goToPreviousState}
+                        disabled={currentSet === 1}
+                        accessibilityLabel="État précédent"
+                    >
+                        <Ionicons name="chevron-back" size={24} color={currentSet === 1 ? "#ccc" : "#b21ae5"} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.pausePlayButton}
+                        onPress={togglePause}
+                        accessibilityLabel={isPaused ? "Reprendre" : "Pause"}
+                    >
+                        <Ionicons
+                            name={isPaused ? "play" : "pause"}
+                            size={20}
+                            color="#fff"
                         />
-                        {exerciseType !== 'bodyweight' && (
-                            <WorkoutInputField
-                                label="Poids effectué (kg)"
-                                value={tempWeight}
-                                onChangeText={(text) => {
-                                    setTempWeight(text);
-                                    if (text === '') {
-                                        setWeightError('Veuillez entrer un poids.');
-                                    } else if (text.includes(',')) {
-                                        const parts = text.split(',');
-                                        if (parts.length !== 2 || !['25', '5', '75'].includes(parts[1])) {
-                                            setWeightError("Le poids doit être un entier ou suivi d'une virgule et de 25, 5 ou 75.");
-                                        } else {
-                                            setWeightError('');
-                                        }
-                                    } else if (!/^\d+$/.test(text)) {
-                                        setWeightError('Veuillez entrer un entier valide pour le poids.');
-                                    } else {
-                                        setWeightError('');
-                                    }
-                                }}
-                                onBlur={() => {
-                                    if (tempWeight === '') {
-                                        setWeightError('Veuillez entrer un poids.');
-                                    } else if (tempWeight.includes(',')) {
-                                        const parts = tempWeight.split(',');
-                                        if (parts.length !== 2 || !['25', '5', '75'].includes(parts[1])) {
-                                            setWeightError("Le poids doit être un entier ou suivi d'une virgule et de 25, 5 ou 75.");
-                                        } else {
-                                            setWeightError('');
-                                        }
-                                    } else if (!/^\d+$/.test(tempWeight)) {
-                                        setWeightError('Veuillez entrer un entier valide pour le poids.');
-                                    } else {
-                                        setWeightError('');
-                                    }
-                                }}
-                                error={weightError}
-                                keyboardType="numeric"
-                            />
-                        )}
-                        <TouchableOpacity style={ButtonStyles.container} onPress={saveSetData}>
-                            <Text style={ButtonStyles.text}>Enregistrer</Text>
-                        </TouchableOpacity>
-                    </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.controlButtonIcon}
+                        onPress={goToNextState}
+                        disabled={lastSetCompleted}
+                        accessibilityLabel="État suivant"
+                    >
+                        <Ionicons name="chevron-forward" size={24} color={lastSetCompleted ? "#ccc" : "#b21ae5"} />
+                    </TouchableOpacity>
                 </View>
-            </Modal>
-
-            {/* Vue minimisée de la séance */}
-            {isMinimized && (
-                <TouchableOpacity style={styles.minimizedContainer} onPress={() => setIsMinimized(false)}>
-                    <Text style={TextStyles.simpleText}>{exerciseName}</Text>
-                    <Text style={TextStyles.simpleText}>Série {currentSet}/{totalSets}</Text>
-                    <Text style={TextStyles.simpleText}>
-                        {phase === 'rest'
-                            ? 'Repos'
-                            : `${formatTime(timer)} : ${plannedReps} reps`}
-                    </Text>
-                </TouchableOpacity>
             )}
+
+            {/* Modal de saisie avec fermeture du clavier */}
+            <Modal visible={isEditingModalVisible} transparent animationType="slide">
+                <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContainer}>
+                            <Text style={[TextStyles.subTitle, { marginBottom: 20 }]}>
+                                {results[editingSetIndex]?.reps
+                                    ? `Modifie les données de ta série ${editingSetIndex + 1} comme un pro !`
+                                    : `Entre les données de ta série ${editingSetIndex + 1} comme un pro !`}
+                            </Text>
+
+                            {/* Input Répétitions avec boutons +/- et historique */}
+                            <View style={styles.inputRow}>
+                                <TouchableOpacity
+                                    style={styles.adjustButton}
+                                    onPress={() => setTempReps(Math.max(0, parseInt(tempReps || '0') - 1).toString())}
+                                    accessibilityLabel="Retirer 1 répétition"
+                                >
+                                    <Text style={styles.adjustButtonText}>-</Text>
+                                </TouchableOpacity>
+                                <WorkoutInputField
+                                    label="Répétitions"
+                                    value={tempReps}
+                                    onChangeText={setTempReps}
+                                    onBlur={() => setRepsError(validateReps(tempReps))}
+                                    error={repsError}
+                                    keyboardType="numeric"
+                                    shake={repsInputShakeRef.current}
+                                />
+                                <TouchableOpacity
+                                    style={styles.adjustButton}
+                                    onPress={() => setTempReps((parseInt(tempReps || '0') + 1).toString())}
+                                    accessibilityLabel="Ajouter 1 répétition"
+                                >
+                                    <Text style={styles.adjustButtonText}>+</Text>
+                                </TouchableOpacity>
+                                {editingSetIndex > 0 && results[editingSetIndex - 1]?.reps && (
+                                    <TouchableOpacity
+                                        style={styles.historyButton}
+                                        onPress={() => setTempReps(results[editingSetIndex - 1].reps!.toString())}
+                                        accessibilityLabel="Copier les répétitions de la série précédente"
+                                    >
+                                        <Ionicons name="time-outline" size={20} color="#b21ae5" />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+
+                            {/* Input Poids avec boutons +/- et historique */}
+                            {exerciseType !== 'bodyweight' && (
+                                <View style={styles.inputRow}>
+                                    <TouchableOpacity
+                                        style={styles.adjustButton}
+                                        onPress={() => {
+                                            const currentWeight = parseFloat(tempWeight.replace(',', '.') || '0');
+                                            const newWeight = Math.max(0, currentWeight - 2.5);
+                                            setTempWeight(newWeight % 1 === 0 ? newWeight.toString() : newWeight.toString().replace('.', ','));
+                                        }}
+                                        accessibilityLabel="Retirer 2,5 kg"
+                                    >
+                                        <Text style={styles.adjustButtonText}>-</Text>
+                                    </TouchableOpacity>
+                                    <WorkoutInputField
+                                        label="Poids (kg)"
+                                        value={tempWeight}
+                                        onChangeText={setTempWeight}
+                                        onBlur={() => setWeightError(validateWeight(tempWeight))}
+                                        error={weightError}
+                                        keyboardType="numeric"
+                                        shake={weightInputShakeRef.current}
+                                    />
+                                    <TouchableOpacity
+                                        style={styles.adjustButton}
+                                        onPress={() => {
+                                            const currentWeight = parseFloat(tempWeight.replace(',', '.') || '0');
+                                            const newWeight = currentWeight + 2.5;
+                                            setTempWeight(newWeight % 1 === 0 ? newWeight.toString() : newWeight.toString().replace('.', ','));
+                                        }}
+                                        accessibilityLabel="Ajouter 2,5 kg"
+                                    >
+                                        <Text style={styles.adjustButtonText}>+</Text>
+                                    </TouchableOpacity>
+                                    {editingSetIndex > 0 && results[editingSetIndex - 1]?.weight && (
+                                        <TouchableOpacity
+                                            style={styles.historyButton}
+                                            onPress={() => setTempWeight(results[editingSetIndex - 1].weight!.toString())}
+                                            accessibilityLabel="Copier le poids de la série précédente"
+                                        >
+                                            <Ionicons name="time-outline" size={20} color="#b21ae5" />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            )}
+
+                            {/* Bouton Enregistrer */}
+                            <TouchableOpacity style={ButtonStyles.container} onPress={saveSetData} accessibilityLabel="Enregistrer la série">
+                                <Text style={ButtonStyles.text}>Enregistrer</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    fullScreenContainer: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    contentContainer: {
-        flexGrow: 1,
-        alignItems: 'center',
-        paddingVertical: 20,
-        paddingHorizontal: 20,
-    },
-    setContainer: {
-        backgroundColor: '#fff',
-        borderRadius: 10,
+    fullScreenContainer: { flex: 1, backgroundColor: '#fff' },
+    contentContainer: { flexGrow: 1, alignItems: 'center', paddingVertical: 20, paddingHorizontal: 20 },
+    setContainer: { backgroundColor: '#fff', borderRadius: 10, flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingRight: 10, paddingLeft: 0, marginVertical: 5, width: '100%' },
+    setNumberIconContainer: { width: 70, height: 70, position: 'relative', marginRight: 20 },
+    setNumberIcon: { width: 70, height: 70, backgroundColor: '#F2F0F5', borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+    setNumberIconText: { fontSize: 16, color: '#141217', fontFamily: 'PlusJakartaSans_700Bold' },
+    setDetailsContainer: { flexDirection: 'column', flex: 1 },
+    setTitleText: { fontSize: 18, fontFamily: 'PlusJakartaSans_500Medium', color: '#141217', marginBottom: 8 },
+    setStatusText: { fontSize: 16, fontFamily: 'PlusJakartaSans_300Light', color: '#756387' },
+    checkIcon: { marginLeft: 10 },
+    progressWrapper: { width: '100%', alignSelf: 'center', marginBottom: 20 },
+    progressContainer: { width: '100%', height: 8, backgroundColor: '#e0dce5', borderRadius: 6, overflow: 'hidden', marginVertical: 10 },
+    progressBar: { height: '100%', backgroundColor: '#141118' },
+    timerText: { fontSize: 16, color: '#141118', marginTop: 5, alignSelf: 'flex-start' },
+    seriesListContainer: { width: '100%', marginVertical: 20 },
+    errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#fff' },
+    errorText: { fontSize: 18, color: 'red', textAlign: 'center' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+    modalContainer: { width: '90%', backgroundColor: '#fff', borderRadius: 8, padding: 20, alignItems: 'center' },
+    inputContainer: { width: 120, marginHorizontal: 10 },
+    controlContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 15, marginBottom: 15 },
+    controlButton: { marginHorizontal: 20, alignItems: 'center' },
+    axolotlText: { textAlign: 'center', color: '#b21ae5', fontSize: 16 },
+    inputRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 10,
-        paddingRight: 10,
-        paddingLeft: 0,
-        marginVertical: 5,
+        justifyContent: 'center',
+        marginBottom: 15,
         width: '100%',
     },
-    setNumberIconContainer: {
-        width: 70,
-        height: 70,
-        position: 'relative',
-        marginRight: 20,
-    },
-    setNumberIcon: {
-        width: 70,
-        height: 70,
-        backgroundColor: '#F2F0F5',
+    adjustButton: {
+        width: 40,
+        height: 40,
         borderRadius: 20,
+        backgroundColor: '#b21ae5',
         justifyContent: 'center',
         alignItems: 'center',
+        marginHorizontal: 10,
     },
-    setNumberIconText: {
-        fontSize: 16,
-        color: '#141217',
-        fontFamily: 'PlusJakartaSans_700Bold',
+    adjustButtonText: {
+        fontSize: 20,
+        color: '#ffffff',
+        lineHeight: 40,
     },
-    setDetailsContainer: {
-        flexDirection: 'column',
-        flex: 1,
-    },
-    setTitleText: {
-        fontSize: 18,
-        fontFamily: 'PlusJakartaSans_500Medium',
-        color: '#141217',
-        marginBottom: 8,
-    },
-    setStatusText: {
-        fontSize: 16,
-        fontFamily: 'PlusJakartaSans_300Light',
-        color: '#756387',
-    },
-    checkIcon: {
+    historyButton: {
         marginLeft: 10,
     },
-    progressWrapper: {
-        width: '100%',
-        alignSelf: 'center',
-        marginBottom: 20,
-    },
-    progressContainer: {
-        width: '100%',
-        height: 8,
-        backgroundColor: '#e0dce5',
-        borderRadius: 6,
-        overflow: 'hidden',
-        marginVertical: 10,
-        alignSelf: 'center',
-    },
-    progressBar: {
-        height: '100%',
-        backgroundColor: '#141118',
-    },
-    timerText: {
-        fontSize: 16,
-        color: '#141118',
-        marginTop: 5,
-        alignSelf: 'flex-start',
-    },
-    seriesListContainer: {
-        width: '100%',
-        marginVertical: 20,
-    },
-    minimizedContainer: {
+    fixedControlButtonsContainer: {
         position: 'absolute',
-        bottom: 70,
+        bottom: 20,
         left: 0,
         right: 0,
-        backgroundColor: '#fff',
-        paddingVertical: 10,
-        alignItems: 'center',
-        borderTopWidth: 1,
-        borderColor: '#ccc',
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-        backgroundColor: '#fff',
-    },
-    errorText: {
-        fontSize: 18,
-        color: 'red',
-        textAlign: 'center',
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalContainer: {
-        width: '80%',
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        padding: 20,
-        alignItems: 'center',
-    },
-    inputContainer: {
-        marginBottom: 10,
-    },
-    controlContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 15,
-        marginBottom: 15,
+        gap: 20,
+        paddingVertical: 10,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
     },
-    controlButton: {
-        marginHorizontal: 20,
+    controlButtonIcon: {
+        padding: 5,
+    },
+    pausePlayButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#b21ae5',
+        justifyContent: 'center',
         alignItems: 'center',
     },
 });

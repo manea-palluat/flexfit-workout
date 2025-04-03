@@ -6,7 +6,7 @@ type Exercise @model @auth(rules: [{ allow: owner }]) {
   restTime: Int!
   sets: Int!
   reps: Int!
-  exerciseType: String  # New field: e.g., "normal" or "bodyweight"
+  exerciseType: String
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
   owner: String
@@ -20,7 +20,7 @@ input CreateExerciseInput {
   restTime: Int!
   sets: Int!
   reps: Int!
-  exerciseType: String  # New field for creation
+  exerciseType: String
 }
 
 input UpdateExerciseInput {
@@ -31,7 +31,7 @@ input UpdateExerciseInput {
   restTime: Int
   sets: Int
   reps: Int
-  exerciseType: String  # New field for updates
+  exerciseType: String 
 }
 
 type ExerciseTracking @model @auth(rules: [{ allow: owner }]) {

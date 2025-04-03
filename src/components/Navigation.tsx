@@ -1,3 +1,4 @@
+// src/navigation/Navigation.tsx
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import {
@@ -34,6 +35,7 @@ import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import LegalNoticeScreen from '../screens/LegalNoticeScreen';
 import AboutScreen from '../screens/AboutScreen';
 import ParameterScreen from '../screens/ParameterScreen';
+import RecentExercisesDetailScreen from '../screens/RecentExercisesDetailScreen';
 import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from '../types/NavigationTypes';
 
@@ -136,7 +138,7 @@ function MainTabs() {
     );
 }
 
-const Navigation: React.FC = () => {
+function Navigation(): JSX.Element {
     const { user } = useAuth();
 
     return (
@@ -276,6 +278,14 @@ const Navigation: React.FC = () => {
                                 headerTitleStyle: defaultTitleStyle,
                             }}
                         />
+                        <Stack.Screen
+                            name="RecentExercisesDetail"
+                            component={RecentExercisesDetailScreen}
+                            options={{
+                                headerTitle: 'Exercices récents détaillés',
+                                headerTitleStyle: defaultTitleStyle,
+                            }}
+                        />
                     </>
                 )}
                 <Stack.Screen
@@ -290,7 +300,7 @@ const Navigation: React.FC = () => {
                     name="PrivacyPolicy"
                     component={PrivacyPolicyScreen}
                     options={{
-                        headerTitle: 'Politique de Confidentialité',
+                        headerTitle: 'Politique de confidentialité',
                         headerTitleStyle: defaultTitleStyle,
                     }}
                 />
@@ -298,14 +308,14 @@ const Navigation: React.FC = () => {
                     name="LegalNotice"
                     component={LegalNoticeScreen}
                     options={{
-                        headerTitle: 'Mentions Légales',
+                        headerTitle: 'Mentions légales',
                         headerTitleStyle: defaultTitleStyle,
                     }}
                 />
             </Stack.Navigator>
         </NavigationContainer>
     );
-};
+}
 
 const BackArrow = (props: any) => (
     <Svg width={24} height={24} viewBox="0 0 24 24" {...props}>

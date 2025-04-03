@@ -1,27 +1,22 @@
-// src/screens/TrackingScreen.tsx 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';//import de React et hooks
+// src/screens/TrackingScreen.tsx
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
     Text,
-    FlatList,
-    StyleSheet,
     TouchableOpacity,
-    RefreshControl,
-    Alert,
-    TextInput,
-} from 'react-native';//composants de base
-import { API, graphqlOperation } from 'aws-amplify';//pour l'API backend
-import { listExerciseTrackings, listExercises } from '../graphql/queries';//requêtes GraphQL
-import { useAuth } from '../context/AuthContext';//contexte d'authentification
-import { useNavigation, useFocusEffect } from '@react-navigation/native';//navigation et focus effect
-import type { RootStackParamList } from '../types/NavigationTypes';//types de navigation
-import { StackNavigationProp } from '@react-navigation/stack';//type navigation stack
-import { ButtonStyles } from '../styles/ButtonStyles';//styles bouton
-import Ionicons from 'react-native-vector-icons/Ionicons';//icônes Ionicons
-import ExerciseFilterBar from '../components/ExerciseFilterBar';//composant de filtre par exo
-import MuscleGroupFilterBar from '../components/MuscleGroupFilterBar';//composant de filtre par groupe
+    StyleSheet,
+    ScrollView,
+    Dimensions,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { LineChart } from 'react-native-chart-kit';
+import { API, graphqlOperation } from 'aws-amplify';
+import { listExerciseTrackings } from '../graphql/queries';
+import { useAuth } from '../context/AuthContext';
+import { TextStyles } from '../styles/TextStyles';
+import type { RootStackParamList } from '../types/NavigationTypes';
 
-// TYPE : structure d'un enregistrement de suivi
 interface TrackingRecord {
     id: string;
     userId: string;
@@ -31,69 +26,19 @@ interface TrackingRecord {
     setsData: string;
 }
 
-// TYPE : mapping pour stocker le groupe musculaire et le type d'exo
 interface ExerciseInfo {
     muscleGroup: string;
     exerciseType?: string;
 }
 
-type NavigationProp = StackNavigationProp<RootStackParamList>;//type navigation
-
 const TrackingScreen: React.FC = () => {
-    const [trackings, setTrackings] = useState<TrackingRecord[]>([]);//stocke tous les suivis
-    const [loading, setLoading] = useState<boolean>(true);//etat loading
-    const [refreshing, setRefreshing] = useState<boolean>(false);//pour pull-to-refresh
-    const { user } = useAuth(); //récupère l'utilisateur
-    const navigation = useNavigation<NavigationProp>(); //pour naviguer
+    const [activeTab, setActiveTab] = useState<'performances' | 'mensurations'>('performances');
+    const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+    const { user } = useAuth();
 
-    // BARRE DE RECHERCHE : état pour le texte recherché
-    const [searchQuery, setSearchQuery] = useState<string>(''); //texte recherché
+    const [trackings, setTrackings] = useState<TrackingRecord[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
 
-    // FILTRE PAR EXERCICE : sélection de l'exo à filtrer
-    const [filterExercise, setFilterExercise] = useState<string>('All'); //filtre exo
-
-    // FILTRE PAR GROUPE MUSCULAIRE : sélection du groupe à filtrer
-    const [filterMuscleGroup, setFilterMuscleGroup] = useState<string>('All'); //filtre groupe musculaire
-
-    // ETAT DES FILTRES DISPONIBLES
-    const [availableMuscleGroups, setAvailableMuscleGroups] = useState<string[]>([]);//liste des groupes dispo
-    const [exerciseMapping, setExerciseMapping] = useState<{ [key: string]: ExerciseInfo }>({});//mapping exo -> infos
-
-    // MEMO : liste unique des exos présents dans les suivis
-    const uniqueExercises = useMemo(() => {
-        return Array.from(new Set(trackings.map((t) => t.exerciseName)));
-    }, [trackings]); //on évite le recalcul inutile
-
-    // MEMO : filtre la liste des exos selon le groupe musculaire sélectionné
-    const filteredExercises = useMemo(() => {
-        if (filterMuscleGroup !== 'All') {
-            return uniqueExercises.filter(
-                (ex) => exerciseMapping[ex]?.muscleGroup === filterMuscleGroup
-            );
-        }
-        return uniqueExercises;
-    }, [uniqueExercises, exerciseMapping, filterMuscleGroup]);
-
-    // PULL-TO-REFRESH : rafraîchit les données de suivi
-    const onRefresh = async () => {
-        setRefreshing(true); //active l'animation refresh
-        await fetchTrackings(); // recharge les suivis
-        setRefreshing(false); // désactive refresh
-    };
-
-    // RAFRAICHISSEMENT : recharge les suivis quand l'écran reprend le focus
-    useFocusEffect(
-        useCallback(() => {
-            fetchTrackings();
-        }, [user])
-    );
-
-    // Au chargement ou au changement d'utilisateur, on récupère les données
-    useEffect(() => {
-        fetchTrackings();
-    }, [user]);
-
-    // FONCTION : récupère les suivis depuis le backend
     const fetchTrackings = async () => {
         if (!user) {
             setLoading(false);
@@ -103,322 +48,380 @@ const TrackingScreen: React.FC = () => {
             const response: any = await API.graphql(
                 graphqlOperation(listExerciseTrackings, {
                     filter: { userId: { eq: user?.attributes?.sub || user?.username } },
-                    sortDirection: 'DESC', // plus récent d'abord
+                    sortDirection: 'DESC',
                 })
             );
             const items: TrackingRecord[] = response.data.listExerciseTrackings.items;
             setTrackings(items);
         } catch (error) {
-            console.error('Error fetching tracking data', error); //pb de récupération
-            Alert.alert('Erreur', 'Une erreur est survenue lors du chargement des données.');
+            console.error('Erreur lors du chargement des suivis', error);
         } finally {
             setLoading(false);
         }
     };
 
-    // MAPPING DES GROUPES MUSCULAIRES : récupère les exos pour établir le mapping et la liste des groupes
     useEffect(() => {
-        const fetchMuscleGroups = async () => {
-            if (!user) return;
-            try {
-                const response: any = await API.graphql(
-                    graphqlOperation(listExercises, {
-                        filter: { userId: { eq: user?.attributes?.sub || user?.username } },
-                    })
-                );
-                const items = response.data.listExercises.items;
-                const mapping: { [key: string]: ExerciseInfo } = {};
-                const groups: string[] = [];
-                items.forEach((e: any) => {
-                    if (e.name && e.muscleGroup) {
-                        mapping[e.name] = {
-                            muscleGroup: e.muscleGroup,
-                            exerciseType: e.exerciseType, // capture le type d'exo
-                        };
-                        groups.push(e.muscleGroup);
-                    }
-                });
-                setExerciseMapping(mapping);
-                setAvailableMuscleGroups(Array.from(new Set(groups)));
-            } catch (error) {
-                console.error('Error fetching muscle groups', error);
-                Alert.alert('Erreur', 'Impossible de charger les groupes musculaires.');
-            }
-        };
-        fetchMuscleGroups();
+        fetchTrackings();
     }, [user]);
 
-    // STATISTIQUES : calcule le nombre total de séances et le poids total soulevé
-    const totalSessions = trackings.length; // nombre de séances
-    const totalWeightLifted = trackings.reduce((sum, record) => {
-        try {
-            const setsData = JSON.parse(record.setsData);
-            const recordTotal = setsData.reduce(
-                (s: number, set: { reps: number; weight: number }) => s + set.reps * set.weight,
-                0
-            );
-            return sum + recordTotal;
-        } catch (e) {
-            return sum;
-        }
-    }, 0);
-
-    // FILTRAGE : on filtre les suivis en fonction de la recherche et des filtres appliqués
-    const filteredTrackings = trackings.filter((tracking) => {
-        let exerciseMatch = true;
-        if (searchQuery) {
-            exerciseMatch = tracking.exerciseName
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase());
-        } else if (filterExercise && filterExercise !== 'All') {
-            exerciseMatch = tracking.exerciseName === filterExercise;
-        }
-        const muscleMatch =
-            filterMuscleGroup !== 'All'
-                ? exerciseMapping[tracking.exerciseName]?.muscleGroup === filterMuscleGroup
-                : true;
-        return exerciseMatch && muscleMatch;
+    const [exerciseMapping] = useState<{ [key: string]: ExerciseInfo }>({
+        "Développé couché": { muscleGroup: "Pectoraux", exerciseType: "normal" },
+        "Squat": { muscleGroup: "Jambes", exerciseType: "normal" },
     });
+    const [availableMuscleGroups] = useState<string[]>(["Pectoraux", "Jambes"]);
 
-    // BADGES DES FILTRES ACTIFS
-    const activeFilters: string[] = [];
-    if (filterMuscleGroup && filterMuscleGroup !== 'All')
-        activeFilters.push(`Groupe: ${filterMuscleGroup}`);
-    if (filterExercise && filterExercise !== 'All')
-        activeFilters.push(`Exercice: ${filterExercise}`);
-    if (searchQuery) activeFilters.push(`Recherche: ${searchQuery}`);
+    const recentExercises = useMemo(() => {
+        const sorted = [...trackings].sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        return sorted.slice(0, 2).map((t) => t.exerciseName);
+    }, [trackings]);
 
-    // RENDER DE CHAQUE ENREGISTREMENT
-    const renderItem = ({ item }: { item: TrackingRecord }) => {
-        const dateObj = new Date(item.date);
-        // formate la date en DD/MM
-        const formattedDate = `${dateObj.getDate().toString().padStart(2, '0')}/${(
-            dateObj.getMonth() + 1
-        )
-            .toString()
-            .padStart(2, '0')}`;
+    const compute1RM = (reps: number, weight: number) => {
+        return weight * (1 + reps / 30);
+    };
 
-        let setSummary = '';
-        try {
-            const setsData = JSON.parse(item.setsData);
-            const exerciseType = exerciseMapping[item.exerciseName]?.exerciseType?.toLowerCase();
-            if (exerciseType === 'bodyweight') {
-                // pour les exos poids du corps, affiche uniquement les reps
-                setSummary = setsData
-                    .map((set: { reps: number; weight: number }) => `${set.reps} reps`)
-                    .join('\n');
-            } else {
-                setSummary = setsData
-                    .map((set: { reps: number; weight: number }) => `${set.reps} x ${set.weight} kg`)
-                    .join('\n');
-            }
-        } catch (e) {
-            console.error('Error parsing setsData', e);
+    // Fonction pour obtenir les labels des 3 derniers mois
+    const getLastThreeMonthsLabels = () => {
+        const now = new Date();
+        const months = [];
+        for (let i = 2; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthName = date.toLocaleString('fr-FR', { month: 'short' });
+            months.push(monthName);
         }
+        return months; // Par exemple: ["janv.", "févr.", "mars"]
+    };
+
+    // Fonction pour générer les données du graphique sur les 3 derniers mois
+    const getMiniChartDataForExercise = (exerciseName: string) => {
+        const now = new Date();
+        const threshold = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        const sessions = trackings
+            .filter((t) => {
+                if (t.exerciseName !== exerciseName) return false;
+                const d = new Date(t.date);
+                return d >= threshold;
+            })
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        // Créer un axe virtuel avec 90 points (un par jour sur 3 mois)
+        const totalDays = 90; // Approximativement 3 mois
+        const data: number[] = new Array(totalDays).fill(null); // Remplir avec null pour les jours sans données
+
+        // Calculer les positions des séances sur l'axe des x
+        sessions.forEach((session) => {
+            try {
+                const sessionDate = new Date(session.date);
+                const daysSinceThreshold = Math.floor(
+                    (sessionDate.getTime() - threshold.getTime()) / (1000 * 60 * 60 * 24)
+                );
+                if (daysSinceThreshold >= 0 && daysSinceThreshold < totalDays) {
+                    const sets = JSON.parse(session.setsData);
+                    const max1RM = Math.max(
+                        ...sets.map((set: { reps: number; weight: number }) =>
+                            compute1RM(set.reps, set.weight)
+                        )
+                    );
+                    data[daysSinceThreshold] = max1RM;
+                }
+            } catch (error) {
+                console.error('Erreur lors du calcul de la 1RM', error);
+            }
+        });
+
+        // Labels pour l'axe des x (seulement les 3 mois)
+        const labels = getLastThreeMonthsLabels();
+
+        return { data, labels };
+    };
+
+    const MiniChart: React.FC<{ exerciseName: string }> = ({ exerciseName }) => {
+        const { data, labels } = getMiniChartDataForExercise(exerciseName);
+        const [chartWidth, setChartWidth] = useState(Dimensions.get("window").width - 56);
+        const chartHeight = 220;
+
+        const handleLayout = (event: any) => {
+            const { width } = event.nativeEvent.layout;
+            setChartWidth(width);
+        };
 
         return (
-            <TouchableOpacity
-                style={styles.recordItem}
-                onPress={() =>
-                    navigation.navigate('TrackingDetail', { tracking: item })
-                } //ouvre le détail du suivi
-                onLongPress={() => {
-                    Alert.alert(
-                        'Supprimer',
-                        'Voulez-vous supprimer cet enregistrement ?',
-                        [
-                            { text: 'Annuler', style: 'cancel' },
+            <View style={styles.chartContainer} onLayout={handleLayout}>
+                <LineChart
+                    data={{
+                        labels: labels,
+                        datasets: [
                             {
-                                text: 'Supprimer',
-                                style: 'destructive',
-                                onPress: () => {
-                                    setTrackings((prev) => prev.filter((rec) => rec.id !== item.id));
-                                },
+                                data: data,
+                                strokeWidth: 2,
+                                withDots: true,
                             },
                         ],
-                        { cancelable: true }
-                    );
-                }}
-                accessibilityLabel={`Enregistrement du ${formattedDate} pour ${item.exerciseName}`}
-            >
-                <Text style={styles.recordTitle}>
-                    {item.exerciseName} - {formattedDate}
-                </Text>
-                <Text style={styles.recordSummary}>{setSummary}</Text>
-            </TouchableOpacity>
+                    }}
+                    width={chartWidth}
+                    height={chartHeight}
+                    yAxisSuffix=" kg"
+                    chartConfig={{
+                        backgroundColor: "#fff",
+                        backgroundGradientFrom: "#fff",
+                        backgroundGradientTo: "#fff",
+                        decimalPlaces: 0,
+                        color: (opacity = 1) => `rgba(178,26,229, ${opacity})`,
+                        labelColor: (opacity = 1) => `rgba(20,18,23, ${opacity})`,
+                        propsForDots: {
+                            r: "4",
+                            strokeWidth: "1",
+                            stroke: "#b21ae5",
+                        },
+                        propsForVerticalLabels: {
+                            fontSize: 12,
+                        },
+                        propsForHorizontalLabels: {
+                            fontSize: 12,
+                        },
+                        // Ajuster les labels pour qu'ils soient espacés comme des mois
+                        formatXLabel: (value, index) => {
+                            // Afficher uniquement les labels aux positions correspondant aux mois
+                            const positions = [0, 30, 60]; // Approximativement le début de chaque mois
+                            return positions.includes(index) ? labels[positions.indexOf(index)] : '';
+                        },
+                    }}
+                    fromZero={true}
+                    yAxisInterval={20}
+                    segments={5}
+                    style={{ borderRadius: 16 }}
+                    withCustomGrid={true}
+                    // S'assurer que les points sont dessinés même pour les valeurs nulles (mais sans ligne)
+                    withInnerLines={false}
+                    withOuterLines={true}
+                />
+            </View>
         );
     };
 
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <Text>Chargement des données de suivi...</Text>
+                <Text style={TextStyles.simpleText}>Chargement des données…</Text>
             </View>
         );
     }
 
     return (
         <View style={styles.container}>
-            {/* HEADER DE SYNTHÈSE */}
-            <View style={styles.summaryHeader}>
-                <Text style={styles.summaryText}>Séances: {totalSessions}</Text>
-                <Text style={styles.summaryText}>Poids total: {totalWeightLifted.toFixed(0)} kg</Text>
+            {/* HEADER */}
+            <View style={styles.header}>
+                <Text style={[TextStyles.headerText, { color: '#141217' }]}>Suivi</Text>
             </View>
 
-            //BARRE DE RECHERCHE
-            <TextInput
-                style={styles.searchBar}
-                placeholder="Rechercher un exercice..."
-                placeholderTextColor="#999"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-            />
+            {/* ONGLETS */}
+            <View style={styles.tabBar}>
+                <TouchableOpacity
+                    style={[styles.tabButton, activeTab === 'performances' && styles.activeTab]}
+                    onPress={() => setActiveTab('performances')}
+                >
+                    <Text style={[TextStyles.simpleText, activeTab === 'performances' && { color: '#fff' }]}>
+                        Performances
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.tabButton, activeTab === 'mensurations' && styles.activeTab]}
+                    onPress={() => setActiveTab('mensurations')}
+                >
+                    <Text style={[TextStyles.simpleText, activeTab === 'mensurations' && { color: '#fff' }]}>
+                        Mensurations
+                    </Text>
+                </TouchableOpacity>
+            </View>
 
-            // FILTRE PAR GROUPE MUSCULAIRE
-            <MuscleGroupFilterBar
-                groups={availableMuscleGroups}
-                activeGroup={filterMuscleGroup}
-                onFilterChange={(selectedGroup) => {
-                    setFilterMuscleGroup(selectedGroup);
-                    if (filterExercise !== 'Tout' && exerciseMapping[filterExercise]?.muscleGroup !== selectedGroup) {
-                        setFilterExercise('Tout');
-                    }
-                }}
-            />
-
-            // FILTRE PAR EXERCICE
-            <ExerciseFilterBar
-                exercises={filteredExercises}
-                onFilterChange={(selectedExercise, query) => {
-                    setFilterExercise(selectedExercise);
-                }}
-            />
-
-            // BADGES DES FILTRES ACTIFS
-            {activeFilters.length > 0 && (
-                <View style={styles.activeFiltersContainer}>
-                    {activeFilters.map((filter, idx) => (
-                        <View key={idx} style={styles.filterBadge}>
-                            <Text style={styles.filterBadgeText}>{filter}</Text>
+            {/* CONTENU */}
+            {activeTab === 'performances' ? (
+                <ScrollView style={styles.contentContainer}>
+                    {/* RÉSUMÉ GÉNÉRAL */}
+                    <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Résumé général</Text>
+                    <View style={styles.summaryRow}>
+                        <View style={styles.summaryBox}>
+                            <Text style={[TextStyles.subSimpleText, styles.summaryBoxLabel]}>
+                                Exos (7 derniers jours)
+                            </Text>
+                            <Text style={[TextStyles.simpleText, styles.summaryBoxValue]}>
+                                {trackings.length}
+                            </Text>
                         </View>
-                    ))}
-                </View>
-            )}
+                        <View style={styles.summaryBox}>
+                            <Text style={[TextStyles.subSimpleText, styles.summaryBoxLabel]}>
+                                Poids total
+                            </Text>
+                            <Text style={[TextStyles.simpleText, styles.summaryBoxValue]}>
+                                {trackings.reduce((sum, t) => {
+                                    try {
+                                        const sets = JSON.parse(t.setsData);
+                                        const sessionTotal = sets.reduce(
+                                            (s: number, set: { reps: number; weight: number }) => s + set.reps * set.weight,
+                                            0
+                                        );
+                                        return sum + sessionTotal;
+                                    } catch {
+                                        return sum;
+                                    }
+                                }, 0)}{" "}
+                                kg
+                            </Text>
+                        </View>
+                    </View>
 
-            // LISTE DES SUIVIS
-            <FlatList
-                data={filteredTrackings}
-                keyExtractor={(item) => item.id}
-                renderItem={renderItem}
-                contentContainerStyle={styles.contentContainer}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                ListEmptyComponent={
-                    <View style={styles.emptyStateContainer}>
-                        <Text style={styles.emptyStateText}>
-                            Aucun enregistrement trouvé. Essayez d'ajuster vos filtres.
+                    {/* EXERCICES RÉCENTS */}
+                    <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Exercices récents</Text>
+                    <TouchableOpacity
+                        style={styles.exerciseCard}
+                        onPress={() => navigation.navigate('RecentExercisesDetail')}
+                    >
+                        <View style={styles.exerciseCardContent}>
+                            {recentExercises.map((exerciseName, index) => (
+                                <View key={`${exerciseName}-${index}`} style={styles.exerciseBlock}>
+                                    <Text style={[TextStyles.simpleText, styles.exerciseName]}>
+                                        {exerciseName}
+                                    </Text>
+                                    <MiniChart exerciseName={exerciseName} />
+                                </View>
+                            ))}
+                        </View>
+                    </TouchableOpacity>
+
+                    {/* RECORDS */}
+                    <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Records</Text>
+                    <View style={styles.recordsContainer}>
+                        <Text style={[TextStyles.subSimpleText, styles.recordLine]}>
+                            Tractions : 20 reps
+                        </Text>
+                        <Text style={[TextStyles.subSimpleText, styles.recordLine]}>
+                            DC : 100 kg
                         </Text>
                     </View>
-                }
-            />
 
-            // BOUTON ACTION PERMANENT
-            <TouchableOpacity
-                style={styles.persistentButton}
-                onPress={() => navigation.navigate('ManualTracking')}
-                accessibilityLabel="Ajouter un suivi manuel"
-            >
-                <Text style={ButtonStyles.text}>Ajouter un suivi manuel</Text>
-            </TouchableOpacity>
+                    <View style={{ height: 120 }} />
+                </ScrollView>
+            ) : (
+                <ScrollView style={styles.contentContainer}>
+                    {/* ONGLET MENSURATIONS */}
+                    <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Dernières mensurations</Text>
+                    <View style={styles.measurementItem}>
+                        <Text style={[TextStyles.simpleText, styles.measurementDate]}>
+                            1 avr. 2025
+                        </Text>
+                        <Text style={[TextStyles.simpleText, styles.measurementValue]}>
+                            Poids : 72 kg
+                        </Text>
+                        <Text style={[TextStyles.simpleText, styles.measurementValue]}>
+                            Tour de bras : 34 cm
+                        </Text>
+                    </View>
+                    <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Graphiques</Text>
+                    <View style={styles.mensuGraphPlaceholder}>
+                        <Text style={[TextStyles.subSimpleText, { color: '#999' }]}>
+                            Graphiques (Poids, tour de taille, etc.)
+                        </Text>
+                    </View>
+                    <View style={{ height: 120 }} />
+                </ScrollView>
+            )}
+
+            {/* BOUTON FLOTTANT */}
+            {activeTab === 'performances' ? (
+                <TouchableOpacity
+                    style={styles.floatingButton}
+                    onPress={() => {
+                        // TODO: Navigation vers l'écran d'ajout de suivi manuel
+                    }}
+                >
+                    <Text style={TextStyles.simpleText}>Ajouter un suivi manuel</Text>
+                </TouchableOpacity>
+            ) : (
+                <TouchableOpacity
+                    style={styles.floatingButton}
+                    onPress={() => {
+                        // TODO: Navigation vers l'écran d'ajout de mensuration
+                    }}
+                >
+                    <Text style={TextStyles.simpleText}>+ Ajouter une mensuration</Text>
+                </TouchableOpacity>
+            )}
         </View>
     );
 };
 
+export default TrackingScreen;
+
+const PURPLE = '#b21ae5';
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-        padding: 16,
-        paddingBottom: 80,
-    },
-    summaryHeader: {
+    container: { flex: 1, backgroundColor: '#fff' },
+    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    header: { paddingTop: 16, paddingHorizontal: 16, marginBottom: 8 },
+    tabBar: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        marginHorizontal: 16,
         marginBottom: 16,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
+        borderRadius: 8,
+        overflow: 'hidden',
+        backgroundColor: '#F1F1F1',
+    },
+    tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center' },
+    activeTab: { backgroundColor: PURPLE },
+    contentContainer: { flex: 1, paddingHorizontal: 16 },
+    sectionTitle: { marginVertical: 8 },
+    summaryRow: { flexDirection: 'row', marginBottom: 16 },
+    summaryBox: { flex: 1, backgroundColor: '#F1F1F1', padding: 12, borderRadius: 8, marginRight: 8 },
+    summaryBoxLabel: { marginBottom: 4 },
+    summaryBoxValue: {},
+    exerciseCard: {
         backgroundColor: '#F1F1F1',
         borderRadius: 8,
+        padding: 12,
+        marginBottom: 16,
+        width: "100%",
     },
-    summaryText: {
-        fontSize: 14,
-        color: '#333',
+    exerciseCardContent: {},
+    exerciseBlock: { marginBottom: 16 },
+    exerciseName: { marginBottom: 4 },
+    chartContainer: {
+        overflow: 'hidden',
+        borderRadius: 16,
     },
-    searchBar: {
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#F1F1F1',
-        paddingHorizontal: 15,
-        marginBottom: 10,
-        fontSize: 14,
-        color: '#333',
-    },
-    activeFiltersContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginBottom: 10,
-    },
-    filterBadge: {
-        backgroundColor: '#b21ae5',
-        borderRadius: 12,
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-        marginRight: 6,
-        marginBottom: 6,
-    },
-    filterBadgeText: {
-        color: '#fff',
-        fontSize: 12,
-    },
-    contentContainer: {
-        paddingBottom: 20,
-    },
-    emptyStateContainer: {
-        alignItems: 'center',
-        marginTop: 40,
-    },
-    emptyStateText: {
-        fontSize: 16,
-        color: '#999',
-    },
-    loadingContainer: {
-        flex: 1,
+    miniGraph: {
+        width: Dimensions.get("window").width - 40,
+        height: 220,
+        backgroundColor: '#E2E2E2',
+        borderRadius: 6,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    recordItem: {
+    miniGraphText: {},
+    recordsContainer: {
         backgroundColor: '#F1F1F1',
-        padding: 16,
         borderRadius: 8,
-        marginBottom: 12,
+        padding: 12,
     },
-    recordTitle: {
-        fontFamily: 'PlusJakartaSans_500Medium',
-        fontSize: 16,
-        lineHeight: 25,
-        color: '#141217',
-        marginBottom: 4,
+    recordLine: { marginBottom: 4 },
+    measurementItem: { backgroundColor: '#F1F1F1', borderRadius: 8, padding: 12, marginBottom: 12 },
+    measurementDate: { marginBottom: 4 },
+    measurementValue: {},
+    mensuGraphPlaceholder: {
+        height: 140,
+        backgroundColor: '#F8F8F8',
+        borderRadius: 8,
+        marginBottom: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    recordSummary: {
-        fontSize: 16,
-        color: '#756387',
-    },
-    persistentButton: {
+    floatingButton: {
         position: 'absolute',
-        bottom: 16,
         left: 16,
         right: 16,
-        ...ButtonStyles.container,
+        bottom: 16,
+        backgroundColor: PURPLE,
+        borderRadius: 8,
+        paddingVertical: 14,
+        alignItems: 'center',
     },
 });
-
-export default TrackingScreen;

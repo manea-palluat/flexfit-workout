@@ -233,11 +233,12 @@ function Navigation(): JSX.Element {
                         <Stack.Screen
                             name="ExerciseHistory"
                             component={ExerciseHistoryScreen}
-                            options={{
-                                headerTitle: 'Historique des exercices',
+                            options={({ route }) => ({
+                                headerTitle: route.params.exerciseName,
                                 headerTitleStyle: defaultTitleStyle,
-                            }}
+                            })}
                         />
+
                         <Stack.Screen
                             name="ManualTracking"
                             component={ManualTrackingScreen}
@@ -286,6 +287,7 @@ function Navigation(): JSX.Element {
                                 headerTitleStyle: defaultTitleStyle,
                             }}
                         />
+
                     </>
                 )}
                 <Stack.Screen

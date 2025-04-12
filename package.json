@@ -21,6 +21,7 @@
     "@react-navigation/native": "^7.0.14",
     "@react-navigation/stack": "^7.1.1",
     "aws-amplify": "^5.3.23",
+    "d3-shape": "^3.2.0",
     "expo": "~52.0.28",
     "expo-app-loading": "^2.1.1",
     "expo-av": "~15.0.2",
@@ -39,14 +40,18 @@
     "react-native-get-random-values": "^1.11.0",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-modal-datetime-picker": "^18.0.0",
+    "react-native-reanimated": "^3.17.3",
     "react-native-safe-area-context": "^5.2.0",
     "react-native-screens": "^4.6.0",
     "react-native-svg": "^15.11.2",
+    "react-native-svg-charts": "^5.4.0",
     "react-native-vector-icons": "^10.2.0",
-    "uuid": "^11.0.5"
+    "uuid": "^11.0.5",
+    "victory-native": "^41.16.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@types/d3-shape": "^3.1.7",
     "@types/react": "~18.3.12",
     "@types/react-native-background-timer": "^2.0.2",
     "react-native-svg-transformer": "^1.5.0",

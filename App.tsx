@@ -13,9 +13,9 @@ import * as Notifications from 'expo-notifications';// gestion des notifs avec E
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-        shouldShowAlert: true,// affiche une alerte visuelle
-        shouldPlaySound: true,// active le son
-        shouldSetBadge: false,// pas de badge sur l'icône
+        shouldShowAlert: true,//affiche une alerte visuelle
+        shouldPlaySound: true,//active le son
+        shouldSetBadge: false,//pas de badge sur l'icône
     }),
 });
 

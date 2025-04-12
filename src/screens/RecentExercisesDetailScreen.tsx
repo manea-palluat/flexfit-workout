@@ -1,3 +1,4 @@
+// src/screens/RecentExercisesDetailScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
@@ -134,9 +135,10 @@ const RecentExercisesDetailScreen: React.FC = () => {
     };
 
     const uniqueExercises = Array.from(new Set(trackings.map((t) => t.exerciseName)));
-    const filteredExercises = filterMuscleGroup === 'Tous'
-        ? uniqueExercises
-        : uniqueExercises.filter((ex) => exerciseMapping[ex]?.muscleGroup === filterMuscleGroup);
+    const filteredExercises =
+        filterMuscleGroup === 'Tous'
+            ? uniqueExercises
+            : uniqueExercises.filter((ex) => exerciseMapping[ex]?.muscleGroup === filterMuscleGroup);
 
     const filteredTrackings = trackings.filter((tracking) => {
         const exerciseMatch = filterExercise === 'Tous' || tracking.exerciseName === filterExercise;
@@ -147,7 +149,13 @@ const RecentExercisesDetailScreen: React.FC = () => {
             searchQuery.trim() === '' ||
             tracking.exerciseName.toLowerCase().includes(searchQuery.toLowerCase());
         const result = exerciseMatch && muscleMatch && searchMatch;
-        console.log('Filtering:', { tracking: tracking.exerciseName, exerciseMatch, muscleMatch, searchMatch, result });
+        console.log('Filtering:', {
+            tracking: tracking.exerciseName,
+            exerciseMatch,
+            muscleMatch,
+            searchMatch,
+            result,
+        });
         return result;
     });
 
@@ -159,7 +167,8 @@ const RecentExercisesDetailScreen: React.FC = () => {
         return (
             <TouchableOpacity
                 style={styles.trackingItem}
-                onPress={() => navigation.navigate('TrackingDetail', { tracking: item })}
+                // Modification ici pour naviguer vers l'écran d'historique de l'exercice
+                onPress={() => navigation.navigate('ExerciseHistory', { exerciseName: item.exerciseName })}
                 onLongPress={() => {
                     Alert.alert(
                         'Supprimer',
@@ -193,7 +202,12 @@ const RecentExercisesDetailScreen: React.FC = () => {
         );
     }
 
-    console.log('Rendering with:', { trackings: trackings.length, filteredTrackings: filteredTrackings.length, filterExercise, filterMuscleGroup });
+    console.log('Rendering with:', {
+        trackings: trackings.length,
+        filteredTrackings: filteredTrackings.length,
+        filterExercise,
+        filterMuscleGroup,
+    });
 
     return (
         <View style={styles.container}>
@@ -217,7 +231,6 @@ const RecentExercisesDetailScreen: React.FC = () => {
                 initialActiveFilter={filterExercise}
                 onFilterChange={handleExerciseFilterChange}
             />
-
             <FlatList
                 data={filteredTrackings}
                 keyExtractor={(item) => item.id}

@@ -18,7 +18,6 @@ import { TextInputStyles } from '../styles/TextInputStyles';
 import { TextStyles } from '../styles/TextStyles';
 import { ButtonStyles } from '../styles/ButtonStyles';
 
-// Ne touche pas aux imports, c'est bon !
 
 type AuthScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Auth'>;
 type AuthScreenRouteProp = RouteProp<RootStackParamList, 'Auth'>;

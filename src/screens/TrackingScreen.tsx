@@ -7,6 +7,7 @@ import {
     StyleSheet,
     ScrollView,
     Dimensions,
+    LayoutChangeEvent,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -15,6 +16,7 @@ import { API, graphqlOperation } from 'aws-amplify';
 import { listExerciseTrackings } from '../graphql/queries';
 import { useAuth } from '../context/AuthContext';
 import { TextStyles } from '../styles/TextStyles';
+import { ButtonStyles } from '../styles/ButtonStyles';
 import type { RootStackParamList } from '../types/NavigationTypes';
 
 interface TrackingRecord {
@@ -71,45 +73,37 @@ const TrackingScreen: React.FC = () => {
     const [availableMuscleGroups] = useState<string[]>(["Pectoraux", "Jambes"]);
 
     const recentExercises = useMemo(() => {
+        const uniqueExercises: { [key: string]: TrackingRecord } = {};
         const sorted = [...trackings].sort(
             (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         );
-        return sorted.slice(0, 2).map((t) => t.exerciseName);
+        sorted.forEach((tracking) => {
+            if (!uniqueExercises[tracking.exerciseName]) {
+                uniqueExercises[tracking.exerciseName] = tracking;
+            }
+        });
+        return Object.values(uniqueExercises).slice(0, 2);
     }, [trackings]);
 
-    const compute1RM = (reps: number, weight: number) => {
+    const compute1RM = (reps: number, weight: number): number => {
         return weight * (1 + reps / 30);
     };
 
-    // Fonction pour obtenir les labels des 3 derniers mois
-    const getLastThreeMonthsLabels = () => {
-        const now = new Date();
-        const months = [];
-        for (let i = 2; i >= 0; i--) {
-            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const monthName = date.toLocaleString('fr-FR', { month: 'short' });
-            months.push(monthName);
-        }
-        return months; // Par exemple: ["janv.", "févr.", "mars"]
-    };
-
-    // Fonction pour générer les données du graphique sur les 3 derniers mois
     const getMiniChartDataForExercise = (exerciseName: string) => {
         const now = new Date();
-        const threshold = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        const threshold = new Date(now.getFullYear(), now.getMonth() - 2, now.getDate());
+        const totalDays = Math.floor((now.getTime() - threshold.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const data: (number | null)[] = new Array(totalDays).fill(null);
+        const labels: string[] = new Array(totalDays).fill('');
+
         const sessions = trackings
             .filter((t) => {
                 if (t.exerciseName !== exerciseName) return false;
                 const d = new Date(t.date);
-                return d >= threshold;
+                return d >= threshold && d <= now;
             })
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        // Créer un axe virtuel avec 90 points (un par jour sur 3 mois)
-        const totalDays = 90; // Approximativement 3 mois
-        const data: number[] = new Array(totalDays).fill(null); // Remplir avec null pour les jours sans données
-
-        // Calculer les positions des séances sur l'axe des x
         sessions.forEach((session) => {
             try {
                 const sessionDate = new Date(session.date);
@@ -118,6 +112,7 @@ const TrackingScreen: React.FC = () => {
                 );
                 if (daysSinceThreshold >= 0 && daysSinceThreshold < totalDays) {
                     const sets = JSON.parse(session.setsData);
+                    if (!Array.isArray(sets)) return;
                     const max1RM = Math.max(
                         ...sets.map((set: { reps: number; weight: number }) =>
                             compute1RM(set.reps, set.weight)
@@ -126,34 +121,62 @@ const TrackingScreen: React.FC = () => {
                     data[daysSinceThreshold] = max1RM;
                 }
             } catch (error) {
-                console.error('Erreur lors du calcul de la 1RM', error);
+                console.error(`Erreur lors du calcul de 1RM pour ${session.id}:`, error);
             }
         });
 
-        // Labels pour l'axe des x (seulement les 3 mois)
-        const labels = getLastThreeMonthsLabels();
+        // Création des labels au format "jj/mm" (ex: "29/09")
+        for (let i = 0; i < totalDays; i++) {
+            const currentDate = new Date(threshold);
+            currentDate.setDate(currentDate.getDate() + i);
+            const day = ('0' + currentDate.getDate()).slice(-2);
+            const month = ('0' + (currentDate.getMonth() + 1)).slice(-2);
+            labels[i] = `${day}/${month}`;
+        }
 
-        return { data, labels };
+        // Filtrer les données pour ne garder que les points valides
+        const validData: number[] = [];
+        const validLabels: string[] = [];
+        data.forEach((value, index) => {
+            if (value !== null && !isNaN(value)) {
+                validData.push(value);
+                validLabels.push(labels[index]);
+            }
+        });
+
+        console.log(`Données filtrées pour ${exerciseName}:`, { validData, validLabels });
+        return { data: validData, labels: validLabels, hasData: validData.length > 0 };
     };
 
     const MiniChart: React.FC<{ exerciseName: string }> = ({ exerciseName }) => {
-        const { data, labels } = getMiniChartDataForExercise(exerciseName);
-        const [chartWidth, setChartWidth] = useState(Dimensions.get("window").width - 56);
+        const { data, labels, hasData } = getMiniChartDataForExercise(exerciseName);
+        const [chartWidth, setChartWidth] = useState(Dimensions.get('window').width - 32);
         const chartHeight = 220;
 
-        const handleLayout = (event: any) => {
+        const handleLayout = (event: LayoutChangeEvent) => {
             const { width } = event.nativeEvent.layout;
+            console.log(`Largeur du conteneur pour ${exerciseName}:`, width);
             setChartWidth(width);
         };
+
+        if (!hasData) {
+            return (
+                <View style={styles.chartContainer}>
+                    <Text style={[TextStyles.subSimpleText, { textAlign: 'center' }]}>
+                        Aucune donnée disponible pour {exerciseName}
+                    </Text>
+                </View>
+            );
+        }
 
         return (
             <View style={styles.chartContainer} onLayout={handleLayout}>
                 <LineChart
                     data={{
-                        labels: labels,
+                        labels,
                         datasets: [
                             {
-                                data: data,
+                                data,
                                 strokeWidth: 2,
                                 withDots: true,
                             },
@@ -163,38 +186,33 @@ const TrackingScreen: React.FC = () => {
                     height={chartHeight}
                     yAxisSuffix=" kg"
                     chartConfig={{
-                        backgroundColor: "#fff",
-                        backgroundGradientFrom: "#fff",
-                        backgroundGradientTo: "#fff",
+                        backgroundColor: '#fff',
+                        backgroundGradientFrom: '#fff',
+                        backgroundGradientTo: '#fff',
                         decimalPlaces: 0,
-                        color: (opacity = 1) => `rgba(178,26,229, ${opacity})`,
-                        labelColor: (opacity = 1) => `rgba(20,18,23, ${opacity})`,
+                        color: (opacity = 1) => `rgba(178, 26, 229, ${opacity})`,
+                        labelColor: (opacity = 1) => `rgba(20, 18, 23, ${opacity})`,
                         propsForDots: {
-                            r: "4",
-                            strokeWidth: "1",
-                            stroke: "#b21ae5",
+                            r: '4',
+                            strokeWidth: '1',
+                            stroke: '#b21ae5',
                         },
-                        propsForVerticalLabels: {
+                        propsForLabels: {
                             fontSize: 12,
                         },
-                        propsForHorizontalLabels: {
-                            fontSize: 12,
-                        },
-                        // Ajuster les labels pour qu'ils soient espacés comme des mois
-                        formatXLabel: (value, index) => {
-                            // Afficher uniquement les labels aux positions correspondant aux mois
-                            const positions = [0, 30, 60]; // Approximativement le début de chaque mois
-                            return positions.includes(index) ? labels[positions.indexOf(index)] : '';
-                        },
+                        fillShadowGradientOpacity: 0,
+                        paddingLeft: 20,
+                        paddingRight: 40,
                     }}
-                    fromZero={true}
-                    yAxisInterval={20}
-                    segments={5}
-                    style={{ borderRadius: 16 }}
-                    withCustomGrid={true}
-                    // S'assurer que les points sont dessinés même pour les valeurs nulles (mais sans ligne)
+                    bezier
+                    fromZero
                     withInnerLines={false}
                     withOuterLines={true}
+                    style={{
+                        borderRadius: 16,
+                        marginLeft: 10,
+                        marginRight: 10,
+                    }}
                 />
             </View>
         );
@@ -210,12 +228,10 @@ const TrackingScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
-            {/* HEADER */}
             <View style={styles.header}>
                 <Text style={[TextStyles.headerText, { color: '#141217' }]}>Suivi</Text>
             </View>
 
-            {/* ONGLETS */}
             <View style={styles.tabBar}>
                 <TouchableOpacity
                     style={[styles.tabButton, activeTab === 'performances' && styles.activeTab]}
@@ -235,10 +251,8 @@ const TrackingScreen: React.FC = () => {
                 </TouchableOpacity>
             </View>
 
-            {/* CONTENU */}
             {activeTab === 'performances' ? (
                 <ScrollView style={styles.contentContainer}>
-                    {/* RÉSUMÉ GÉNÉRAL */}
                     <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Résumé général</Text>
                     <View style={styles.summaryRow}>
                         <View style={styles.summaryBox}>
@@ -258,38 +272,40 @@ const TrackingScreen: React.FC = () => {
                                     try {
                                         const sets = JSON.parse(t.setsData);
                                         const sessionTotal = sets.reduce(
-                                            (s: number, set: { reps: number; weight: number }) => s + set.reps * set.weight,
+                                            (s: number, set: { reps: number; weight: number }) =>
+                                                s + set.reps * set.weight,
                                             0
                                         );
                                         return sum + sessionTotal;
                                     } catch {
                                         return sum;
                                     }
-                                }, 0)}{" "}
+                                }, 0)}{' '}
                                 kg
                             </Text>
                         </View>
                     </View>
 
-                    {/* EXERCICES RÉCENTS */}
                     <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Exercices récents</Text>
-                    <TouchableOpacity
-                        style={styles.exerciseCard}
-                        onPress={() => navigation.navigate('RecentExercisesDetail')}
-                    >
-                        <View style={styles.exerciseCardContent}>
-                            {recentExercises.map((exerciseName, index) => (
-                                <View key={`${exerciseName}-${index}`} style={styles.exerciseBlock}>
+                    {recentExercises.map((exercise) => (
+                        <TouchableOpacity
+                            key={exercise.id}
+                            style={styles.exerciseCard}
+                            onPress={() =>
+                                navigation.navigate('RecentExercisesDetail', { exerciseName: exercise.exerciseName })
+                            }
+                        >
+                            <View style={styles.exerciseCardContent}>
+                                <View style={styles.exerciseBlock}>
                                     <Text style={[TextStyles.simpleText, styles.exerciseName]}>
-                                        {exerciseName}
+                                        {exercise.exerciseName}
                                     </Text>
-                                    <MiniChart exerciseName={exerciseName} />
+                                    <MiniChart exerciseName={exercise.exerciseName} />
                                 </View>
-                            ))}
-                        </View>
-                    </TouchableOpacity>
+                            </View>
+                        </TouchableOpacity>
+                    ))}
 
-                    {/* RECORDS */}
                     <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Records</Text>
                     <View style={styles.recordsContainer}>
                         <Text style={[TextStyles.subSimpleText, styles.recordLine]}>
@@ -304,7 +320,6 @@ const TrackingScreen: React.FC = () => {
                 </ScrollView>
             ) : (
                 <ScrollView style={styles.contentContainer}>
-                    {/* ONGLET MENSURATIONS */}
                     <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Dernières mensurations</Text>
                     <View style={styles.measurementItem}>
                         <Text style={[TextStyles.simpleText, styles.measurementDate]}>
@@ -327,24 +342,35 @@ const TrackingScreen: React.FC = () => {
                 </ScrollView>
             )}
 
-            {/* BOUTON FLOTTANT */}
             {activeTab === 'performances' ? (
                 <TouchableOpacity
-                    style={styles.floatingButton}
-                    onPress={() => {
-                        // TODO: Navigation vers l'écran d'ajout de suivi manuel
-                    }}
+                    style={[
+                        ButtonStyles.container,
+                        {
+                            marginHorizontal: 16,
+                            marginBottom: 16,
+                            alignSelf: 'center',
+                            width: Dimensions.get('window').width - 32,
+                        },
+                    ]}
+                    onPress={() => navigation.navigate('ManualTracking')}
                 >
-                    <Text style={TextStyles.simpleText}>Ajouter un suivi manuel</Text>
+                    <Text style={ButtonStyles.text}>Ajouter un suivi manuel</Text>
                 </TouchableOpacity>
             ) : (
                 <TouchableOpacity
-                    style={styles.floatingButton}
-                    onPress={() => {
-                        // TODO: Navigation vers l'écran d'ajout de mensuration
-                    }}
+                    style={[
+                        ButtonStyles.container,
+                        {
+                            marginHorizontal: 16,
+                            marginBottom: 16,
+                            alignSelf: 'center',
+                            width: Dimensions.get('window').width - 32,
+                        },
+                    ]}
+                    onPress={() => navigation.navigate('AddMeasurement')}
                 >
-                    <Text style={TextStyles.simpleText}>+ Ajouter une mensuration</Text>
+                    <Text style={ButtonStyles.text}>+ Ajouter une mensuration</Text>
                 </TouchableOpacity>
             )}
         </View>
@@ -379,29 +405,20 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         padding: 12,
         marginBottom: 16,
-        width: "100%",
+        width: '100%',
     },
     exerciseCardContent: {},
     exerciseBlock: { marginBottom: 16 },
     exerciseName: { marginBottom: 4 },
     chartContainer: {
-        overflow: 'hidden',
+        overflow: 'visible',
         borderRadius: 16,
-    },
-    miniGraph: {
-        width: Dimensions.get("window").width - 40,
-        height: 220,
-        backgroundColor: '#E2E2E2',
-        borderRadius: 6,
+        minHeight: 220,
         justifyContent: 'center',
         alignItems: 'center',
+        marginHorizontal: 8,
     },
-    miniGraphText: {},
-    recordsContainer: {
-        backgroundColor: '#F1F1F1',
-        borderRadius: 8,
-        padding: 12,
-    },
+    recordsContainer: { backgroundColor: '#F1F1F1', borderRadius: 8, padding: 12 },
     recordLine: { marginBottom: 4 },
     measurementItem: { backgroundColor: '#F1F1F1', borderRadius: 8, padding: 12, marginBottom: 12 },
     measurementDate: { marginBottom: 4 },
@@ -412,16 +429,6 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         marginBottom: 16,
         justifyContent: 'center',
-        alignItems: 'center',
-    },
-    floatingButton: {
-        position: 'absolute',
-        left: 16,
-        right: 16,
-        bottom: 16,
-        backgroundColor: PURPLE,
-        borderRadius: 8,
-        paddingVertical: 14,
         alignItems: 'center',
     },
 });

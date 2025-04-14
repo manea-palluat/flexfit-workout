@@ -9,7 +9,10 @@ import {
     Switch,
     StyleSheet,
     Alert,
+    Platform,
 } from 'react-native';
+// Import du DateTimePicker (assurez-vous de l'installer)
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { ButtonStyles } from '../styles/ButtonStyles';
 import { TextStyles } from '../styles/TextStyles';
 
@@ -22,13 +25,16 @@ export interface MeasurementType {
 export interface AddMeasureModalProps {
     visible: boolean;
     onClose: () => void;
+    /**
+     * La date par défaut (p.ex. aujourd'hui) qui pourra être modifiée par l’utilisateur.
+     */
     measurementDate: Date;
     measurementTypes: MeasurementType[];
     /**
-     * Called when the measurement entries are submitted.
-     * Form data contains keys as measurement type IDs with a numeric value.
+     * Callback lorsque l'utilisateur soumet le formulaire.
+     * formData contient, pour chaque type activé, la valeur numérique saisie.
      */
-    onSubmit: (formData: { [key: string]: { value: number } }) => Promise<void>;
+    onSubmit: (formData: { [key: string]: { value: number }; date: string }) => Promise<void>;
 }
 
 interface MeasurementFormData {
@@ -44,6 +50,9 @@ const AddMeasureModal: React.FC<AddMeasureModalProps> = ({
 }) => {
     const [measurementForm, setMeasurementForm] = useState<MeasurementFormData>({});
     const [errorMessage, setErrorMessage] = useState<string>('');
+    // Pour la sélection de date
+    const [selectedDate, setSelectedDate] = useState<Date>(measurementDate);
+    const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
 
     useEffect(() => {
         const initialForm: MeasurementFormData = {};
@@ -52,7 +61,9 @@ const AddMeasureModal: React.FC<AddMeasureModalProps> = ({
         });
         setMeasurementForm(initialForm);
         setErrorMessage('');
-    }, [measurementTypes, visible]);
+        // Lors de l'ouverture du modal, la date par défaut est celle passée en props.
+        setSelectedDate(measurementDate);
+    }, [measurementTypes, visible, measurementDate]);
 
     const toggleMeasurement = (id: string, active: boolean) => {
         setMeasurementForm((prev) => ({
@@ -66,6 +77,14 @@ const AddMeasureModal: React.FC<AddMeasureModalProps> = ({
             ...prev,
             [id]: { ...prev[id], value },
         }));
+    };
+
+    const handleDateChange = (_event: any, date?: Date) => {
+        // Pour Android, le picker se ferme automatiquement.
+        if (date) {
+            setSelectedDate(date);
+        }
+        setShowDatePicker(Platform.OS === 'ios'); // Pour iOS, on peut garder le picker ouvert
     };
 
     const handleSubmit = async () => {
@@ -84,7 +103,8 @@ const AddMeasureModal: React.FC<AddMeasureModalProps> = ({
             return;
         }
         try {
-            await onSubmit(formData);
+            // On ajoute la date choisie aux données du formulaire
+            await onSubmit({ ...formData, date: selectedDate.toISOString() });
             setErrorMessage('');
             onClose();
         } catch (error) {
@@ -98,7 +118,23 @@ const AddMeasureModal: React.FC<AddMeasureModalProps> = ({
             <View style={styles.modalBackground}>
                 <View style={styles.modalContainer}>
                     <Text style={styles.modalTitle}>Ajouter une mesure</Text>
-                    <Text style={styles.dateText}>Date : {measurementDate.toLocaleDateString()}</Text>
+
+                    {/* Affichage et sélection de la date */}
+                    <View style={styles.dateRow}>
+                        <Text style={styles.dateText}>Date : {selectedDate.toLocaleDateString()}</Text>
+                        <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+                            <Text style={styles.editDateText}>Modifier</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {showDatePicker && (
+                        <DateTimePicker
+                            value={selectedDate}
+                            mode="date"
+                            display="default"
+                            onChange={handleDateChange}
+                        />
+                    )}
+
                     {measurementTypes.map((type) => (
                         <View key={type.id} style={styles.measurementRow}>
                             <Switch
@@ -153,11 +189,20 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         textAlign: 'center',
     },
+    dateRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
     dateText: {
         fontSize: 16,
-        marginBottom: 12,
-        textAlign: 'center',
         color: '#666',
+    },
+    editDateText: {
+        fontSize: 16,
+        color: '#b21ae5',
+        textDecorationLine: 'underline',
     },
     measurementRow: {
         flexDirection: 'row',

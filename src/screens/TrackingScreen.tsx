@@ -13,17 +13,8 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LineChart } from 'react-native-chart-kit';
 import { API, graphqlOperation } from 'aws-amplify';
-import {
-    listExerciseTrackings,
-    listMensurations,
-    listMeasures,
-} from '../graphql/queries';
-import {
-    createMeasure,
-    createMensuration,
-    updateMensuration,
-    deleteMensuration,
-} from '../graphql/mutations';
+import { listExerciseTrackings, listMensurations, listMeasures } from '../graphql/queries';
+import { createMeasure, createMensuration, updateMensuration, deleteMensuration } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
 import { TextStyles } from '../styles/TextStyles';
 import { ButtonStyles } from '../styles/ButtonStyles';
@@ -32,7 +23,7 @@ import AddMeasureModal from '../components/AddMeasureModal';
 import AddMensurationModal from '../components/AddMensurationModal';
 import EditMensurationModal from '../components/EditMensurationModal';
 
-// --- Types for Performances ---
+// --- Types pour les Performances ---
 interface TrackingRecord {
     id: string;
     userId: string;
@@ -42,12 +33,12 @@ interface TrackingRecord {
     setsData: string;
 }
 
-// --- Types for Measurements ---
+// --- Types pour les Mensurations ---
 export interface MeasurementType {
     id: string;
     userId: string;
-    name: string; // e.g., "Tour de bras", "Poids", etc.
-    unit?: string; // e.g., "cm", "kg"
+    name: string; // ex: "Tour de bras", "Poids", etc.
+    unit?: string; // ex: "cm", "kg"
     createdAt: string;
     updatedAt: string;
     owner: string;
@@ -55,7 +46,7 @@ export interface MeasurementType {
 
 export interface Measure {
     id: string;
-    mensurationId: string; // Reference to the MeasurementType
+    mensurationId: string; // Référence vers la mensuration
     userId: string;
     date: string;
     value: number;
@@ -167,9 +158,7 @@ const TrackingScreen: React.FC = () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayTime = today.getTime();
-        if (!trainingDaysSet.has(todayTime)) {
-            return 0;
-        }
+        if (!trainingDaysSet.has(todayTime)) return 0;
         let streak = 0;
         let dayToCheck = todayTime;
         while (trainingDaysSet.has(dayToCheck)) {
@@ -299,11 +288,7 @@ const TrackingScreen: React.FC = () => {
                         decimalPlaces: 0,
                         color: (opacity = 1) => `rgba(178, 26, 229, ${opacity})`,
                         labelColor: (opacity = 1) => `rgba(20, 18, 23, ${opacity})`,
-                        propsForDots: {
-                            r: '4',
-                            strokeWidth: '1',
-                            stroke: '#b21ae5',
-                        },
+                        propsForDots: { r: '4', strokeWidth: '1', stroke: '#b21ae5' },
                         propsForLabels: { fontSize: 12 },
                     }}
                     bezier
@@ -454,12 +439,9 @@ const TrackingScreen: React.FC = () => {
                 </ScrollView>
             ) : (
                 <ScrollView style={styles.contentContainer} contentContainerStyle={{ paddingBottom: 120 }}>
-                    {/* Mensurations Tab Header */}
-                    <Text style={[TextStyles.headerText, { color: '#141217', marginBottom: 8 }]}>
+                    {/* Header for Mensurations (sans le sous-titre) */}
+                    <Text style={[TextStyles.headerText, { color: '#141217', marginBottom: 16 }]}>
                         Suivi des mensurations
-                    </Text>
-                    <Text style={[TextStyles.subSimpleText, { color: '#999', marginBottom: 16 }]}>
-                        Chaque progrès compte 💜
                     </Text>
                     {/* Measurements Summary (grid) */}
                     <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Résumé rapide</Text>
@@ -549,7 +531,7 @@ const TrackingScreen: React.FC = () => {
                             </Text>
                         </View>
                     ))}
-                    {/* CTA Buttons for Measures and Mensurations */}
+                    {/* CTA Buttons for Measurements */}
                     <TouchableOpacity
                         style={[ButtonStyles.container, { marginBottom: 12 }]}
                         onPress={() => setAddMeasureModalVisible(true)}
@@ -589,7 +571,7 @@ const TrackingScreen: React.FC = () => {
                         const input = {
                             userId: user.attributes?.sub || user.username,
                             mensurationId: id,
-                            date: new Date().toISOString(),
+                            date: formData.date, // Utilisation de la date sélectionnée dans le modal
                             value: formData[id].value,
                         };
                         try {
@@ -641,10 +623,7 @@ const TrackingScreen: React.FC = () => {
                         }
                     }}
                     onDelete={async (id) => {
-                        const input = {
-                            id,
-                            userId: user.attributes?.sub || user.username,
-                        };
+                        const input = { id }; // On n'envoie que l'id
                         try {
                             await API.graphql(graphqlOperation(deleteMensuration, { input }));
                             await fetchMeasurementTypes();

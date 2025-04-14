@@ -23,13 +23,11 @@ export interface EditMensurationModalProps {
     onClose: () => void;
     mensuration: MeasurementType;
     /**
-     * Fonction appelée pour mettre à jour la mensuration.
-     * Doit retourner une promesse.
+     * Callback appelée pour mettre à jour la mensuration.
      */
     onUpdate: (id: string, name: string, unit?: string) => Promise<void>;
     /**
-     * Fonction appelée pour supprimer la mensuration.
-     * Doit retourner une promesse.
+     * Callback appelée pour supprimer la mensuration.
      */
     onDelete: (id: string) => Promise<void>;
 }
@@ -45,7 +43,6 @@ const EditMensurationModal: React.FC<EditMensurationModalProps> = ({
     const [unit, setUnit] = useState<string>(mensuration.unit || '');
     const [error, setError] = useState<string>('');
 
-    // Réinitialisation des champs lorsque la mensuration change
     useEffect(() => {
         setName(mensuration.name);
         setUnit(mensuration.unit || '');
@@ -77,8 +74,7 @@ const EditMensurationModal: React.FC<EditMensurationModalProps> = ({
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            // IMPORTANT : On n'envoie ici que l'ID, car l'input deleteMensuration attend uniquement l'ID.
-                            const input = { id: mensuration.id };
+                            // Seul l'id est envoyé dans l'input.
                             await onDelete(mensuration.id);
                             onClose();
                         } catch (err) {

@@ -56,16 +56,14 @@ Vous pouvez aussi utiliser un émulateur Android / iOS si vous êtes sur un envi
   "start": "expo start",
   "android": "expo start --android",
   "ios": "expo start --ios",
-  "web": "expo start --web"
 }
 ```
 
 - `npm start` → démarre l'interface Expo
 - `npm run android` → lance sur un émulateur Android
 - `npm run ios` → lance sur un simulateur iOS (macOS uniquement)
-- `npm run web` → lance dans le navigateur
 
-Tu peux aussi ajouter un script pour tout nettoyer si besoin :
+Vous pouvez aussi ajouter un script pour tout nettoyer si besoin :
 
 ```json
 "clean": "rm -rf node_modules package-lock.json && npm install"

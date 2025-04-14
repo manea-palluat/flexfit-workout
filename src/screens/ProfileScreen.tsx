@@ -85,7 +85,7 @@ const ProfileScreen: React.FC = () => {
             signOut().catch((error) => console.error('Error signing out:', error));
         } else if (option.route) {
             try {
-                // navigation.navigate(option.route);
+                navigation.navigate(option.route);
             } catch (error) {
                 Alert.alert('Info', `La page "${option.label}" n'est pas encore disponible.`);
             }

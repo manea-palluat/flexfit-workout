@@ -1,4 +1,3 @@
-// App.tsx
 import 'react-native-get-random-values';// permet de générer des valeurs aléatoires sécurisées (ex. UUID)
 import React, { useEffect } from 'react';
 import AppLoading from 'expo-app-loading';//cran de chargement pendant le load des polices

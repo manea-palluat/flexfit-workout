@@ -15,7 +15,7 @@ Pensée pour être intuitive, motivante et complète, elle combine :
 ### 1. Cloner le projet
 
 ```bash
-git clone https://github.com/ton-utilisateur/flexfit.git
+git clone https://github.com/Maneaaa/flexfitprojet
 cd flexfit
 ```
 
@@ -155,4 +155,3 @@ npm start
 ---
 
 Merci pour votre lecture et vos retours 🙏  
-FlexFit est en constante évolution et toute remarque est la bienvenue !

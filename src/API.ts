@@ -176,6 +176,102 @@ export type DeleteExerciseTrackingInput = {
   id: string,
 };
 
+export type CreateMensurationInput = {
+  userId: string,
+  name: string,
+  unit?: string | null,
+};
+
+export type ModelMensurationConditionInput = {
+  userId?: ModelIDInput | null,
+  name?: ModelStringInput | null,
+  unit?: ModelStringInput | null,
+  createdAt?: ModelStringInput | null,
+  updatedAt?: ModelStringInput | null,
+  owner?: ModelStringInput | null,
+  and?: Array< ModelMensurationConditionInput | null > | null,
+  or?: Array< ModelMensurationConditionInput | null > | null,
+  not?: ModelMensurationConditionInput | null,
+};
+
+export type Mensuration = {
+  __typename: "Mensuration",
+  id: string,
+  userId: string,
+  name: string,
+  unit?: string | null,
+  createdAt: string,
+  updatedAt: string,
+  owner?: string | null,
+};
+
+export type UpdateMensurationInput = {
+  id: string,
+  userId: string,
+  name?: string | null,
+  unit?: string | null,
+};
+
+export type DeleteMensurationInput = {
+  id: string,
+};
+
+export type CreateMeasureInput = {
+  userId: string,
+  mensurationId: string,
+  date: string,
+  value: number,
+};
+
+export type ModelMeasureConditionInput = {
+  mensurationId?: ModelIDInput | null,
+  userId?: ModelIDInput | null,
+  date?: ModelStringInput | null,
+  value?: ModelFloatInput | null,
+  owner?: ModelStringInput | null,
+  and?: Array< ModelMeasureConditionInput | null > | null,
+  or?: Array< ModelMeasureConditionInput | null > | null,
+  not?: ModelMeasureConditionInput | null,
+  createdAt?: ModelStringInput | null,
+  updatedAt?: ModelStringInput | null,
+};
+
+export type ModelFloatInput = {
+  ne?: number | null,
+  eq?: number | null,
+  le?: number | null,
+  lt?: number | null,
+  ge?: number | null,
+  gt?: number | null,
+  between?: Array< number | null > | null,
+  attributeExists?: boolean | null,
+  attributeType?: ModelAttributeTypes | null,
+};
+
+export type Measure = {
+  __typename: "Measure",
+  id: string,
+  mensurationId: string,
+  userId: string,
+  date: string,
+  value: number,
+  owner?: string | null,
+  createdAt: string,
+  updatedAt: string,
+};
+
+export type UpdateMeasureInput = {
+  id: string,
+  userId: string,
+  mensurationId: string,
+  date?: string | null,
+  value?: number | null,
+};
+
+export type DeleteMeasureInput = {
+  id: string,
+};
+
 export type ModelIDKeyConditionInput = {
   eq?: string | null,
   le?: string | null,
@@ -235,6 +331,55 @@ export type ModelExerciseTrackingConnection = {
   __typename: "ModelExerciseTrackingConnection",
   items:  Array<ExerciseTracking | null >,
   nextToken?: string | null,
+};
+
+export type ModelMensurationFilterInput = {
+  id?: ModelIDInput | null,
+  userId?: ModelIDInput | null,
+  name?: ModelStringInput | null,
+  unit?: ModelStringInput | null,
+  createdAt?: ModelStringInput | null,
+  updatedAt?: ModelStringInput | null,
+  owner?: ModelStringInput | null,
+  and?: Array< ModelMensurationFilterInput | null > | null,
+  or?: Array< ModelMensurationFilterInput | null > | null,
+  not?: ModelMensurationFilterInput | null,
+};
+
+export type ModelMensurationConnection = {
+  __typename: "ModelMensurationConnection",
+  items:  Array<Mensuration | null >,
+  nextToken?: string | null,
+};
+
+export type ModelMeasureFilterInput = {
+  id?: ModelIDInput | null,
+  mensurationId?: ModelIDInput | null,
+  userId?: ModelIDInput | null,
+  date?: ModelStringInput | null,
+  value?: ModelFloatInput | null,
+  owner?: ModelStringInput | null,
+  createdAt?: ModelStringInput | null,
+  updatedAt?: ModelStringInput | null,
+  and?: Array< ModelMeasureFilterInput | null > | null,
+  or?: Array< ModelMeasureFilterInput | null > | null,
+  not?: ModelMeasureFilterInput | null,
+};
+
+export type ModelMeasureConnection = {
+  __typename: "ModelMeasureConnection",
+  items:  Array<Measure | null >,
+  nextToken?: string | null,
+};
+
+export type ModelStringKeyConditionInput = {
+  eq?: string | null,
+  le?: string | null,
+  lt?: string | null,
+  ge?: string | null,
+  gt?: string | null,
+  between?: Array< string | null > | null,
+  beginsWith?: string | null,
 };
 
 export type ModelSubscriptionExerciseFilterInput = {
@@ -308,6 +453,43 @@ export type ModelSubscriptionExerciseTrackingFilterInput = {
   and?: Array< ModelSubscriptionExerciseTrackingFilterInput | null > | null,
   or?: Array< ModelSubscriptionExerciseTrackingFilterInput | null > | null,
   owner?: ModelStringInput | null,
+};
+
+export type ModelSubscriptionMensurationFilterInput = {
+  id?: ModelSubscriptionIDInput | null,
+  userId?: ModelSubscriptionIDInput | null,
+  name?: ModelSubscriptionStringInput | null,
+  unit?: ModelSubscriptionStringInput | null,
+  createdAt?: ModelSubscriptionStringInput | null,
+  updatedAt?: ModelSubscriptionStringInput | null,
+  and?: Array< ModelSubscriptionMensurationFilterInput | null > | null,
+  or?: Array< ModelSubscriptionMensurationFilterInput | null > | null,
+  owner?: ModelStringInput | null,
+};
+
+export type ModelSubscriptionMeasureFilterInput = {
+  id?: ModelSubscriptionIDInput | null,
+  mensurationId?: ModelSubscriptionIDInput | null,
+  userId?: ModelSubscriptionIDInput | null,
+  date?: ModelSubscriptionStringInput | null,
+  value?: ModelSubscriptionFloatInput | null,
+  createdAt?: ModelSubscriptionStringInput | null,
+  updatedAt?: ModelSubscriptionStringInput | null,
+  and?: Array< ModelSubscriptionMeasureFilterInput | null > | null,
+  or?: Array< ModelSubscriptionMeasureFilterInput | null > | null,
+  owner?: ModelStringInput | null,
+};
+
+export type ModelSubscriptionFloatInput = {
+  ne?: number | null,
+  eq?: number | null,
+  le?: number | null,
+  lt?: number | null,
+  ge?: number | null,
+  gt?: number | null,
+  between?: Array< number | null > | null,
+  in?: Array< number | null > | null,
+  notIn?: Array< number | null > | null,
 };
 
 export type CreateExerciseMutationVariables = {
@@ -436,6 +618,117 @@ export type DeleteExerciseTrackingMutation = {
   } | null,
 };
 
+export type CreateMensurationMutationVariables = {
+  input: CreateMensurationInput,
+  condition?: ModelMensurationConditionInput | null,
+};
+
+export type CreateMensurationMutation = {
+  createMensuration?:  {
+    __typename: "Mensuration",
+    id: string,
+    userId: string,
+    name: string,
+    unit?: string | null,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type UpdateMensurationMutationVariables = {
+  input: UpdateMensurationInput,
+  condition?: ModelMensurationConditionInput | null,
+};
+
+export type UpdateMensurationMutation = {
+  updateMensuration?:  {
+    __typename: "Mensuration",
+    id: string,
+    userId: string,
+    name: string,
+    unit?: string | null,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type DeleteMensurationMutationVariables = {
+  input: DeleteMensurationInput,
+  condition?: ModelMensurationConditionInput | null,
+};
+
+export type DeleteMensurationMutation = {
+  deleteMensuration?:  {
+    __typename: "Mensuration",
+    id: string,
+    userId: string,
+    name: string,
+    unit?: string | null,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type CreateMeasureMutationVariables = {
+  input: CreateMeasureInput,
+  condition?: ModelMeasureConditionInput | null,
+};
+
+export type CreateMeasureMutation = {
+  createMeasure?:  {
+    __typename: "Measure",
+    id: string,
+    mensurationId: string,
+    userId: string,
+    date: string,
+    value: number,
+    owner?: string | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+};
+
+export type UpdateMeasureMutationVariables = {
+  input: UpdateMeasureInput,
+  condition?: ModelMeasureConditionInput | null,
+};
+
+export type UpdateMeasureMutation = {
+  updateMeasure?:  {
+    __typename: "Measure",
+    id: string,
+    mensurationId: string,
+    userId: string,
+    date: string,
+    value: number,
+    owner?: string | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+};
+
+export type DeleteMeasureMutationVariables = {
+  input: DeleteMeasureInput,
+  condition?: ModelMeasureConditionInput | null,
+};
+
+export type DeleteMeasureMutation = {
+  deleteMeasure?:  {
+    __typename: "Measure",
+    id: string,
+    mensurationId: string,
+    userId: string,
+    date: string,
+    value: number,
+    owner?: string | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+};
+
 export type GetExerciseQueryVariables = {
   userId: string,
   exerciseId: string,
@@ -527,6 +820,115 @@ export type ListExerciseTrackingsQuery = {
       createdAt: string,
       updatedAt: string,
       owner?: string | null,
+    } | null >,
+    nextToken?: string | null,
+  } | null,
+};
+
+export type GetMensurationQueryVariables = {
+  id: string,
+};
+
+export type GetMensurationQuery = {
+  getMensuration?:  {
+    __typename: "Mensuration",
+    id: string,
+    userId: string,
+    name: string,
+    unit?: string | null,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type ListMensurationsQueryVariables = {
+  filter?: ModelMensurationFilterInput | null,
+  limit?: number | null,
+  nextToken?: string | null,
+};
+
+export type ListMensurationsQuery = {
+  listMensurations?:  {
+    __typename: "ModelMensurationConnection",
+    items:  Array< {
+      __typename: "Mensuration",
+      id: string,
+      userId: string,
+      name: string,
+      unit?: string | null,
+      createdAt: string,
+      updatedAt: string,
+      owner?: string | null,
+    } | null >,
+    nextToken?: string | null,
+  } | null,
+};
+
+export type GetMeasureQueryVariables = {
+  id: string,
+};
+
+export type GetMeasureQuery = {
+  getMeasure?:  {
+    __typename: "Measure",
+    id: string,
+    mensurationId: string,
+    userId: string,
+    date: string,
+    value: number,
+    owner?: string | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+};
+
+export type ListMeasuresQueryVariables = {
+  filter?: ModelMeasureFilterInput | null,
+  limit?: number | null,
+  nextToken?: string | null,
+};
+
+export type ListMeasuresQuery = {
+  listMeasures?:  {
+    __typename: "ModelMeasureConnection",
+    items:  Array< {
+      __typename: "Measure",
+      id: string,
+      mensurationId: string,
+      userId: string,
+      date: string,
+      value: number,
+      owner?: string | null,
+      createdAt: string,
+      updatedAt: string,
+    } | null >,
+    nextToken?: string | null,
+  } | null,
+};
+
+export type MeasuresByMensurationIdAndDateQueryVariables = {
+  mensurationId: string,
+  date?: ModelStringKeyConditionInput | null,
+  sortDirection?: ModelSortDirection | null,
+  filter?: ModelMeasureFilterInput | null,
+  limit?: number | null,
+  nextToken?: string | null,
+};
+
+export type MeasuresByMensurationIdAndDateQuery = {
+  measuresByMensurationIdAndDate?:  {
+    __typename: "ModelMeasureConnection",
+    items:  Array< {
+      __typename: "Measure",
+      id: string,
+      mensurationId: string,
+      userId: string,
+      date: string,
+      value: number,
+      owner?: string | null,
+      createdAt: string,
+      updatedAt: string,
     } | null >,
     nextToken?: string | null,
   } | null,
@@ -655,5 +1057,116 @@ export type OnDeleteExerciseTrackingSubscription = {
     createdAt: string,
     updatedAt: string,
     owner?: string | null,
+  } | null,
+};
+
+export type OnCreateMensurationSubscriptionVariables = {
+  filter?: ModelSubscriptionMensurationFilterInput | null,
+  owner?: string | null,
+};
+
+export type OnCreateMensurationSubscription = {
+  onCreateMensuration?:  {
+    __typename: "Mensuration",
+    id: string,
+    userId: string,
+    name: string,
+    unit?: string | null,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type OnUpdateMensurationSubscriptionVariables = {
+  filter?: ModelSubscriptionMensurationFilterInput | null,
+  owner?: string | null,
+};
+
+export type OnUpdateMensurationSubscription = {
+  onUpdateMensuration?:  {
+    __typename: "Mensuration",
+    id: string,
+    userId: string,
+    name: string,
+    unit?: string | null,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type OnDeleteMensurationSubscriptionVariables = {
+  filter?: ModelSubscriptionMensurationFilterInput | null,
+  owner?: string | null,
+};
+
+export type OnDeleteMensurationSubscription = {
+  onDeleteMensuration?:  {
+    __typename: "Mensuration",
+    id: string,
+    userId: string,
+    name: string,
+    unit?: string | null,
+    createdAt: string,
+    updatedAt: string,
+    owner?: string | null,
+  } | null,
+};
+
+export type OnCreateMeasureSubscriptionVariables = {
+  filter?: ModelSubscriptionMeasureFilterInput | null,
+  owner?: string | null,
+};
+
+export type OnCreateMeasureSubscription = {
+  onCreateMeasure?:  {
+    __typename: "Measure",
+    id: string,
+    mensurationId: string,
+    userId: string,
+    date: string,
+    value: number,
+    owner?: string | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+};
+
+export type OnUpdateMeasureSubscriptionVariables = {
+  filter?: ModelSubscriptionMeasureFilterInput | null,
+  owner?: string | null,
+};
+
+export type OnUpdateMeasureSubscription = {
+  onUpdateMeasure?:  {
+    __typename: "Measure",
+    id: string,
+    mensurationId: string,
+    userId: string,
+    date: string,
+    value: number,
+    owner?: string | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+};
+
+export type OnDeleteMeasureSubscriptionVariables = {
+  filter?: ModelSubscriptionMeasureFilterInput | null,
+  owner?: string | null,
+};
+
+export type OnDeleteMeasureSubscription = {
+  onDeleteMeasure?:  {
+    __typename: "Measure",
+    id: string,
+    mensurationId: string,
+    userId: string,
+    date: string,
+    value: number,
+    owner?: string | null,
+    createdAt: string,
+    updatedAt: string,
   } | null,
 };

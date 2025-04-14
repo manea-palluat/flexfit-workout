@@ -140,3 +140,120 @@ export const deleteExerciseTracking = /* GraphQL */ `mutation DeleteExerciseTrac
   APITypes.DeleteExerciseTrackingMutationVariables,
   APITypes.DeleteExerciseTrackingMutation
 >;
+export const createMensuration = /* GraphQL */ `mutation CreateMensuration(
+  $input: CreateMensurationInput!
+  $condition: ModelMensurationConditionInput
+) {
+  createMensuration(input: $input, condition: $condition) {
+    id
+    userId
+    name
+    unit
+    createdAt
+    updatedAt
+    owner
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.CreateMensurationMutationVariables,
+  APITypes.CreateMensurationMutation
+>;
+export const updateMensuration = /* GraphQL */ `mutation UpdateMensuration(
+  $input: UpdateMensurationInput!
+  $condition: ModelMensurationConditionInput
+) {
+  updateMensuration(input: $input, condition: $condition) {
+    id
+    userId
+    name
+    unit
+    createdAt
+    updatedAt
+    owner
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.UpdateMensurationMutationVariables,
+  APITypes.UpdateMensurationMutation
+>;
+export const deleteMensuration = /* GraphQL */ `mutation DeleteMensuration(
+  $input: DeleteMensurationInput!
+  $condition: ModelMensurationConditionInput
+) {
+  deleteMensuration(input: $input, condition: $condition) {
+    id
+    userId
+    name
+    unit
+    createdAt
+    updatedAt
+    owner
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.DeleteMensurationMutationVariables,
+  APITypes.DeleteMensurationMutation
+>;
+export const createMeasure = /* GraphQL */ `mutation CreateMeasure(
+  $input: CreateMeasureInput!
+  $condition: ModelMeasureConditionInput
+) {
+  createMeasure(input: $input, condition: $condition) {
+    id
+    mensurationId
+    userId
+    date
+    value
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.CreateMeasureMutationVariables,
+  APITypes.CreateMeasureMutation
+>;
+export const updateMeasure = /* GraphQL */ `mutation UpdateMeasure(
+  $input: UpdateMeasureInput!
+  $condition: ModelMeasureConditionInput
+) {
+  updateMeasure(input: $input, condition: $condition) {
+    id
+    mensurationId
+    userId
+    date
+    value
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.UpdateMeasureMutationVariables,
+  APITypes.UpdateMeasureMutation
+>;
+export const deleteMeasure = /* GraphQL */ `mutation DeleteMeasure(
+  $input: DeleteMeasureInput!
+  $condition: ModelMeasureConditionInput
+) {
+  deleteMeasure(input: $input, condition: $condition) {
+    id
+    mensurationId
+    userId
+    date
+    value
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.DeleteMeasureMutationVariables,
+  APITypes.DeleteMeasureMutation
+>;

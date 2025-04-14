@@ -110,3 +110,120 @@ export const listExerciseTrackings = /* GraphQL */ `query ListExerciseTrackings(
   APITypes.ListExerciseTrackingsQueryVariables,
   APITypes.ListExerciseTrackingsQuery
 >;
+export const getMensuration = /* GraphQL */ `query GetMensuration($id: ID!) {
+  getMensuration(id: $id) {
+    id
+    userId
+    name
+    unit
+    createdAt
+    updatedAt
+    owner
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.GetMensurationQueryVariables,
+  APITypes.GetMensurationQuery
+>;
+export const listMensurations = /* GraphQL */ `query ListMensurations(
+  $filter: ModelMensurationFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  listMensurations(filter: $filter, limit: $limit, nextToken: $nextToken) {
+    items {
+      id
+      userId
+      name
+      unit
+      createdAt
+      updatedAt
+      owner
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.ListMensurationsQueryVariables,
+  APITypes.ListMensurationsQuery
+>;
+export const getMeasure = /* GraphQL */ `query GetMeasure($id: ID!) {
+  getMeasure(id: $id) {
+    id
+    mensurationId
+    userId
+    date
+    value
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.GetMeasureQueryVariables,
+  APITypes.GetMeasureQuery
+>;
+export const listMeasures = /* GraphQL */ `query ListMeasures(
+  $filter: ModelMeasureFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  listMeasures(filter: $filter, limit: $limit, nextToken: $nextToken) {
+    items {
+      id
+      mensurationId
+      userId
+      date
+      value
+      owner
+      createdAt
+      updatedAt
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.ListMeasuresQueryVariables,
+  APITypes.ListMeasuresQuery
+>;
+export const measuresByMensurationIdAndDate = /* GraphQL */ `query MeasuresByMensurationIdAndDate(
+  $mensurationId: ID!
+  $date: ModelStringKeyConditionInput
+  $sortDirection: ModelSortDirection
+  $filter: ModelMeasureFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  measuresByMensurationIdAndDate(
+    mensurationId: $mensurationId
+    date: $date
+    sortDirection: $sortDirection
+    filter: $filter
+    limit: $limit
+    nextToken: $nextToken
+  ) {
+    items {
+      id
+      mensurationId
+      userId
+      date
+      value
+      owner
+      createdAt
+      updatedAt
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.MeasuresByMensurationIdAndDateQueryVariables,
+  APITypes.MeasuresByMensurationIdAndDateQuery
+>;

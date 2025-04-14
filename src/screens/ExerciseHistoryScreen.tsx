@@ -210,8 +210,7 @@ const ExerciseHistoryScreen: React.FC = () => {
                         propsForLabels: {
                             fontSize: 14,
                         },
-                        paddingLeft: 20,
-                        paddingRight: 40,
+                        // Plus de paddingLeft / paddingRight ici
                     }}
                     bezier
                     fromZero
@@ -221,6 +220,9 @@ const ExerciseHistoryScreen: React.FC = () => {
                         borderRadius: 16,
                         marginLeft: 10,
                         marginRight: 10,
+                        // Déplacement du padding ici :
+                        paddingLeft: 20,
+                        paddingRight: 40,
                     }}
                 />
             </View>

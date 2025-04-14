@@ -1,4 +1,3 @@
-// src/screens/ConfirmSignUpScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -175,7 +174,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         width: '100%',
     },
-    // POUR OCCUPER LA LARGEUR TOTALE DU FORMULAIRE (80% de l'écran)
     fullWidth: {
         width: '100%',
         alignSelf: 'center',

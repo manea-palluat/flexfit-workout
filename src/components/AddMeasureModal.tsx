@@ -1,4 +1,3 @@
-// src/components/AddMeasureModal.tsx
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -34,7 +33,7 @@ export interface AddMeasureModalProps {
      * Callback lorsque l'utilisateur soumet le formulaire.
      * formData contient, pour chaque type activé, la valeur numérique saisie.
      */
-    onSubmit: (formData: { [key: string]: { value: number }; date: string }) => Promise<void>;
+    onSubmit: (formData: { [key: string]: { value: number } | string }) => Promise<void>;
 }
 
 interface MeasurementFormData {

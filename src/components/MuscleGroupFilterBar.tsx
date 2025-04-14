@@ -1,4 +1,3 @@
-// src/components/MuscleGroupFilterBar.tsx
 import React from 'react';
 import { ScrollView, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 

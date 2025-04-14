@@ -1,5 +1,3 @@
-// src/screens/TermsOfUseScreen.tsx
-// IMPORTS : on importe React et les composants de base de RN
 import React from 'react';
 import { ScrollView, Text, StyleSheet } from 'react-native';
 import { termsOfUseText } from '../legal/legalTexts'; // texte légal chargé depuis le dossier legal

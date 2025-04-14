@@ -1,4 +1,3 @@
-// src/components/CustomChart.tsx
 import React from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';

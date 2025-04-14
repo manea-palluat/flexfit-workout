@@ -16,6 +16,7 @@
       "supportsTablet": true,
       "infoPlist": {
         "UIBackgroundModes": [
+          "audio",
           "audio"
         ]
       }
@@ -34,6 +35,13 @@
       "eas": {
         "projectId": "e1183e39-171d-4306-a49f-a2aca3044cf8"
       }
+    },
+    "owner": "manea",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e1183e39-171d-4306-a49f-a2aca3044cf8"
     }
   }
 }

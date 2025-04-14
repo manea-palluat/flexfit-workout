@@ -1,4 +1,3 @@
-// src/screens/RecentExercisesDetailScreen.tsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     View,

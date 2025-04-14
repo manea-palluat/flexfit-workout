@@ -1,4 +1,3 @@
-// src/components/MuscleGroupFilterModal.tsx
 import React from 'react';
 import {
     Modal,

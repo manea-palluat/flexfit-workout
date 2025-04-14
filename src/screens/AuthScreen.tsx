@@ -414,7 +414,6 @@ const styles = StyleSheet.create({
         width: '80%',
         alignSelf: 'center',
     },
-    // Ensure consistent spacing between inputs.
     inputContainer: {
         marginVertical: 0,
         marginBottom: 10,

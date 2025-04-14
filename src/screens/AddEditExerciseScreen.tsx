@@ -1,4 +1,3 @@
-// src/screens/AddEditExerciseScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -357,7 +356,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#333',
     },
-    // STYLE DU SEGMENTED CONTROL, ressemblant à un champ de saisie
     segmentedControl: {
         flexDirection: 'row',
         backgroundColor: '#F1F1F1',

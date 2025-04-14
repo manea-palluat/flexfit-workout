@@ -1,4 +1,3 @@
-// src/screens/AboutScreen.tsx
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, StyleSheet, View, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';

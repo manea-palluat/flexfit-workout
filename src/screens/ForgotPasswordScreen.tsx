@@ -20,8 +20,6 @@ import { TextInputStyles } from '../styles/TextInputStyles';
 import { ButtonStyles } from '../styles/ButtonStyles';
 import { TextStyles } from '../styles/TextStyles';
 
-// NE TOUCHE PAS AUX IMPORTS
-
 type NavigationProp = StackNavigationProp<RootStackParamList, 'ForgotPassword'>;
 
 const ForgotPasswordScreen: React.FC = () => {
@@ -49,7 +47,7 @@ const ForgotPasswordScreen: React.FC = () => {
         }).start();
     }, [newPasswordFocused, newPassword]);
 
-    // CALCUL FORCE MDP : retourne la force du mdp en pourcentage
+    //CALCUL FORCE MDP : retourne la force du mdp en pourcentage
     const computePasswordStrength = (pwd: string): number => {
         const trimmed = pwd.trim();
         const conditions = [
@@ -73,7 +71,7 @@ const ForgotPasswordScreen: React.FC = () => {
         }).start();
     }, [newPassword]);
 
-    // INTERPOLATION POUR LA LARGEUR DE LA BARRE
+    //INTERPOLATION POUR LA LARGEUR DE LA BARRE
     const animatedWidth = strengthAnim.interpolate({
         inputRange: [0, 100],
         outputRange: ['0%', '100%'],
@@ -86,19 +84,19 @@ const ForgotPasswordScreen: React.FC = () => {
         outputRange: ['#FF0000', '#FFA500', '#00AA00'],
     });
 
-    // VALIDATION EMAIL : vérifie le format de l'email
+    //VALIDATION EMAIL : vérifie le format de l'email
     const validateEmail = (email: string): boolean => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
     };
 
-    // VALIDATION CODE : vérifie que le code est composé de 6 chiffres
+    //VALIDATION CODE : vérifie que le code est composé de 6 chiffres
     const validateCode = (code: string): boolean => {
         const codeRegex = /^\d{6}$/;
         return codeRegex.test(code);
     };
 
-    // GESTION DES ERREURS : affiche un message sympa en cas de pb
+    //GESTION DES ERREURS : affiche un message sympa en cas de pb
     const handleForgotPasswordErrors = (error: any) => {
         console.error('Forgot Password Error:', error);
         if (error.code === 'UserNotFoundException') {
@@ -120,7 +118,7 @@ const ForgotPasswordScreen: React.FC = () => {
         }
     };
 
-    // ENVOI CODE : envoie le code de confirmation à l'email saisi
+    //ENVOI CODE : envoie le code de confirmation à l'email saisi
     const sendCode = async () => {
         setError(''); //reset erreur
         if (!email) {
@@ -143,7 +141,7 @@ const ForgotPasswordScreen: React.FC = () => {
         }
     };
 
-    // SOUMISSION NOUVEAU MDP : envoie le code et le nouveau mdp pour réinitialiser
+    //ENVOI NOUVEAU MDP : envoie le code et le nouveau mdp pour réinitialiser
     const submitNewPassword = async () => {
         setError(''); //reset erreur
         if (!email || !code || !newPassword) {
@@ -302,7 +300,6 @@ const styles = StyleSheet.create({
         width: '100%',
         marginBottom: 20,
     },
-    // Styles pour la checklist et la barre de progression (inspirés de AuthScreen)
     checklistContainer: {
         width: '100%',
         marginBottom: 10,

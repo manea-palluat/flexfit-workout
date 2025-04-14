@@ -1,5 +1,3 @@
-// src/screens/PrivacyPolicyScreen.tsx
-// IMPORT DES LIBS : on importe React et les composants de base de RN, et le texte de la politique de conf.
 import React from 'react';
 import { ScrollView, Text, StyleSheet } from 'react-native';
 import { privacyPolicyText } from '../legal/legalTexts'; // texte légal chargé depuis le dossier legal

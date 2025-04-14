@@ -1,4 +1,3 @@
-// src/components/ExerciseFilterModal.tsx
 import React from 'react';
 import {
     Modal,

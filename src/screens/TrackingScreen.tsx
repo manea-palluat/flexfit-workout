@@ -1,4 +1,8 @@
 // src/screens/TrackingScreen.tsx
+// Ce fichier contient le code React Native pour l'écran de suivi des performances et des mensurations dans l'application FlexFit.
+// Il permet de récupérer et d'afficher les données d'exercices ainsi que celles des mensurations via AWS Amplify GraphQL,
+// et propose des graphiques et des interfaces pour ajouter et modifier ces données.
+
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
@@ -24,6 +28,7 @@ import AddMensurationModal from '../components/AddMensurationModal';
 import EditMensurationModal from '../components/EditMensurationModal';
 
 // --- Types pour les Performances ---
+// Déclaration de l'interface pour stocker les données de suivi d'exercice
 interface TrackingRecord {
     id: string;
     userId: string;
@@ -34,6 +39,7 @@ interface TrackingRecord {
 }
 
 // --- Types pour les Mensurations ---
+// Définition des types pour les mensurations et les mesures associées
 export interface MeasurementType {
     id: string;
     userId: string;
@@ -46,36 +52,44 @@ export interface MeasurementType {
 
 export interface Measure {
     id: string;
-    mensurationId: string; // Référence vers la mensuration
+    mensurationId: string; // Référence vers la mensuration correspondante
     userId: string;
     date: string;
     value: number;
     owner: string;
 }
 
+// Composant principal de l'écran de suivi
 const TrackingScreen: React.FC = () => {
+    // --- Déclaration des états pour la gestion des onglets ---
+    // L'utilisateur peut basculer entre les onglets "performances" et "mensurations"
     const [activeTab, setActiveTab] = useState<'performances' | 'mensurations'>('performances');
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
     const { user } = useAuth();
 
-    // Performances state
+    // --- États pour les Performances ---
+    // Stocke la liste des suivis d'exercices et gère l'affichage d'un indicateur de chargement
     const [trackings, setTrackings] = useState<TrackingRecord[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
 
-    // Measurements state
+    // --- États pour les Mensurations ---
+    // Stocke les types de mensurations, les mesures individuelles et l'état du chargement des données
     const [measurementTypes, setMeasurementTypes] = useState<MeasurementType[]>([]);
     const [measures, setMeasures] = useState<Measure[]>([]);
     const [loadingMeasurements, setLoadingMeasurements] = useState<boolean>(true);
     const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
+    // Définit la largeur initiale du graphique en fonction de la largeur de l'écran
     const [chartWidth, setChartWidth] = useState(Dimensions.get('window').width - 32);
 
-    // Modals
+    // --- États pour la gestion des modals ---
+    // Contrôle l'affichage des modals pour ajouter ou modifier des mesures/mensurations
     const [addMeasureModalVisible, setAddMeasureModalVisible] = useState(false);
     const [addMensurationModalVisible, setAddMensurationModalVisible] = useState(false);
     const [editMensurationModalVisible, setEditMensurationModalVisible] = useState(false);
     const [editingMensuration, setEditingMensuration] = useState<MeasurementType | null>(null);
 
-    // --- Fetch Performances ---
+    // --- Fonction de récupération des Performances ---
+    // Récupère les données de suivi d'exercices associées à l'utilisateur depuis l'API GraphQL
     const fetchTrackings = async () => {
         if (!user) {
             setLoading(false);
@@ -97,11 +111,13 @@ const TrackingScreen: React.FC = () => {
         }
     };
 
+    // Utilisation d'un effet pour récupérer les suivis dès que l'utilisateur est défini
     useEffect(() => {
         fetchTrackings();
     }, [user]);
 
-    // --- Fetch Measurements (Mensurations) ---
+    // --- Fonction de récupération des Types de Mensurations ---
+    // Récupère les différents types de mensurations définis par l'utilisateur
     const fetchMeasurementTypes = async () => {
         if (!user) return;
         try {
@@ -112,6 +128,7 @@ const TrackingScreen: React.FC = () => {
             );
             const types: MeasurementType[] = response.data.listMensurations.items;
             setMeasurementTypes(types);
+            // Sélectionne le premier type par défaut s'il n'y a pas de type sélectionné
             if (types.length > 0 && !selectedTypeId) {
                 setSelectedTypeId(types[0].id);
             }
@@ -120,6 +137,8 @@ const TrackingScreen: React.FC = () => {
         }
     };
 
+    // --- Fonction de récupération des Mesures ---
+    // Récupère les mesures individuelles pour les mensurations de l'utilisateur
     const fetchMeasures = async () => {
         if (!user) return;
         try {
@@ -137,6 +156,7 @@ const TrackingScreen: React.FC = () => {
         }
     };
 
+    // Utilisation d'un effet pour récupérer les données de mensurations dès que l'utilisateur change ou que l'onglet actif est "mensurations"
     useEffect(() => {
         if (activeTab === 'mensurations') {
             const fetchData = async () => {
@@ -147,9 +167,11 @@ const TrackingScreen: React.FC = () => {
         }
     }, [user, activeTab]);
 
-    // --- Performances Calculations ---
+    // --- Calcul de la série de performances ---
+    // Calcule le nombre de jours consécutifs d'entraînement en utilisant les données de suivi
     const currentStreak = useMemo(() => {
         const trainingDaysSet = new Set<number>();
+        // Pour chaque suivi, on ajoute la date (réduite à minuit) dans un Set pour obtenir des jours uniques
         trackings.forEach((t) => {
             const d = new Date(t.date);
             d.setHours(0, 0, 0, 0);
@@ -158,9 +180,11 @@ const TrackingScreen: React.FC = () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayTime = today.getTime();
+        // Si aujourd'hui n'est pas dans le Set, la série est à 0
         if (!trainingDaysSet.has(todayTime)) return 0;
         let streak = 0;
         let dayToCheck = todayTime;
+        // On décrémente d'un jour (en millisecondes) tant que le Set contient la date
         while (trainingDaysSet.has(dayToCheck)) {
             streak++;
             dayToCheck -= 86400000;
@@ -168,6 +192,8 @@ const TrackingScreen: React.FC = () => {
         return streak;
     }, [trackings]);
 
+    // --- Extraction des Exercices Récents ---
+    // Récupère les deux derniers exercices uniques à partir des suivis, triés par date
     const recentExercises = useMemo(() => {
         const uniqueExercises: { [key: string]: TrackingRecord } = {};
         const sorted = [...trackings].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -179,11 +205,14 @@ const TrackingScreen: React.FC = () => {
         return Object.values(uniqueExercises).slice(0, 2);
     }, [trackings]);
 
+    // --- Calcul du 1RM (One-Rep Max) --- 
+    // Calcule la charge maximale théorique à partir du nombre de répétitions et du poids utilisé
     const compute1RM = (reps: number, weight: number): number => {
         return weight * (1 + reps / 30);
     };
 
-    // --- MiniChart for Performances ---
+    // --- Fonction de récupération des données pour le MiniChart d'un exercice ---
+    // Construit les labels et les données pour le graphique d'un exercice donné sur une période d'environ 2 mois
     const getMiniChartDataForExercise = (exerciseName: string) => {
         const now = new Date();
         const threshold = new Date(now.getFullYear(), now.getMonth() - 2, now.getDate());
@@ -191,6 +220,7 @@ const TrackingScreen: React.FC = () => {
         const data: (number | null)[] = new Array(totalDays).fill(null);
         const labels: string[] = new Array(totalDays).fill('');
 
+        // Filtrage des sessions correspondant à l'exercice et dans la période définie
         const sessions = trackings
             .filter((t) => {
                 if (t.exerciseName !== exerciseName) return false;
@@ -199,6 +229,7 @@ const TrackingScreen: React.FC = () => {
             })
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+        // Pour chaque session, calcul du 1RM et placement dans le tableau de données
         sessions.forEach((session) => {
             try {
                 const sessionDate = new Date(session.date);
@@ -218,6 +249,7 @@ const TrackingScreen: React.FC = () => {
             }
         });
 
+        // Construction des labels pour chaque jour de la période
         for (let i = 0; i < totalDays; i++) {
             const currentDate = new Date(threshold);
             currentDate.setDate(currentDate.getDate() + i);
@@ -226,6 +258,7 @@ const TrackingScreen: React.FC = () => {
             labels[i] = `${day}/${month}`;
         }
 
+        // Filtrage des points aberrants sur la base de l'Interquartile Range (IQR)
         let validData: number[] = [];
         let validLabels: string[] = [];
         data.forEach((value, index) => {
@@ -251,16 +284,20 @@ const TrackingScreen: React.FC = () => {
         return { data: validData, labels: validLabels, hasData: validData.length > 0 };
     };
 
+    // --- Composant MiniChart --- 
+    // Ce sous-composant affiche un graphique linéaire pour visualiser l'évolution d'un exercice précis
     const MiniChart: React.FC<{ exerciseName: string }> = ({ exerciseName }) => {
         const { data, labels, hasData } = getMiniChartDataForExercise(exerciseName);
         const [chartWidthLocal, setChartWidthLocal] = useState(Dimensions.get('window').width - 32);
         const chartHeight = 220;
 
+        // Met à jour la largeur du graphique en fonction de la mise en page
         const handleLayout = (event: LayoutChangeEvent) => {
             const { width } = event.nativeEvent.layout;
             setChartWidthLocal(width);
         };
 
+        // Si aucune donnée n'est disponible, on affiche un message d'information
         if (!hasData) {
             return (
                 <View style={styles.chartContainer}>
@@ -301,7 +338,8 @@ const TrackingScreen: React.FC = () => {
         );
     };
 
-    // --- Measurements Summary Data ---
+    // --- Préparation des données pour le résumé des mensurations ---
+    // Crée un résumé pour chaque type de mensuration en associant la dernière mesure disponible
     const summaryData = useMemo(() => {
         return measurementTypes.map((type) => {
             const measuresForType = measures
@@ -312,7 +350,8 @@ const TrackingScreen: React.FC = () => {
         });
     }, [measurementTypes, measures]);
 
-    // --- Measurements Chart Data for Selected Type ---
+    // --- Préparation des données pour le graphique d'évolution d'une mensuration ---
+    // Organise les mesures sélectionnées dans l'ordre chronologique et formate les labels et valeurs
     const chartData = useMemo(() => {
         if (!selectedTypeId) return { labels: [], data: [] };
         const filtered = measures
@@ -330,7 +369,8 @@ const TrackingScreen: React.FC = () => {
         return { labels, data };
     }, [selectedTypeId, measures]);
 
-    // --- Measurements Grouped History ---
+    // --- Groupement de l'historique des mesures ---
+    // Organise les mesures par date pour afficher un historique groupé par jour
     const groupedHistory = useMemo(() => {
         const groups: { [date: string]: Measure[] } = {};
         measures.forEach((m) => {
@@ -347,11 +387,14 @@ const TrackingScreen: React.FC = () => {
         return sortedDates.map((date) => ({ date, measures: groups[date] }));
     }, [measures]);
 
+    // --- Gestion de la mise en page du graphique ---
+    // Met à jour la largeur du graphique lors de l'événement de changement de taille du layout
     const handleChartLayout = (event: LayoutChangeEvent) => {
         const { width } = event.nativeEvent.layout;
         setChartWidth(width);
     };
 
+    // Affichage d'un écran de chargement si les données ne sont pas encore disponibles
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -362,12 +405,12 @@ const TrackingScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
-            {/* Header */}
+            {/* Header de l'écran */}
             <View style={styles.header}>
                 <Text style={[TextStyles.headerText, { color: '#141217' }]}>Suivi</Text>
             </View>
 
-            {/* Tab Bar */}
+            {/* Barre des onglets pour basculer entre Performances et Mensurations */}
             <View style={styles.tabBar}>
                 <TouchableOpacity
                     style={[styles.tabButton, activeTab === 'performances' && styles.activeTab]}
@@ -387,9 +430,10 @@ const TrackingScreen: React.FC = () => {
                 </TouchableOpacity>
             </View>
 
-            {/* Content */}
+            {/* Affichage du contenu en fonction de l'onglet sélectionné */}
             {activeTab === 'performances' ? (
                 <ScrollView style={styles.contentContainer}>
+                    {/* Section résumé général pour les performances */}
                     <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Résumé général</Text>
                     <View style={styles.summaryRow}>
                         <View style={styles.summaryBox}>
@@ -408,6 +452,7 @@ const TrackingScreen: React.FC = () => {
                         </View>
                     </View>
 
+                    {/* Section affichant les exercices récents avec leurs mini-graphiques */}
                     <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Exercices récents</Text>
                     <View style={styles.exercisesContainer}>
                         {recentExercises.map((exercise) => (
@@ -430,6 +475,7 @@ const TrackingScreen: React.FC = () => {
                         ))}
                     </View>
 
+                    {/* Section pour afficher des records prédéfinis */}
                     <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Records</Text>
                     <View style={styles.recordsContainer}>
                         <Text style={[TextStyles.subSimpleText, styles.recordLine]}>Tractions : 20 reps</Text>
@@ -438,12 +484,13 @@ const TrackingScreen: React.FC = () => {
                     <View style={{ height: 120 }} />
                 </ScrollView>
             ) : (
+                // Affichage pour l'onglet Mensurations
                 <ScrollView style={styles.contentContainer} contentContainerStyle={{ paddingBottom: 120 }}>
-                    {/* Header for Mensurations (sans le sous-titre) */}
+                    {/* Titre pour la section mensurations */}
                     <Text style={[TextStyles.headerText, { color: '#141217', marginBottom: 16 }]}>
                         Suivi des mensurations
                     </Text>
-                    {/* Measurements Summary (grid) */}
+                    {/* Grille du résumé rapide des mensurations */}
                     <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Résumé rapide</Text>
                     <View style={styles.gridContainer}>
                         {summaryData.map((item) => (
@@ -472,7 +519,7 @@ const TrackingScreen: React.FC = () => {
                             </TouchableOpacity>
                         ))}
                     </View>
-                    {/* Evolution Chart */}
+                    {/* Section du graphique d'évolution des mensurations */}
                     <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Évolution</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeSelector}>
                         {measurementTypes.map((type) => (
@@ -516,7 +563,7 @@ const TrackingScreen: React.FC = () => {
                             </Text>
                         )}
                     </View>
-                    {/* Measurements History */}
+                    {/* Affichage de l'historique des mesures groupées par date */}
                     <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Historique</Text>
                     {groupedHistory.map((group) => (
                         <View key={group.date} style={styles.historyGroup}>
@@ -531,7 +578,7 @@ const TrackingScreen: React.FC = () => {
                             </Text>
                         </View>
                     ))}
-                    {/* CTA Buttons for Measurements */}
+                    {/* Boutons d'appel à l'action pour ajouter une mesure ou une mensuration */}
                     <TouchableOpacity
                         style={[ButtonStyles.container, { marginBottom: 12 }]}
                         onPress={() => setAddMeasureModalVisible(true)}
@@ -547,6 +594,7 @@ const TrackingScreen: React.FC = () => {
                 </ScrollView>
             )}
 
+            {/* Bouton pour ajouter un suivi manuel (affiché uniquement dans l'onglet Performances) */}
             {activeTab === 'performances' ? (
                 <TouchableOpacity
                     style={[
@@ -559,7 +607,7 @@ const TrackingScreen: React.FC = () => {
                 </TouchableOpacity>
             ) : null}
 
-            {/* Modals */}
+            {/* Modals pour l'ajout et la modification des mesures et mensurations */}
             <AddMeasureModal
                 visible={addMeasureModalVisible}
                 onClose={() => setAddMeasureModalVisible(false)}
@@ -567,12 +615,13 @@ const TrackingScreen: React.FC = () => {
                 measurementTypes={measurementTypes}
                 onSubmit={async (formData) => {
                     if (!user) return;
+                    // Pour chaque type de mensuration, créer une nouvelle mesure avec les données du formulaire
                     for (const id in formData) {
                         const input = {
                             userId: user.attributes?.sub || user.username,
                             mensurationId: id,
                             date: formData.date, // Utilisation de la date sélectionnée dans le modal
-                            value: formData[id].value,
+                            value: typeof formData[id] === 'object' && formData[id] !== null ? formData[id].value : 0,
                         };
                         try {
                             await API.graphql(graphqlOperation(createMeasure, { input }));
@@ -623,7 +672,7 @@ const TrackingScreen: React.FC = () => {
                         }
                     }}
                     onDelete={async (id) => {
-                        const input = { id }; // On n'envoie que l'id
+                        const input = { id }; // On n'envoie que l'id pour supprimer la mensuration
                         try {
                             await API.graphql(graphqlOperation(deleteMensuration, { input }));
                             await fetchMeasurementTypes();
@@ -639,6 +688,8 @@ const TrackingScreen: React.FC = () => {
 
 export default TrackingScreen;
 
+// --- Styles associés à l'écran de suivi ---
+// Ces styles définissent l'apparence des composants affichés dans cet écran.
 const PURPLE = '#b21ae5';
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
@@ -675,7 +726,7 @@ const styles = StyleSheet.create({
     },
     recordsContainer: { backgroundColor: '#F1F1F1', borderRadius: 8, padding: 12 },
     recordLine: { marginBottom: 4 },
-    // Measurements styles:
+    // Styles pour la partie mensurations :
     gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 16 },
     card: {
         backgroundColor: '#fff',

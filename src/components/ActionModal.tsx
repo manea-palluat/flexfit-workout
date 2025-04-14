@@ -1,4 +1,3 @@
-// src/components/ActionModal.tsx
 import React from 'react';
 import { Modal, View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { ButtonStyles } from '../styles/ButtonStyles';

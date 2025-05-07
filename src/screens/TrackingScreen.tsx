@@ -12,6 +12,7 @@ import {
     ScrollView,
     Dimensions,
     LayoutChangeEvent,
+    RefreshControl, // Ajout de RefreshControl pour le pull-to-refresh
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -80,6 +81,9 @@ const TrackingScreen: React.FC = () => {
     const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
     // Définit la largeur initiale du graphique en fonction de la largeur de l'écran
     const [chartWidth, setChartWidth] = useState(Dimensions.get('window').width - 32);
+
+    // --- État pour le pull-to-refresh ---
+    const [refreshing, setRefreshing] = useState<boolean>(false);
 
     // --- États pour la gestion des modals ---
     // Contrôle l'affichage des modals pour ajouter ou modifier des mesures/mensurations
@@ -166,6 +170,19 @@ const TrackingScreen: React.FC = () => {
             fetchData();
         }
     }, [user, activeTab]);
+
+    // --- Fonction de pull-to-refresh ---
+    // Actualise les données en fonction de l'onglet actif
+    const onRefresh = async () => {
+        setRefreshing(true);
+        if (activeTab === 'performances') {
+            await fetchTrackings();
+        } else if (activeTab === 'mensurations') {
+            await fetchMeasurementTypes();
+            await fetchMeasures();
+        }
+        setRefreshing(false);
+    };
 
     // --- Calcul de la série de performances ---
     // Calcule le nombre de jours consécutifs d'entraînement en utilisant les données de suivi
@@ -432,7 +449,10 @@ const TrackingScreen: React.FC = () => {
 
             {/* Affichage du contenu en fonction de l'onglet sélectionné */}
             {activeTab === 'performances' ? (
-                <ScrollView style={styles.contentContainer}>
+                <ScrollView
+                    style={styles.contentContainer}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                >
                     {/* Section résumé général pour les performances */}
                     <Text style={[TextStyles.subTitle, styles.sectionTitle]}>Résumé général</Text>
                     <View style={styles.summaryRow}>
@@ -485,7 +505,11 @@ const TrackingScreen: React.FC = () => {
                 </ScrollView>
             ) : (
                 // Affichage pour l'onglet Mensurations
-                <ScrollView style={styles.contentContainer} contentContainerStyle={{ paddingBottom: 120 }}>
+                <ScrollView
+                    style={styles.contentContainer}
+                    contentContainerStyle={{ paddingBottom: 120 }}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                >
                     {/* Titre pour la section mensurations */}
                     <Text style={[TextStyles.headerText, { color: '#141217', marginBottom: 16 }]}>
                         Suivi des mensurations

@@ -65,8 +65,6 @@ Vous pouvez aussi ajouter un script pour tout nettoyer si besoin :
 "clean": "rm -rf node_modules package-lock.json && npm install"
 ```
 
----
-
 ## 🧠 Backend (AWS Amplify)
 
 Le projet utilise **AWS Amplify** pour la gestion des utilisateurs, des données (DynamoDB) et des appels via AppSync (GraphQL).
@@ -76,7 +74,14 @@ Le projet utilise **AWS Amplify** pour la gestion des utilisateurs, des données
 - Le dossier `amplify/` est bien **versionné** dans Git, y compris :
   - le schéma GraphQL (`schema.graphql`)
   - les fonctions résolveurs, les paramètres, la configuration du cloud
-- Le fichier `aws-exports.js` est **généré automatiquement** à l’installation et **ne doit pas être modifié manuellement**.
+- Le fichier aws-exports.js est également versionné car nécessaire au bon fonctionnement local et au déploiement rapide. Il ne contient aucune clé secrète et ne doit pas être modifié manuellement.
+
+Même si aws-exports.js expose certains identifiants publics (comme l'ID du User Pool ou du projet), les points suivants assurent la protection de l’infrastructure :
+- Vérification obligatoire par email sur Cognito pour éviter le spam d'inscriptions
+- Permissions minimales pour les utilisateurs anonymes (lecture seule si activé)
+- Aucune clé IAM ni accès administrateur n'est exposé
+- Limites de requêtes et surveillance activées via AWS AppSync & CloudWatch
+- Les accès aux API sensibles sont protégés par authentification obligatoire
 
 ## 🧱 Structure du projet (résumé)
 
@@ -95,8 +100,6 @@ App.tsx                      → Point d’entrée de l’app
 amplify/                     → Backend AWS Amplify (GraphQL, Auth, Storage...)
 ```
 
----
-
 ## 📱 Fonctionnalités
 
 - Création de groupes musculaires et d'exercices
@@ -112,8 +115,6 @@ amplify/                     → Backend AWS Amplify (GraphQL, Auth, Storage...)
   - Résumé rapide
 - Interface colorée avec thème violet inspiré d’un axolotl 🦎
 
----
-
 ## Conseils pour éviter les bugs
 
 - Toujours utiliser `npm install` sans modifier les versions des packages.
@@ -126,8 +127,6 @@ npm run clean
 npm start
 ```
 
----
-
 ## 🧪 Points à tester après installation
 
 - ✅ Le projet compile sans erreur (`npm start`)
@@ -136,8 +135,6 @@ npm start
 - ✅ Sons / vibrations / animations fonctionnent en séance
 - ✅ Graphiques visibles dans le suivi des performances
 - ✅ Authentification Amplify fonctionnelle
-
----
 
 Merci pour votre lecture et vos retours 🙏
 

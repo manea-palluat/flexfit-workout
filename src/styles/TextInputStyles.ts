@@ -1,28 +1,27 @@
-// src/styles/TextInputStyles.ts
-import { StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native'
 
 export const TextInputStyles = StyleSheet.create({
     container: {
         width: '100%',
-        marginVertical: 10,
+        marginVertical: 8,
     },
     input: {
-        backgroundColor: '#F2F0F5',
+        backgroundColor: '#f2f0f5',
         borderRadius: 10,
-        paddingVertical: 14,
+        paddingVertical: 12,
         paddingHorizontal: 16,
         fontSize: 16,
         fontFamily: 'PlusJakartaSans_400Regular',
         color: '#333',
     },
-    inputFocused: {
+    focused: {
         borderColor: '#b21ae5',
         borderWidth: 2,
     },
     errorText: {
-        color: '#DC3545',
+        color: '#dc3545',
         fontSize: 14,
-        marginTop: 5,
+        marginTop: 4,
         fontFamily: 'PlusJakartaSans_400Regular',
     },
-});
+})

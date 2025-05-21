@@ -1,9 +1,11 @@
+import type { Exercise } from '../services/exercise/exerciseTypes'
+
 export interface WorkoutSessionData {
     exerciseName: string; // nom de l'exo
     totalSets: number; // nb total de séries prévues
     plannedReps: number; // nb de répétitions planifiées
     restDuration: number; // durée du repos en secondes
-    exerciseType?: string; // type d'exo, optionnel (ex: bodyweight, normal)
+    exerciseType?: 'normal' | 'bodyweight'; // type d'exo, restreint à nos deux valeurs
 }
 
 export interface SetResult {
@@ -18,15 +20,7 @@ export type RootStackParamList = {
     Auth: { mode: 'login' | 'signup' } | undefined; // mode de connexion ou d'inscription
     ConfirmSignUp: { username: string }; // confirmation d'inscription avec le username
     AddEditExercise: {
-        exercise?: {
-            exerciseId: string; // id unique de l'exo
-            name: string; // nom de l'exo
-            muscleGroup: string; // groupe musculaire ciblé
-            restTime: number; // temps de repos en secondes
-            sets: number; // nb de séries
-            reps: number; // nb de répétitions
-            exerciseType?: string | null; // type d'exo, optionnel ou null
-        };
+        exercise?: Exercise
     } | undefined; // écran pour ajouter ou modifier un exo
     TrackingDetail: {
         tracking: {

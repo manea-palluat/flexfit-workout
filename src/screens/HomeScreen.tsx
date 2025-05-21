@@ -19,10 +19,10 @@ const HomeScreen: React.FC = () => {
             <Text style={[TextStyles.title, styles.titleMargin]}>Bienvenue sur FlexFit.</Text>
             {/* BOUTON CONNEXION */}
             <TouchableOpacity
-                style={ButtonStyles.container}
+                style={ButtonStyles.primaryContainer}
                 onPress={() => navigation.navigate('Auth', { mode: 'login' })}
             >
-                <Text style={ButtonStyles.text}>Connexion</Text>
+                <Text style={ButtonStyles.primaryText}>Connexion</Text>
             </TouchableOpacity>
             {/* BOUTON INSCRIPTION */}
             <TouchableOpacity
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     infoCircle: {
         fontSize: 16,
         color: '#000000',
-        fontFamily: ButtonStyles.text.fontFamily,
+        fontFamily: ButtonStyles.primaryText.fontFamily,
     },
     aboutButtonText: {
         fontSize: 16,

@@ -1,55 +1,57 @@
-// src/styles/ButtonStyles.ts
-import { StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native'
 
 export const ButtonStyles = StyleSheet.create({
-    container: {
+    primaryContainer: {
         backgroundColor: '#b21ae5',
-        paddingVertical: 16,
-        paddingHorizontal: 50,
-        width: '100%',
+        paddingVertical: 14,
+        paddingHorizontal: 24,
         borderRadius: 50,
         alignItems: 'center',
         justifyContent: 'center',
-        marginVertical: 10,
+        marginVertical: 8,
     },
-    text: {
+    primaryText: {
         color: '#fff',
         fontSize: 16,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
         fontFamily: 'PlusJakartaSans_700Bold',
-    },
-    destructiveContainer: {
-        backgroundColor: '#DC3545',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 50,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    destructiveText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
         letterSpacing: 0.5,
     },
+
     invertedContainer: {
         backgroundColor: 'transparent',
         borderWidth: 2,
         borderColor: '#b21ae5',
-        paddingVertical: 16,
-        paddingHorizontal: 50,
-        width: '100%',
+        paddingVertical: 14,
+        paddingHorizontal: 24,
         borderRadius: 50,
         alignItems: 'center',
         justifyContent: 'center',
-        marginVertical: 10,
+        marginVertical: 8,
     },
     invertedText: {
         color: '#b21ae5',
         fontSize: 16,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
         fontFamily: 'PlusJakartaSans_700Bold',
+        letterSpacing: 0.5,
     },
-});
+
+    destructiveContainer: {
+        backgroundColor: '#dc3545',
+        paddingVertical: 14,
+        paddingHorizontal: 24,
+        borderRadius: 50,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: 8,
+    },
+    destructiveText: {
+        color: '#fff',
+        fontSize: 16,
+        fontFamily: 'PlusJakartaSans_700Bold',
+        letterSpacing: 0.5,
+    },
+
+    disabled: {
+        opacity: 0.5,
+    },
+})

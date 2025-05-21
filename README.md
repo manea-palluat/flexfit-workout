@@ -8,9 +8,7 @@ Pensée pour être intuitive, motivante et complète, elle combine :
 - un suivi visuel des performances,
 - et un enregistrement des mensurations.
 
----
-
-## ⚙️ Installation rapide
+## Installation rapide
 
 ### 1. Cloner le projet
 
@@ -35,8 +33,8 @@ npm install
 
 ### 3. Installer Expo Go sur votre téléphone
 
-- 📱 Android : [Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)  
-- 🍏 iOS : [App Store](https://apps.apple.com/app/expo-go/id982107779)
+- Android : [Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)  
+- iOS : [App Store](https://apps.apple.com/app/expo-go/id982107779)
 
 ### 4. Lancer le projet
 
@@ -47,9 +45,7 @@ npm start
 Une page s’ouvrira dans votre navigateur avec un QR code à scanner dans Expo Go.  
 Vous pouvez aussi utiliser un émulateur Android / iOS si vous êtes sur un environnement de développement adapté.
 
----
-
-## 🚀 Scripts disponibles (`package.json`)
+## Scripts disponibles (`package.json`)
 
 ```json
 "scripts": {
@@ -81,15 +77,6 @@ Le projet utilise **AWS Amplify** pour la gestion des utilisateurs, des données
   - le schéma GraphQL (`schema.graphql`)
   - les fonctions résolveurs, les paramètres, la configuration du cloud
 - Le fichier `aws-exports.js` est **généré automatiquement** à l’installation et **ne doit pas être modifié manuellement**.
-- Pour reconfigurer Amplify si besoin :
-
-```bash
-amplify pull
-```
-
-> ℹ️ Il faut que l’utilisateur soit connecté à AWS Amplify via le CLI (`amplify configure`) et possède les droits sur le projet cloud.
-
----
 
 ## 🧱 Structure du projet (résumé)
 
@@ -127,7 +114,7 @@ amplify/                     → Backend AWS Amplify (GraphQL, Auth, Storage...)
 
 ---
 
-## 🧼 Conseils pour éviter les bugs
+## Conseils pour éviter les bugs
 
 - Toujours utiliser `npm install` sans modifier les versions des packages.
 - Vérifiez que vous avez bien **Node.js 18**.
@@ -152,4 +139,18 @@ npm start
 
 ---
 
-Merci pour votre lecture et vos retours 🙏  
+Merci pour votre lecture et vos retours 🙏
+
+Note du 21/05/2025 :
+## Refactoring en cours
+
+L'application est actuellement en cours de refonte technique.
+Objectifs principaux :
+
+- Amélioration de la structure du code (séparation des responsabilités)
+- Factorisation des composants pour une meilleure réutilisabilité
+- Séparation claire entre logique métier et interface utilisateur
+- Nettoyage des fichiers, renommage et documentation
+- Ajout de tests automatisés et meilleure gestion des erreurs
+
+💡 Ce processus est en cours : certaines parties du code peuvent encore être redondantes, désorganisées ou couplées de manière temporaire.

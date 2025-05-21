@@ -1,0 +1,103 @@
+###############################
+# Modèles et inputs pour les exercices
+###############################
+
+type Exercise @model @auth(rules: [{ allow: owner }]) {
+  userId: ID! @primaryKey(sortKeyFields: ["exerciseId"])
+  exerciseId: ID!
+  name: String!
+  muscleGroup: String!
+  restTime: Int!
+  sets: Int!
+  reps: Int!
+  exerciseType: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  owner: String
+}
+
+input CreateExerciseInput {
+  userId: ID!
+  exerciseId: ID!
+  name: String!
+  muscleGroup: String!
+  restTime: Int!
+  sets: Int!
+  reps: Int!
+  exerciseType: String
+}
+
+input UpdateExerciseInput {
+  userId: ID!
+  exerciseId: ID!
+  name: String
+  muscleGroup: String
+  restTime: Int
+  sets: Int
+  reps: Int
+  exerciseType: String 
+}
+
+type ExerciseTracking @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  userId: ID!
+  exerciseId: String!
+  exerciseName: String!
+  date: AWSDateTime!
+  setsData: AWSJSON!
+}
+
+###############################
+# Modèles et inputs pour la gestion des mensurations personnalisées
+###############################
+
+# Ce type représente la définition d'une mensuration.
+# Exemple : "Tour de bras", "Tour de cou", etc.
+type Mensuration @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  userId: ID!
+  name: String!
+  unit: String       # Optionnel, par exemple "cm" ou "kg"
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  owner: String
+}
+
+input CreateMensurationInput {
+  userId: ID!
+  name: String!
+  unit: String
+}
+
+input UpdateMensurationInput {
+  id: ID!
+  userId: ID!
+  name: String
+  unit: String
+}
+
+# Ce type enregistre chaque valeur mesurée pour une mensuration spécifique.
+# On y ajoute le champ "userId" pour faciliter le filtrage direct.
+type Measure @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  mensurationId: ID! @index(name: "byMensuration", sortKeyFields: ["date"])
+  userId: ID!
+  date: AWSDateTime!
+  value: Float!
+  owner: String
+}
+
+input CreateMeasureInput {
+  userId: ID!
+  mensurationId: ID!
+  date: AWSDateTime!
+  value: Float!
+}
+
+input UpdateMeasureInput {
+  id: ID!
+  userId: ID!
+  mensurationId: ID!
+  date: AWSDateTime
+  value: Float
+}

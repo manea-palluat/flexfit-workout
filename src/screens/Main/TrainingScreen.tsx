@@ -20,6 +20,7 @@ import { TextStyles } from '../../styles/TextStyles'; // styles custom pour le t
 import { SvgXml } from 'react-native-svg'; // pour afficher du SVG
 import ExerciseSessionTrackingModal from '../../components/ExerciseSessionTrackingModal'; // modal de suivi d'exo
 import ActionModal from '../../components/ActionModal'; // modal d'actions (modifier/supprimer)
+import type { WorkoutSessionData } from '../../types/NavigationTypes';
 
 // Mise à jour de l'interface pour inclure exerciseType (optionnel)
 export interface Exercise {
@@ -193,19 +194,20 @@ const TrainingScreen: React.FC = () => {
             <TouchableOpacity
                 style={styles.playIconContainer}
                 onPress={() => {
-                    // Prépare les infos de la session, y compris exerciseType
-                    const sessionData = {
+                    const sessionData: WorkoutSessionData = {
                         exerciseName: item.name,
                         totalSets: item.sets,
                         plannedReps: item.reps,
                         restDuration: item.restTime,
-                        exerciseType: item.exerciseType, // passe l'exerciseType ici
+                        // ici on force le type acceptable
+                        exerciseType: item.exerciseType === 'bodyweight' ? 'bodyweight' : 'normal',
                     };
+
                     navigation.navigate('WorkoutSession', {
                         sessionData,
-                        onComplete: (results: { reps?: number; weight?: number }[]) => {
-                            console.log('Session complete, results:', results); // log le résultat de la session
-                            // Ici, on peut sauvegarder la session si besoin
+                        onComplete: (results) => {
+                            console.log('Session complete, results:', results);
+                            // …
                         },
                     });
                 }}

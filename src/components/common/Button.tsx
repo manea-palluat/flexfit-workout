@@ -1,61 +1,54 @@
-// src/components/common/Button.tsx
-import React from 'react'
-import { TouchableOpacity, Text, StyleSheet } from 'react-native'
+import React from 'react';
+import { TouchableOpacity, Text, StyleProp, ViewStyle, TextStyle } from 'react-native';
+import { ButtonStyles } from '../../styles/ButtonStyles';
 
-interface Props {
-    title: string
-    onPress: () => void
-    variant?: 'primary' | 'inverted'
-    disabled?: boolean
+export type ButtonVariant = 'primary' | 'inverted' | 'destructive';
+
+export interface ButtonProps {
+    title: string;
+    onPress: () => void;
+    variant?: ButtonVariant;
+    disabled?: boolean;
+    loading?: boolean;
+    style?: StyleProp<ViewStyle>;
+    textStyle?: StyleProp<TextStyle>;
 }
 
-export default function Button({
-    title, onPress, variant = 'primary', disabled
-}: Props) {
+export const Button: React.FC<ButtonProps> = ({
+    title,
+    onPress,
+    variant = 'primary',
+    disabled = false,
+    loading = false,
+    style,
+    textStyle,
+}) => {
+    const containerStyles: StyleProp<ViewStyle> = [
+        { width: '100%' },
+        variant === 'primary' && ButtonStyles.primaryContainer,
+        variant === 'inverted' && ButtonStyles.invertedContainer,
+        variant === 'destructive' && ButtonStyles.destructiveContainer,
+        disabled && ButtonStyles.disabled,
+        style,
+    ];
+
+    const titleStyles: StyleProp<TextStyle> = [
+        variant === 'primary' && ButtonStyles.primaryText,
+        variant === 'inverted' && ButtonStyles.invertedText,
+        variant === 'destructive' && ButtonStyles.destructiveText,
+        textStyle,
+    ];
+
     return (
         <TouchableOpacity
-            style={[
-                variant === 'primary' ? s.primary : s.inverted,
-                disabled && s.disabled
-            ]}
+            style={containerStyles}
             onPress={onPress}
-            disabled={disabled}
+            activeOpacity={0.8}
+            disabled={disabled || loading}
         >
-            <Text style={variant === 'primary' ? s.primaryText : s.invertedText}>
-                {title}
+            <Text style={titleStyles}>
+                {loading ? '...' : title}
             </Text>
         </TouchableOpacity>
-    )
-}
-
-const s = StyleSheet.create({
-    primary: {
-        backgroundColor: '#b21ae5',
-        paddingVertical: 12,
-        borderRadius: 50,
-        alignItems: 'center',
-        marginVertical: 10
-    },
-    primaryText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600'
-    },
-    inverted: {
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#b21ae5',
-        paddingVertical: 12,
-        borderRadius: 50,
-        alignItems: 'center',
-        marginVertical: 10
-    },
-    invertedText: {
-        color: '#b21ae5',
-        fontSize: 16,
-        fontWeight: '600'
-    },
-    disabled: {
-        opacity: 0.5
-    }
-})
+    );
+};

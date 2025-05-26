@@ -1,9 +1,10 @@
-import { StyleSheet } from 'react-native'
+import { StyleSheet } from 'react-native';
 
 export const ButtonStyles = StyleSheet.create({
     primaryContainer: {
+        width: '100%',
         backgroundColor: '#b21ae5',
-        paddingVertical: 14,
+        paddingVertical: 16,
         paddingHorizontal: 24,
         borderRadius: 50,
         alignItems: 'center',
@@ -12,16 +13,17 @@ export const ButtonStyles = StyleSheet.create({
     },
     primaryText: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: 18,
         fontFamily: 'PlusJakartaSans_700Bold',
         letterSpacing: 0.5,
     },
 
     invertedContainer: {
+        width: '100%',
         backgroundColor: 'transparent',
         borderWidth: 2,
         borderColor: '#b21ae5',
-        paddingVertical: 14,
+        paddingVertical: 16,
         paddingHorizontal: 24,
         borderRadius: 50,
         alignItems: 'center',
@@ -30,14 +32,15 @@ export const ButtonStyles = StyleSheet.create({
     },
     invertedText: {
         color: '#b21ae5',
-        fontSize: 16,
+        fontSize: 18,
         fontFamily: 'PlusJakartaSans_700Bold',
         letterSpacing: 0.5,
     },
 
     destructiveContainer: {
+        width: '100%',
         backgroundColor: '#dc3545',
-        paddingVertical: 14,
+        paddingVertical: 16,
         paddingHorizontal: 24,
         borderRadius: 50,
         alignItems: 'center',
@@ -46,7 +49,7 @@ export const ButtonStyles = StyleSheet.create({
     },
     destructiveText: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: 18,
         fontFamily: 'PlusJakartaSans_700Bold',
         letterSpacing: 0.5,
     },
@@ -54,4 +57,4 @@ export const ButtonStyles = StyleSheet.create({
     disabled: {
         opacity: 0.5,
     },
-})
+});

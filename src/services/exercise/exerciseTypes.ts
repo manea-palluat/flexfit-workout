@@ -1,4 +1,3 @@
-// src/services/exercise/exerciseTypes.ts
 export interface Exercise {
     exerciseId: string
     name: string

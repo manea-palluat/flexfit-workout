@@ -1,18 +1,22 @@
-// src/screens/Exercise/AddEditExerciseScreen.tsx
 import React, { useState, useEffect } from 'react'
-import { ScrollView, View, Text, StyleSheet, Alert } from 'react-native'
+import {
+    ScrollView,
+    Text,
+    StyleSheet,
+    Alert
+} from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { RootStackParamList } from '../../types'
 import { useAuth } from '../../context/AuthContext'
-import FormInput from '../../components/common/FormInput'
+import { FormInput } from '../../components/form/FormInput'
 import ListModal from '../../components/common/ListModal'
-import Button from '../../components/common/Button'
+import { Button } from '../../components/common/Button'
+import SegmentedControl, { Segment } from '../../components/common/SegmentedControl'
 import {
     fetchMuscleGroups,
     saveExercise
-} from '../../services/exercise'
-import type { Exercise, ExerciseInput } from '../../services/exercise/exerciseTypes'
-import SegmentedControl, { Segment } from '../../components/common/SegmentedControl'
+} from '../../services/exercise/exerciseService'
+import type { ExerciseInput } from '../../services/exercise/exerciseTypes'
 
 type RoutePropType = RouteProp<RootStackParamList, 'AddEditExercise'>
 
@@ -23,19 +27,20 @@ export default function AddEditExerciseScreen() {
     const { user } = useAuth()
     const userId = user?.attributes.sub || user?.username || ''
 
-    //états du formulaire
+    // états du formulaire
     const [name, setName] = useState(exercise?.name ?? '')
     const [muscleGroup, setMuscleGroup] = useState(exercise?.muscleGroup ?? '')
     const [restTime, setRestTime] = useState(exercise?.restTime.toString() ?? '')
     const [sets, setSets] = useState(exercise?.sets.toString() ?? '')
     const [reps, setReps] = useState(exercise?.reps.toString() ?? '')
-    const [exerciseType, setExerciseType] = useState<'normal' | 'bodyweight'>(exercise?.exerciseType ?? 'normal')
+    const [exerciseType, setExerciseType] =
+        useState<'normal' | 'bodyweight'>(exercise?.exerciseType ?? 'normal')
 
     const [groups, setGroups] = useState<string[]>([])
     const [showGroups, setShowGroups] = useState(false)
     const [loading, setLoading] = useState(false)
 
-    //récupère les muscle groups
+    // récupère les groupes existants
     useEffect(() => {
         if (!userId) return
         fetchMuscleGroups(userId)
@@ -46,7 +51,13 @@ export default function AddEditExerciseScreen() {
             .catch(console.error)
     }, [userId])
 
-    //sauvegarde
+    // ajout client-side d'un nouveau groupe
+    const handleAddGroup = (newGroup: string) => {
+        setGroups(gs => [...gs, newGroup])
+        setMuscleGroup(newGroup)
+    }
+
+    // sauvegarde de l'exercice
     const onSave = async () => {
         if (!name || !muscleGroup || !restTime || !sets || !reps) {
             return Alert.alert('Erreur', 'Veuillez remplir tous les champs.')
@@ -82,9 +93,8 @@ export default function AddEditExerciseScreen() {
 
     const tabSegments: Segment<'normal' | 'bodyweight'>[] = [
         { label: 'Normal', value: 'normal' },
-        { label: 'Poids du corps', value: 'bodyweight' },
-    ];
-
+        { label: 'Poids du corps', value: 'bodyweight' }
+    ]
 
     return (
         <ScrollView contentContainerStyle={styles.ctn}>
@@ -113,6 +123,7 @@ export default function AddEditExerciseScreen() {
                 onChangeText={setRestTime}
                 keyboardType="numeric"
             />
+
             <FormInput
                 label="Nombre de séries"
                 placeholder="Ex : 4"
@@ -120,6 +131,7 @@ export default function AddEditExerciseScreen() {
                 onChangeText={setSets}
                 keyboardType="numeric"
             />
+
             <FormInput
                 label="Répétitions par série"
                 placeholder="Ex : 10"
@@ -135,7 +147,10 @@ export default function AddEditExerciseScreen() {
                 onSelect={setMuscleGroup}
                 onClose={() => setShowGroups(false)}
                 title="Groupe musculaire"
+                onAdd={handleAddGroup}
+                addPlaceholder="Nouveau groupe…"
             />
+
             <Button
                 title={muscleGroup || 'Choisir un groupe musculaire'}
                 onPress={() => setShowGroups(true)}
@@ -147,6 +162,7 @@ export default function AddEditExerciseScreen() {
                 onPress={onSave}
                 disabled={loading}
             />
+
             <Button
                 title="Annuler"
                 onPress={() => nav.goBack()}
@@ -168,10 +184,5 @@ const styles = StyleSheet.create({
         color: '#333',
         textAlign: 'center',
         marginBottom: 20
-    },
-    segmented: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginVertical: 20
     }
 })

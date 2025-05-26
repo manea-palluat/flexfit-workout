@@ -36,12 +36,12 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
                 <TouchableOpacity onPress={toggle} style={styles.eyeButton}>
                     <Ionicons name={visible ? 'eye' : 'eye-off'} size={24} color="#b21ae5" />
                 </TouchableOpacity>
-                {showStrength && (
-                    <View style={styles.strengthContainer}>
-                        <PasswordStrengthMeter password={(props.value as string) || ''} />
-                    </View>
-                )}
             </View>
+            {showStrength && (
+                <View style={styles.strengthContainer}>
+                    <PasswordStrengthMeter password={(props.value as string) || ''} />
+                </View>
+            )}
         </>
     );
 };

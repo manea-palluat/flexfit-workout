@@ -24,7 +24,7 @@ export const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({ pa
     useEffect(() => {
         const strength = computeStrength(password);
         Animated.timing(checklistAnim, {
-            toValue: password.length > 0 ? 1 : 0,
+            toValue: password.length >= 0 ? 1 : 0,
             duration: 300,
             useNativeDriver: false,
         }).start();
